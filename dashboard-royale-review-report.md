@@ -48,4 +48,4 @@ Dense zones still use same-day, same-configuration peer matching. Sparse zones n
 
 ## Submission note
 
-The dashboard and written materials reflect the revised July decision. The existing walkthrough was recorded before this revision and describes the earlier $97,000 reserve and funded move.
+The dashboard, write-up, claims table and updated walkthrough all reflect the $98,800 reserve, deferred relocation and 16.3% forecast improvement. The July tab also models the inspection’s conditional recovery and compares three unfunded alternatives.

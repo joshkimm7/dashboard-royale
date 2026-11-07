@@ -2,28 +2,28 @@
 
 ## 01  The Decision
 
-The manager wants to replace the ten lowest earning slot machines. We would cancel that plan. Nine of the ten were in a quiet part of the floor, and none fell below eighty percent of matched local play. The dashboard lets you filter by month or bank and drill into each cabinet.
+Cancel the blanket replacement. Nine of the ten lowest earning cabinets were in quiet locations, and none had weak demand relative to comparable local games. Use the month and bank filters to inspect the shortlist.
 
 ## 02  Payout Check
 
-Machine eleven fifty-eight is the payout exception. Its hold was below expectation in twenty-three of twenty-seven weeks. Even after removing its worst week, it fell short by six point eight six percentage points. Spend twelve hundred dollars verifying its paytable and meters.
+Machine eleven fifty-eight showed a persistent payout gap. Even after removing its worst week, it fell short by six point eight six percentage points. Inspect the paytable and meters.
 
-## 03  Historical Moves
+## 03  July Budget
 
-We also checked all four historical moves against comparison cabinets and banks. Every destination gained, but every source lost. Only two pairs came out ahead over fourteen days. That tells us to measure displaced wagers before claiming a gain for the casino.
+Fund only the twelve hundred dollar inspection. If a real fault is fully corrected after the lead day, the historical gap implies about fifty-eight hundred dollars in July recovery. Break-even is about twenty-one percent. That is a threshold, and the chance of a fix is unknown. Compare four weeks before and after with same-game peers.
 
-## 04  July Actions
+## 04  Defer The Move
 
-Spend eighteen hundred dollars to test moving machine eleven eighty-one to Center Pit. Track it against the same configuration in Back Forty, and check both banks and the rest of the floor. Scale only if incremental expected win covers the move cost. Keep ninety-seven thousand dollars in reserve.
+Defer relocation. Only two of four historical bank pairs gained, and none matched the proposed route and game. Require evidence that incremental floor win clears the move cost after displaced play. Keep ninety-eight thousand eight hundred dollars in reserve.
 
-## 05  Demand And Uptime
+## 05  Adjusted Demand
 
-Across the property, about a million dollars in wagers were at risk during downtime. This estimate comes before accounting for players who switched machines.
+After removing recorded events and equalizing weekdays, demand peaked in April. June was two point nine percent below January. Estimated downtime risk also fell, so it does not explain the decline.
 
 ## 06  Guests And Comps
 
-The guest view separates loyalty-card results from floor meters. Tracked players finished down fifteen point six million dollars, and property comps cost about a hundred ninety-one thousand dollars.
+The guest view defines active players as cardholders with recorded wagers. It separates those who broke even from those with zero recorded wagers and labels the two comp denominators.
 
 ## 07  Forecast Validation
 
-Finally, the weekday forecast cut daily wager prediction error by sixty-eight and a half percent on May and June data. Use that forecast to book inspections and moves on quieter days.
+The weekday forecast lowered holdout error by sixteen point three percent versus the same day last week. It missed the May seventeenth E D C spike, but avoided repeating it on May twenty-fourth. Use it to schedule cabinet work on quieter days.
