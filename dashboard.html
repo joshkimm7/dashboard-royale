@@ -2,21 +2,57 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The Gilded Ace | Floor Review</title>
 <style>
-:root{color-scheme:dark;--bg:#121512;--panel:#1c211c;--edge:#383e32;--muted:#b8bcae;--text:#f6f0e2;--gold:#f1cc79;--green:#a5d3a7;--red:#ffa79b}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.55 system-ui,sans-serif}a{color:var(--gold)}button,select{font:inherit;color:inherit;background:#262d24;border:1px solid #5c6254;border-radius:7px;padding:.48rem .72rem;cursor:pointer}button:hover,select:hover{border-color:var(--gold)}:focus-visible{outline:3px solid var(--gold);outline-offset:3px}button[aria-pressed=true],nav button[aria-selected=true]{background:var(--gold);color:#1a2018;border-color:var(--gold);font-weight:750}header{border-bottom:1px solid var(--edge);background:#181d17}.wrap{max-width:1270px;margin:auto;padding:0 28px}.brand{display:flex;align-items:center;justify-content:space-between;gap:15px;padding-top:18px;padding-bottom:18px}.brand strong{font:700 22px Georgia,serif;color:var(--gold)}.mark{display:inline-grid;place-items:center;border:1px solid #7e7048;width:32px;height:32px;border-radius:8px;margin-right:10px}.sub,.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:var(--gold);font-weight:750}.sub{color:var(--muted)}.hero{padding-top:37px;padding-bottom:27px;display:grid;grid-template-columns:1.7fr 1fr;gap:30px;align-items:end}.hero h1{font:normal clamp(38px,6vw,70px)/1 Georgia,serif;letter-spacing:-.04em;margin:.35rem 0 .65rem}.hero p{margin:0;color:var(--muted);max-width:720px}.decision{border-left:2px solid var(--gold);padding:0 0 0 17px}.quick{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}.quick button{font-size:12px}.decision strong{display:block;font-size:19px}.filters{display:flex;gap:12px;align-items:end;flex-wrap:wrap;border-block:1px solid var(--edge);padding:13px 0}.filters label{display:grid;gap:3px;color:var(--muted);font-size:12px}.filters select{min-width:115px;color:var(--text)}.filters .scope{margin-left:auto;color:var(--muted);font-size:13px}.nav{display:flex;gap:6px;overflow:auto;padding:15px 0}.nav button{white-space:nowrap}.grid{display:grid;gap:15px}.metrics{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:15px}.card,.panel{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:17px}.metric{display:block;color:var(--gold);font:normal clamp(23px,3vw,35px)/1.2 Georgia,serif;margin:4px 0}.muted,small{color:var(--muted)}h2,h3{margin:0 0 6px;line-height:1.25}h2{font:normal 29px Georgia,serif}h3{font-size:17px}.panel p{margin:5px 0 13px}.stack{display:grid;gap:15px}.split{grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);align-items:start}.tablewrap{overflow:auto}table{border-collapse:collapse;width:100%;white-space:nowrap;font-variant-numeric:tabular-nums;text-align:left}th,td{border-bottom:1px solid var(--edge);padding:8px 10px}th{font-size:12px;color:var(--muted)}td{font-size:13px}th button{padding:0;background:none;border:none;font-size:inherit;color:inherit;text-align:left}tr:last-child td{border-bottom:0}tbody tr:has(button[aria-pressed=true]){background:#2d3023}td button{padding:.2rem .4rem}.tag{display:inline-block;border:1px solid #62654f;border-radius:99px;padding:1px 8px;color:var(--gold);font-size:11px}.red{color:var(--red)}.green{color:var(--green)}.chart{width:100%;height:auto;display:block}.chart text{fill:var(--muted);font:13px system-ui}.chart .axis{stroke:var(--edge)}.statline{display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid var(--edge);padding:7px 0}.statline strong{text-align:right}.bar{height:6px;background:#373f33;border-radius:4px;margin:4px 0 10px}.bar span{display:block;height:100%;background:var(--gold);border-radius:4px}.map{position:relative;aspect-ratio:1.57;background:repeating-linear-gradient(0deg,transparent 0 24px,#292f27 25px),repeating-linear-gradient(90deg,#171c17 0 24px,#292f27 25px);border-radius:8px;overflow:hidden}.map button{position:absolute;transform:translate(-50%,-50%);font-size:10px;padding:2px 4px;line-height:1.3;z-index:1}.map button.hot{border-color:var(--gold)}.map button:hover,.map button:focus{z-index:4}.maplabel{position:absolute;transform:translate(-50%,-50%);font-size:10px;white-space:nowrap;color:#d2d6c8;pointer-events:none;background:#171c17;padding:0 3px}.controls{display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-bottom:12px}.controls label{display:grid;gap:3px;color:var(--muted);font-size:12px}.columns{columns:2;column-gap:24px}.columns li{break-inside:avoid;margin-bottom:.45rem}details{border-top:1px solid var(--edge);padding:10px 0}summary{cursor:pointer;color:var(--gold)}footer{padding:22px 0 35px;color:var(--muted);font-size:12px}ul{padding-left:20px}.skip{position:absolute;left:8px;top:-100px}.skip:focus{top:8px;z-index:10;background:var(--bg);padding:6px}.legend{display:flex;gap:14px;flex-wrap:wrap;color:var(--muted);font-size:12px}.key{display:inline-block;width:11px;height:3px;vertical-align:middle;margin-right:4px}svg [data-point]:focus{outline:none;stroke:white;stroke-width:3}
+:root{color-scheme:dark;--bg:#121512;--panel:#1c211c;--edge:#383e32;--muted:#b8bcae;--text:#f6f0e2;--gold:#f1cc79;--green:#a5d3a7;--red:#ffa79b}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.55 system-ui,sans-serif}a{color:var(--gold)}button,select{font:inherit;color:inherit;background:#262d24;border:1px solid #5c6254;border-radius:7px;padding:.48rem .72rem;cursor:pointer}button:hover,select:hover{border-color:var(--gold)}:focus-visible{outline:3px solid var(--gold);outline-offset:3px}button[aria-pressed=true],nav button[aria-selected=true]{background:var(--gold);color:#1a2018;border-color:var(--gold);font-weight:750}header{border-bottom:1px solid var(--edge);background:#181d17}.wrap{max-width:1270px;margin:auto;padding:0 28px}.brand{display:flex;align-items:center;justify-content:space-between;gap:15px;padding-top:18px;padding-bottom:18px}.brand strong{font:700 22px Georgia,serif;color:var(--gold)}.mark{display:inline-grid;place-items:center;border:1px solid #7e7048;width:32px;height:32px;border-radius:8px;margin-right:10px}.sub,.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:var(--gold);font-weight:750}.sub{color:var(--muted)}.hero{padding-top:37px;padding-bottom:27px;display:grid;grid-template-columns:1.7fr 1fr;gap:30px;align-items:end}.hero h1{font:normal clamp(38px,6vw,70px)/1 Georgia,serif;letter-spacing:-.04em;margin:.35rem 0 .65rem}.hero p{margin:0;color:var(--muted);max-width:720px}.filters{display:flex;gap:12px;align-items:end;flex-wrap:wrap;border-block:1px solid var(--edge);padding:13px 0}.filters label{display:grid;gap:3px;color:var(--muted);font-size:12px}.filters select{min-width:115px;color:var(--text)}.filters .scope{margin-left:auto;color:var(--muted);font-size:13px}.nav{display:flex;gap:6px;overflow:auto;padding:15px 0}.nav button{white-space:nowrap}.grid{display:grid;gap:15px}.metrics{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:15px}.card,.panel{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:17px}.metric{display:block;color:var(--gold);font:normal clamp(23px,3vw,35px)/1.2 Georgia,serif;margin:4px 0}.muted,small{color:var(--muted)}h2,h3{margin:0 0 6px;line-height:1.25}h2{font:normal 29px Georgia,serif}h3{font-size:17px}.panel p{margin:5px 0 13px}.stack{display:grid;gap:15px}.split{grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);align-items:start}.tablewrap{overflow:auto}table{border-collapse:collapse;width:100%;white-space:nowrap;font-variant-numeric:tabular-nums;text-align:left}th,td{border-bottom:1px solid var(--edge);padding:8px 10px}th{font-size:12px;color:var(--muted)}td{font-size:13px}th button{padding:0;background:none;border:none;font-size:inherit;color:inherit;text-align:left}tr:last-child td{border-bottom:0}tbody tr:has(button[aria-pressed=true]){background:#2d3023}td button{padding:.2rem .4rem}.tag{display:inline-block;border:1px solid #62654f;border-radius:99px;padding:1px 8px;color:var(--gold);font-size:11px}.red{color:var(--red)}.green{color:var(--green)}.chart{width:100%;height:auto;display:block}.chart text{fill:var(--muted);font:13px system-ui}.chart .axis{stroke:var(--edge)}.statline{display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid var(--edge);padding:7px 0}.statline strong{text-align:right}.bar{height:6px;background:#373f33;border-radius:4px;margin:4px 0 10px}.bar span{display:block;height:100%;background:var(--gold);border-radius:4px}.map{position:relative;aspect-ratio:1.57;background:repeating-linear-gradient(0deg,transparent 0 24px,#292f27 25px),repeating-linear-gradient(90deg,#171c17 0 24px,#292f27 25px);border-radius:8px;overflow:hidden}.map button{position:absolute;transform:translate(-50%,-50%);font-size:10px;padding:2px 4px;line-height:1.3;z-index:1}.map button.hot{border-color:var(--gold)}.map button:hover,.map button:focus{z-index:4}.maplabel{position:absolute;transform:translate(-50%,-50%);font-size:10px;white-space:nowrap;color:#d2d6c8;pointer-events:none;background:#171c17;padding:0 3px}.controls{display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-bottom:12px}.controls label{display:grid;gap:3px;color:var(--muted);font-size:12px}.columns{columns:2;column-gap:24px}.columns li{break-inside:avoid;margin-bottom:.45rem}details{border-top:1px solid var(--edge);padding:10px 0}summary{cursor:pointer;color:var(--gold)}footer{padding:22px 0 35px;color:var(--muted);font-size:12px}ul{padding-left:20px}.skip{position:absolute;left:8px;top:-100px}.skip:focus{top:8px;z-index:10;background:var(--bg);padding:6px}.legend{display:flex;gap:14px;flex-wrap:wrap;color:var(--muted);font-size:12px}.key{display:inline-block;width:11px;height:3px;vertical-align:middle;margin-right:4px}svg [data-point]:focus{outline:none;stroke:white;stroke-width:3}
 @media(max-width:850px){.split,.hero{grid-template-columns:1fr}.hero{gap:15px}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.filters .scope{margin-left:0}}@media(max-width:520px){.wrap{padding-inline:14px}.hero{padding-block:25px 18px}.brand .sub{display:none}.card,.panel{padding:12px}.columns{columns:1}.map button{font-size:8px;padding:1px 2px}}
 
-.hero{display:block}.hero h1{max-width:1000px}.hero .decision{margin-top:16px}
+.hero{display:block;padding-top:36px;padding-bottom:24px}
+.hero h1{max-width:1000px;font-size:clamp(37px,5.2vw,65px);line-height:1.05;margin:.3em 0 .24em}
+.hero>p{font-size:clamp(15px,1.5vw,18px)}
+.decision-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:22px 0 12px}
+.decision-card{display:flex;flex-direction:column;align-items:flex-start;min-width:0;padding:14px 16px;background:var(--panel);border:1px solid var(--edge);border-radius:12px}
+.decision-card:first-child{border-color:#827048;background:#24251d}
+.decision-card h2{font:normal clamp(22px,2.5vw,30px)/1.15 Georgia,serif;margin:5px 0 6px}
+.decision-card p{font-size:13px;margin:0 0 10px}
+.decision-card button{font-size:12px;margin-top:auto}
+.move-proof{display:grid;grid-template-columns:1.35fr 1fr 1fr;align-items:center;gap:12px 18px;padding:11px 16px;border:1px solid var(--edge);border-radius:12px;background:#191d18}
+.move-proof h2{font:normal 20px Georgia,serif;margin:0 0 3px}
+.move-proof p{font-size:12px}
+.move-result{display:grid;gap:5px;min-width:0}
+.move-result .tally{font-weight:700;font-variant-numeric:tabular-nums;color:var(--text)}
+.move-result .blocks{display:flex;gap:5px}
+.move-result .blocks span{display:block;width:20px;height:6px;border-radius:2px;background:#3e473c}
+.move-result .blocks .gain{background:var(--gold)}
+.dashboard-tools{background:var(--bg)}
+.filters .scope{border:1px solid var(--edge);border-radius:7px;background:#20261f;padding:.43rem .65rem;font-variant-numeric:tabular-nums}
+.nav{padding:10px 0 12px}
+.card,.panel{padding:clamp(13px,1.7vw,20px)}
+.chart-scroll{max-width:100%;overflow-x:auto}
+.chart-scroll .chart{min-width:470px}
+@media(min-width:900px){.dashboard-tools{position:sticky;top:0;z-index:5;box-shadow:0 1px 0 var(--edge)}}
+@media(max-width:720px){.move-proof{grid-template-columns:1fr 1fr}.move-proof>div:first-child{grid-column:1/-1}}
+@media(max-width:520px){.hero{padding-top:25px}.decision-cards{grid-template-columns:1fr;margin-top:17px;gap:7px}
+  .decision-card{padding:11px 13px}.decision-card p{margin-bottom:7px}.filters .scope{flex-basis:100%}
+  .move-proof{padding:10px 13px}.chart-scroll .chart{min-width:440px}}
 .wrap,.stack,.panel,.card,.tablewrap{min-width:0}.stack{grid-template-columns:minmax(0,1fr)}
 .panel,.card{max-width:100%;overflow-wrap:anywhere}.tablewrap{max-width:100%}.filters label,.filters select{max-width:100%}
 .chart .annotation{font-size:12px;font-weight:700;fill:var(--text)}
 </style></head>
 <body><a class="skip" href="#main">Skip to dashboard</a>
 <header><div class="wrap brand"><strong><span class="mark" aria-hidden="true">♦</span>The Gilded Ace</strong><span class="sub">Dashboard Royale / Las Vegas, NV</span></div></header>
-<main class="wrap" id="main"><section class="hero"><div class="eyebrow">Luck, location, or a leak? · H1 2025</div><h1>Cancel the blanket replacement.</h1><p>Fund one payout inspection and defer the relocation until the numbers support it.</p><div class="decision"><div class="eyebrow">July decision · Full-period evidence</div><p><strong id="decision-summary"></strong></p><div class="quick"><button data-evidence="M-1158" data-section="hold-check">Inspect M-1158 evidence</button><button data-jump="move-check">See the relocation evidence</button></div></div></section>
-<div class="filters" aria-label="Analysis filters"><label>From month<select id="from"></select></label><label>Through month<select id="through"></select></label><label>Bank<select id="bank"></select></label><button id="reset">Reset filters</button><span class="scope" id="scope" role="status"></span></div>
-<nav class="nav" aria-label="Dashboard sections"><button data-tab="audit" aria-pressed="true">01 · Machine audit</button><button data-tab="demand" aria-pressed="false">02 · Demand & uptime</button><button data-tab="guests" aria-pressed="false">03 · Guests & comps</button><button data-tab="model" aria-pressed="false">04 · Forecast validation</button><button data-tab="plan" aria-pressed="false">05 · July decision</button></nav>
+<main class="wrap" id="main">
+<section class="hero" aria-labelledby="july-heading">
+  <div class="eyebrow">July 2025 recommendation</div>
+  <h1 id="july-heading">Cancel the blanket replacement.</h1>
+  <p>Inspect one cabinet for a payout issue and wait for stronger evidence before moving another.</p>
+  <div id="decision-cards" class="decision-cards" aria-label="Recommended actions"></div>
+  <div id="move-proof" class="move-proof"></div>
+</section>
+<div class="dashboard-tools">
+  <div class="filters" aria-label="Analysis filters"><label>From month<select id="from"></select></label><label>Through month<select id="through"></select></label><label>Bank<select id="bank"></select></label><button id="reset">Reset filters</button><span class="scope" id="scope" role="status"></span></div>
+  <nav class="nav" aria-label="Dashboard sections"><button data-tab="audit" aria-pressed="true">01 · Machine audit</button><button data-tab="demand" aria-pressed="false">02 · Demand & uptime</button><button data-tab="guests" aria-pressed="false">03 · Guests & comps</button><button data-tab="model" aria-pressed="false">04 · Forecast validation</button><button data-tab="plan" aria-pressed="false">05 · July decision</button></nav>
+</div>
 <div id="view"></div>
-<footer>Fictional casino · Synthetic property and player data · <a href="https://github.com/tamu-datathon-org/dashboard-royale">Official challenge data and guide</a> · <span id="revision"></span></footer></main>
+<footer>The Gilded Ace is a fictional casino · Synthetic property and player data · <a href="https://github.com/tamu-datathon-org/dashboard-royale">Official challenge data and guide</a> · <span id="revision"></span></footer></main>
 <script id="data" type="application/json">/*__DATA__*/null</script>
 <script>
 'use strict';
@@ -118,7 +154,7 @@ function chart(series,labels,{format=n,min=null,max=null,height=240,annotations=
     return '<path d="M'+cx+' '+cy+'V'+(ly+3)+'" stroke="#d3d6cb" stroke-width="1"/><circle cx="'+cx+'" cy="'+cy+'" r="4" fill="#fff"/>'+
       '<text class="annotation" x="'+(cx+5)+'" y="'+ly+'">'+esc(label)+'</text>';
   }).join('');
-  return '<svg class="chart" viewBox="0 0 '+width+' '+height+'" role="group" aria-label="'+esc(series.map(s=>s.name).join(', '))+'">'+grid+axis+traces+markers+'</svg><div class="legend">'+series.map(s=>'<span><i class="key" style="background:none;height:0;border-top:2px '+(s.dash?(s.dash==='2 4'?'dotted':'dashed'):'solid')+' '+s.color+'"></i>'+esc(s.name)+'</span>').join('')+'</div>';
+  return '<div class="chart-scroll" tabindex="0" aria-label="Chart viewport"><svg class="chart" viewBox="0 0 '+width+' '+height+'" role="group" aria-label="'+esc(series.map(s=>s.name).join(', '))+'">'+grid+axis+traces+markers+'</svg></div><div class="legend">'+series.map(s=>'<span><i class="key" style="background:none;height:0;border-top:2px '+(s.dash?(s.dash==='2 4'?'dotted':'dashed'):'solid')+' '+s.color+'"></i>'+esc(s.name)+'</span>').join('')+'</div>';
 }
 const gold='#f1cc79',green='#a5d3a7',red='#ffa79b';
 const compact = v => (v<0?'−':'')+'$'+(Math.abs(v)>=1e6?n(Math.abs(v)/1e6,2)+'m':n(Math.abs(v)/1000)+'k');
@@ -470,7 +506,18 @@ $('from').innerHTML=months.map((m,i)=>opt(i,m+' 2025')).join('');
 $('through').innerHTML=$('from').innerHTML;
 $('bank').innerHTML=opt('','All banks')+zoneBanks.map(r=>opt(r[0],r[0]+' · '+zones[r[2]])).join('');
 $('revision').textContent='Data revision '+data.revision.slice(0,7);
-$('decision-summary').textContent=fullSummary.slice(0,10).filter(x=>x.flags.includes('Quiet zone')).length+' quiet placements · inspect M-1158 · '+cash(reserve)+' reserved';
+$('decision-cards').innerHTML=
+  '<article class="decision-card"><span class="eyebrow">01 · Inspect M-1158</span><h2>'+cash(inspectionCost)+'</h2><p>Breaks even at a '+pct(inspectionBreakEven,1)+' chance of fully correcting a real payout fault.</p><button data-evidence="M-1158" data-section="hold-check">View payout evidence</button></article>'+
+  '<article class="decision-card"><span class="eyebrow">02 · M-1181 relocation</span><h2>Defer</h2><p>Historical moves show mixed results for the banks taken together.</p><button data-jump="move-check">Compare the four moves</button></article>'+
+  '<article class="decision-card"><span class="eyebrow">03 · Budget reserve</span><h2>'+cash(reserve)+'</h2><p>Unspent from the '+cash(reserve+inspectionCost)+' July budget.</p></article>';
+const moveCases=data.moves.filter(r=>r.main);
+function moveTally(label,count){
+  return '<div class="move-result"><span class="tally">'+n(count)+' of '+n(moveCases.length)+'</span><span>'+label+'</span><span class="blocks" aria-hidden="true">'+
+    moveCases.map((_,i)=>'<span'+(i<count?' class="gain"':'')+'></span>').join('')+'</span></div>';
+}
+$('move-proof').innerHTML='<div><h2>Four historical moves</h2><p>Wagers relative to comparison banks · 14-day window</p></div>'+
+  moveTally('Destination banks gained',moveCases.filter(r=>r.main.targetChange>0).length)+
+  moveTally('Bank pairs gained overall',moveCases.filter(r=>r.main.bankPct>0).length);
 function draw(focus){
   $('from').value=state.from;$('through').value=state.to;$('bank').value=state.bank;
   const s=scope();
@@ -503,7 +550,14 @@ document.addEventListener('click',e=>{
   else if(b.id==='reset'){Object.assign(state,{from:0,to:5,bank:'',region:'',tier:'',machine:'',sort:'win',reverse:false,all:false});}
   else return;
   draw(focus);
-  if(section){const target=$(section);target?.focus();target?.scrollIntoView({block:'start'});}
+  const target=section&&$(section);
+  if(target){
+    const toolbar=document.querySelector('.dashboard-tools');
+    const sticky=getComputedStyle(toolbar).position==='sticky';
+    target.style.scrollMarginTop=(sticky?toolbar.offsetHeight+12:12)+'px';
+    target.focus({preventScroll:true});
+    target.scrollIntoView({block:'start'});
+  }
 });
 draw();
 </script></body></html>
