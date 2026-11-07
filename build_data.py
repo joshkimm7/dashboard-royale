@@ -39,14 +39,22 @@ def peer_rate(groups, min_peers):
 
 daily['floor_rate'] = peer_rate(['gaming_date','config_id'], 1)
 zone_rate = peer_rate(['gaming_date','config_id','zone_id'], 4)
-# Sparse zones use other cabinets' exposure-weighted zone index after day/config normalization.
+# For sparse zones, use only the prior 28 gaming days and exclude the focal cabinet.
+def prior_totals(keys, values):
+    grouped = daily.groupby(keys + ['gaming_date'], sort=True)[values].sum()
+    days = cal.gaming_date
+    index = pd.MultiIndex.from_frame(daily[keys + ['gaming_date']])
+    def lagged(group):
+        group = group.droplevel(keys).reindex(days, fill_value=0)
+        return group.shift(1, fill_value=0).rolling(28, min_periods=1).sum()
+    history = grouped.groupby(level=keys, group_keys=True).apply(lagged)
+    return history.reindex(index).set_axis(daily.index)
+
 daily['floor_coin'] = daily.floor_rate * daily.available_hours
 keys = ['zone_id','config_id']
-zone = daily.groupby(keys)
-own = daily.groupby(keys + ['machine_id'])
-pooled_exp = zone.floor_coin.transform('sum') - own.floor_coin.transform('sum')
-pooled_coin = zone.coin_in_usd.transform('sum') - own.coin_in_usd.transform('sum')
-pooled_rate = daily.floor_rate * (pooled_coin / pooled_exp).where(pooled_exp >= 5000)
+values = ['floor_coin','coin_in_usd']
+pooled = prior_totals(keys, values) - prior_totals(keys + ['machine_id'], values)
+pooled_rate = daily.floor_rate * (pooled.coin_in_usd / pooled.floor_coin).where(pooled.floor_coin >= 5000)
 daily['zone_peer'] = np.select([zone_rate.notna(), pooled_rate.notna()], [2, 1], default=0)
 daily['zone_rate'] = zone_rate.fillna(pooled_rate).fillna(daily.floor_rate)
 # Exclude the affected day and use only fully available days for the same weekday.
@@ -64,6 +72,10 @@ assert np.allclose(daily.groupby('gaming_date').coin_in_usd.sum(), props.coin_in
 train = props.gaming_date < '2025-05-01'
 props['weekday_pred'] = props.local_weekday.map(props[train].groupby('local_weekday').coin_in_usd.mean())
 props['base_pred'] = props[train].coin_in_usd.mean()
+assert pd.to_datetime(props.gaming_date).diff().iloc[1:].eq(pd.Timedelta(days=1)).all()
+props['last_week_pred'] = props.coin_in_usd.shift(7)
+props['expanding_weekday_pred'] = props.groupby('local_weekday').coin_in_usd.transform(
+    lambda history: history.expanding().mean().shift(1))
 dates = props.gaming_date.tolist()
 daily['day'] = daily.gaming_date.map({d:i for i,d in enumerate(dates)})
 
@@ -131,6 +143,7 @@ def compare_move(machine, day, width):
                                 & ~window.machine_id.isin(stable), 'bank_id'].unique()
     change = []
     bank_controls = []
+    theo_change = []
     for bank in (origin[0], target[0]):
         sample = pair[pair.bank_id.eq(bank)]
         zone = sample.zone_id.iloc[0]
@@ -139,6 +152,9 @@ def compare_move(machine, day, width):
         zpre, zpost = rates(zone_controls, hourly=False)
         change.append(bpost - bpre * zpost / zpre if zpre else None)
         bank_controls.append(int(zone_controls.bank_id.nunique()))
+        tpre, tpost = rates(sample, column='theo_usd', hourly=False)
+        tzpre, tzpost = rates(zone_controls, column='theo_usd', hourly=False)
+        theo_change.append(tpost - tpre * tzpost / tzpre if tzpre else None)
     net_change = sum(change) if all(value is not None for value in change) else None
     net_pct = net_change / rates(pair, hourly=False)[0] if net_change is not None else None
     prior = None
@@ -148,11 +164,25 @@ def compare_move(machine, day, width):
         a = control[control.day.lt(day-7)]
         b = control[control.day.ge(day-7) & ~control.after]
         prior = (second.coin_in_usd.sum()/second.available_hours.sum()) / (first.coin_in_usd.sum()/first.available_hours.sum()) / ((b.coin_in_usd.sum()/b.available_hours.sum()) / (a.coin_in_usd.sum()/a.available_hours.sum())) - 1
+    target_zone = focal.loc[focal.after,'zone_id'].iloc[0]
+    pre_target = control[~control.after & control.zone_id.eq(target_zone)]
+    target_rate = pre_target.coin_in_usd.sum() / pre_target.available_hours.sum() if pre_target.available_hours.sum() else None
+    # Use the pre-move target rate gap and remove the change observed in control cabinets.
+    gap = target_rate - pre if target_rate is not None else None
+    rate_gain = post - pre * cpost / cpre
+    capture = rate_gain / gap if gap is not None and gap > 0 else None
+    fpre, fpost = rates(focal, column='theo_usd', hourly=False)
+    tfpre, tfpost = rates(control, column='theo_usd')
+    focal_gain = fpost - fpre * tfpost / tfpre
+    pair_theo = sum(theo_change) if all(value is not None for value in theo_change) else None
+    offset = 1 - pair_theo / focal_gain if pair_theo is not None and focal_gain > 0 else None
     return {'origin': origin[0], 'target': target[0], 'config': focal.config_id.iloc[0],
             'pre': pre, 'post': post, 'controlPre': cpre, 'controlPost': cpost,
             'cabinet': (post/pre)/(cpost/cpre)-1, 'controls': int(control.machine_id.nunique()),
             'bankChange': net_change, 'bankPct': net_pct, 'originChange': change[0], 'targetChange': change[1],
-            'bankControls': bank_controls, 'pretrend': prior}
+            'bankControls': bank_controls, 'pretrend': prior, 'preGap': gap, 'rateGain': rate_gain,
+            'targetPeers': int(pre_target.machine_id.nunique()), 'capture': capture,
+            'focalTheoGain': focal_gain, 'pairTheoGain': pair_theo, 'offset': offset}
 
 moves = []
 for ticket in operations[operations.event_type.eq('move')].itertuples():
@@ -176,7 +206,7 @@ for col in columns[1:8] + ['location_id']:
 data = {
     'revision': subprocess.check_output(['git','-C',str(repo),'rev-parse','HEAD'],text=True).strip(),
     'dates': dates, 'moves': moves, 'dicts': dictionaries, 'daily': rows(daily, columns),
-    'property': rows(props, ['gaming_date','local_weekday','events_active','coin_in_usd','house_win_usd','theo_usd','entrance_zone_entries_observed','counter_coverage_share','comp_face_value_usd','comp_cost_usd','weekday_pred','base_pred']),
+    'property': rows(props, ['gaming_date','local_weekday','events_active','coin_in_usd','house_win_usd','theo_usd','entrance_zone_entries_observed','counter_coverage_share','comp_face_value_usd','comp_cost_usd','weekday_pred','base_pred','last_week_pred','expanding_weekday_pred']),
     'players': rows(players, ['person','month','home_region','opening_tier','tracked_coin_in_usd','tracked_payout_usd','tracked_net_usd','comp_face_value_usd','comp_cost_usd','theo_usd'], 2),
     'locations': rows(locations[locations.node_type.isin(['bank','zone'])], ['location_id','node_type','zone_id','name','x_m','y_m']),
     'vacancies': rows(locations[locations.node_type.eq('slot') & ~locations.location_id.isin(daily.loc[daily.day.eq(len(dates)-1),'location_id'].map(dict(enumerate(dictionaries['location_id']))))], ['location_id','bank_id','zone_id']),
