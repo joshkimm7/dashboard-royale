@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Gilded Ace | Floor Review</title>
+<style>
+:root{color-scheme:dark;--bg:#121512;--panel:#1c211c;--edge:#383e32;--muted:#b8bcae;--text:#f6f0e2;--gold:#f1cc79;--green:#a5d3a7;--red:#ffa79b}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.55 system-ui,sans-serif}a{color:var(--gold)}button,select{font:inherit;color:inherit;background:#262d24;border:1px solid #5c6254;border-radius:7px;padding:.48rem .72rem;cursor:pointer}button:hover,select:hover{border-color:var(--gold)}:focus-visible{outline:3px solid var(--gold);outline-offset:3px}button[aria-pressed=true],nav button[aria-selected=true]{background:var(--gold);color:#1a2018;border-color:var(--gold);font-weight:750}header{border-bottom:1px solid var(--edge);background:#181d17}.wrap{max-width:1270px;margin:auto;padding:0 28px}.brand{display:flex;align-items:center;justify-content:space-between;gap:15px;padding-top:18px;padding-bottom:18px}.brand strong{font:700 22px Georgia,serif;color:var(--gold)}.mark{display:inline-grid;place-items:center;border:1px solid #7e7048;width:32px;height:32px;border-radius:8px;margin-right:10px}.sub,.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:var(--gold);font-weight:750}.sub{color:var(--muted)}.hero{padding-top:37px;padding-bottom:27px;display:grid;grid-template-columns:1.7fr 1fr;gap:30px;align-items:end}.hero h1{font:normal clamp(38px,6vw,70px)/1 Georgia,serif;letter-spacing:-.04em;margin:.35rem 0 .65rem}.hero p{margin:0;color:var(--muted);max-width:720px}.decision{border-left:2px solid var(--gold);padding:0 0 0 17px}.quick{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}.quick button{font-size:12px}.decision strong{display:block;font-size:19px}.filters{display:flex;gap:12px;align-items:end;flex-wrap:wrap;border-block:1px solid var(--edge);padding:13px 0}.filters label{display:grid;gap:3px;color:var(--muted);font-size:12px}.filters select{min-width:115px;color:var(--text)}.filters .scope{margin-left:auto;color:var(--muted);font-size:13px}.nav{display:flex;gap:6px;overflow:auto;padding:15px 0}.nav button{white-space:nowrap}.grid{display:grid;gap:15px}.metrics{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:15px}.card,.panel{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:17px}.metric{display:block;color:var(--gold);font:normal clamp(23px,3vw,35px)/1.2 Georgia,serif;margin:4px 0}.muted,small{color:var(--muted)}h2,h3{margin:0 0 6px;line-height:1.25}h2{font:normal 29px Georgia,serif}h3{font-size:17px}.panel p{margin:5px 0 13px}.stack{display:grid;gap:15px}.split{grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);align-items:start}.tablewrap{overflow:auto}table{border-collapse:collapse;width:100%;white-space:nowrap;font-variant-numeric:tabular-nums;text-align:left}th,td{border-bottom:1px solid var(--edge);padding:8px 10px}th{font-size:12px;color:var(--muted)}td{font-size:13px}th button{padding:0;background:none;border:none;font-size:inherit;color:inherit;text-align:left}tr:last-child td{border-bottom:0}tbody tr:has(button[aria-pressed=true]){background:#2d3023}td button{padding:.2rem .4rem}.tag{display:inline-block;border:1px solid #62654f;border-radius:99px;padding:1px 8px;color:var(--gold);font-size:11px}.red{color:var(--red)}.green{color:var(--green)}.chart{width:100%;height:auto;display:block}.chart text{fill:var(--muted);font:13px system-ui}.chart .axis{stroke:var(--edge)}.statline{display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid var(--edge);padding:7px 0}.statline strong{text-align:right}.bar{height:6px;background:#373f33;border-radius:4px;margin:4px 0 10px}.bar span{display:block;height:100%;background:var(--gold);border-radius:4px}.map{position:relative;aspect-ratio:1.57;background:repeating-linear-gradient(0deg,transparent 0 24px,#292f27 25px),repeating-linear-gradient(90deg,#171c17 0 24px,#292f27 25px);border-radius:8px;overflow:hidden}.map button{position:absolute;transform:translate(-50%,-50%);font-size:10px;padding:2px 4px;line-height:1.3;z-index:1}.map button.hot{border-color:var(--gold)}.map button:hover,.map button:focus{z-index:4}.maplabel{position:absolute;transform:translate(-50%,-50%);font-size:10px;white-space:nowrap;color:#d2d6c8;pointer-events:none;background:#171c17;padding:0 3px}.controls{display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-bottom:12px}.controls label{display:grid;gap:3px;color:var(--muted);font-size:12px}.columns{columns:2;column-gap:24px}.columns li{break-inside:avoid;margin-bottom:.45rem}details{border-top:1px solid var(--edge);padding:10px 0}summary{cursor:pointer;color:var(--gold)}footer{padding:22px 0 35px;color:var(--muted);font-size:12px}ul{padding-left:20px}.skip{position:absolute;left:8px;top:-100px}.skip:focus{top:8px;z-index:10;background:var(--bg);padding:6px}.legend{display:flex;gap:14px;flex-wrap:wrap;color:var(--muted);font-size:12px}.key{display:inline-block;width:11px;height:3px;vertical-align:middle;margin-right:4px}svg [data-point]:focus{outline:none;stroke:white;stroke-width:3}
+@media(max-width:850px){.split,.hero{grid-template-columns:1fr}.hero{gap:15px}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.filters .scope{margin-left:0}}@media(max-width:520px){.wrap{padding-inline:14px}.hero{padding-block:25px 18px}.brand .sub{display:none}.card,.panel{padding:12px}.columns{columns:1}.map button{font-size:8px;padding:1px 2px}}
+</style></head>
+<body><a class="skip" href="#main">Skip to dashboard</a>
+<header><div class="wrap brand"><strong><span class="mark" aria-hidden="true">♦</span>The Gilded Ace</strong><span class="sub">Dashboard Royale / Las Vegas, NV</span></div></header>
+<main class="wrap" id="main"><section class="hero"><div><div class="eyebrow">Floor intelligence · H1 2025</div><h1>Luck, location, or a leak?</h1><p>Follow the dollars from the bottom-ten ranking to the evidence behind each cabinet.</p></div><div class="decision"><div class="eyebrow">July decision · Full-period evidence</div><strong>Cancel the blanket replacement.</strong><p><strong id="decision-summary"></strong></p><div class="quick"><button data-evidence="M-1158" data-section="hold-check">Inspect M-1158 evidence</button><button data-jump="move-check">See the relocation evidence</button></div></div></section>
+<div class="filters" aria-label="Analysis filters"><label>From month<select id="from"></select></label><label>Through month<select id="through"></select></label><label>Bank<select id="bank"></select></label><button id="reset">Reset filters</button><span class="scope" id="scope" role="status"></span></div>
+<nav class="nav" aria-label="Dashboard sections"><button data-tab="audit" aria-pressed="true">01 · Machine audit</button><button data-tab="demand" aria-pressed="false">02 · Demand & uptime</button><button data-tab="guests" aria-pressed="false">03 · Guests & comps</button><button data-tab="model" aria-pressed="false">04 · Forecast validation</button><button data-tab="plan" aria-pressed="false">05 · July decision</button></nav>
+<div id="view"></div>
+<footer>Fictional casino · Synthetic property and player data · <a href="https://github.com/tamu-datathon-org/dashboard-royale">Official challenge data and guide</a> · <span id="revision"></span></footer></main>
+<script id="data" type="application/json">/*__DATA__*/null</script>
+<script>
+'use strict';
+const data = JSON.parse(document.querySelector('#data').textContent);
+const $ = id => document.getElementById(id);
+const months = ['Jan','Feb','Mar','Apr','May','Jun'];
+const dict = data.dicts;
+const zones = Object.fromEntries(data.locations.filter(x=>x[1]==='zone').map(x=>[x[0],x[3]]));
+const fullDays = data.dates.length;
+const shifts = ['06:00–14:00','14:00–22:00','22:00–06:00'];
+const state = {from:0,to:5,bank:'',tab:'audit',machine:'',sort:'win',reverse:false,all:false,region:'',tier:''};
+const auditRows = data.daily.map(r=>({
+  d:r[0], id:dict.machine_id[r[1]], bank:dict.bank_id[r[2]], zone:dict.zone_id[r[3]],
+  config:dict.config_id[r[4]], theme:dict.theme[r[5]], volatility:dict.volatility_class[r[6]], make:dict.manufacturer[r[7]],
+  h:r[8], down:r[9], coin:r[10], win:r[11], theo:r[12], floor:r[13], local:r[14], zonePeer:r[15],
+  lost:r[16], lostTheo:r[17], contrib:r[18], slot:dict.location_id[r[19]], occupied:r[20],
+}));
+const zoneBanks = data.locations.filter(r=>r[1]==='bank');
+const week = d => Math.floor((d+2)/7);
+const month = d => Number(d.slice(5,7))-1;
+const n = (v, digits=0) => v==null||!Number.isFinite(v)?'—':v.toLocaleString('en-US',{minimumFractionDigits:digits,maximumFractionDigits:digits});
+const cash = v => v==null||!Number.isFinite(v)?'—':(v<0?'−':'')+'$'+n(Math.abs(v));
+const pct = (v,d=1) => v==null||!Number.isFinite(v)?'—':n(100*v,d)+'%';
+const pp = v => v==null||!Number.isFinite(v)?'—':(v>0?'+':'')+n(v*100,2)+' pp';
+const ratio = (a,b) => b?a/b:null;
+const sum = (list,f) => list.reduce((a,x)=>a+(f(x)??0),0);
+const by = (list,key) => {const m=new Map();for(const r of list){const k=key(r);if(!m.has(k))m.set(k,[]);m.get(k).push(r);}return m;};
+const esc = v => String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const opt = (value,label) => '<option value="'+esc(value)+'">'+esc(label)+'</option>';
+const card = (label,value,sub='') => '<div class="card"><small>'+label+'</small><strong class="metric">'+value+'</strong><small>'+sub+'</small></div>';
+const panel = (title,body) => '<section class="panel"><h2>'+title+'</h2>'+body+'</section>';
+const line = (label,value) => '<div class="statline"><span>'+label+'</span><strong>'+value+'</strong></div>';
+const rowsTable = (headers,rows) => '<div class="tablewrap"><table><thead><tr>'+headers.map(h=>'<th scope="col">'+h+'</th>').join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+r.map(c=>'<td>'+c+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';
+const note = text => '<p class="muted">'+text+'</p>';
+const metrics = (...cards) => '<div class="grid metrics">'+cards.join('')+'</div>';
+const details = (title,body) => '<details><summary>'+title+'</summary><p>'+body+'</p></details>';
+function pNormalTwoSided(z) {
+  const t=1/(1+0.2316419*Math.abs(z));
+  return Math.min(1,2*Math.exp(-z*z/2)/Math.sqrt(2*Math.PI)*t*(0.31938153+t*(-0.356563782+t*(1.781477937+t*(-1.821255978+t*1.330274429)))));
+}
+function adjustPValues(result){
+  const tests=result.filter(x=>x.p!=null).sort((a,b)=>a.p-b.p);
+  let q=1;
+  for(let i=tests.length-1;i>=0;i--){
+    q=Math.min(q,tests[i].p*tests.length/(i+1));
+    tests[i].q=q;
+  }
+}
+function summarize(rs,totalDays) {
+  const result=[];
+  for(const [id,g] of by(rs,r=>r.id)){
+    const coin=sum(g,r=>r.coin), win=sum(g,r=>r.win), theo=sum(g,r=>r.theo), h=sum(g,r=>r.h), down=sum(g,r=>r.down);
+    const comparable=g.filter(r=>r.floor!=null && r.local!=null);
+    const localExpected=sum(comparable,r=>r.h*r.local), floorExpected=sum(comparable,r=>r.h*r.floor);
+    const res=ratio(win-theo,coin);
+    const weeks=[...by(g.filter(r=>r.coin>0),r=>week(r.d)).values()];
+    const k=weeks.length;
+    const se=k>=6 && coin>0 ? Math.sqrt(k/(k-1)*sum(weeks,w=>sum(w,r=>r.win-r.theo-res*r.coin)**2))/coin : null;
+    const middle=(g[0].d+g.at(-1).d)/2;
+    const halves=[g.filter(r=>r.d<=middle),g.filter(r=>r.d>middle)].map(a=>ratio(sum(a,r=>r.win-r.theo),sum(a,r=>r.coin)));
+    result.push({id,g,win,theo,coin,h,down,days:g.length,hold:ratio(win,coin),res,k,se,p:se>0?pNormalTwoSided(res/se):null,q:null,
+      lo:se==null?null:res-1.96*se,hi:se==null?null:res+1.96*se,halves,
+      local:ratio(sum(comparable,r=>r.coin),localExpected),zone:ratio(localExpected,floorExpected),
+      zoneCover:ratio(sum(g.filter(r=>r.zonePeer),r=>r.h),h),rate:ratio(coin,h), lost:sum(g,r=>r.lost),
+      lostTheo:sum(g,r=>r.lostTheo),contrib:sum(g,r=>r.contrib), banks:[...new Set(g.map(r=>r.bank))],
+      zones:[...new Set(g.map(r=>r.zone))],totalDays});
+  }
+  adjustPValues(result);
+  for(const x of result){
+    const flags=[];
+    if(x.q!=null&&x.q<.05&&x.res<0&&x.halves.every(v=>v!=null&&v<0))flags.push('Inspect hold');
+    if(x.days/x.totalDays<.7)flags.push('Short exposure');
+    if(ratio(x.down,x.h+x.down)>.02)flags.push('Downtime');
+    if(x.zoneCover>=.5&&x.zone!=null&&x.zone<.8)flags.push('Quiet zone');
+    if(x.local!=null&&x.local<.8)flags.push('Low peer demand');
+    x.flags=flags;
+  }
+  return result;
+}
+const fullSummary=summarize(auditRows,fullDays).sort((a,b)=>a.win-b.win);
+function chart(series,labels,{format=n,min=null,max=null,height=240}={}) {
+  const width=720,left=78,right=18,top=16,bottom=32;
+  const all=series.flatMap(s=>s.values).filter(Number.isFinite);
+  if(!all.length)return note('No observations for this selection.');
+  const lo=min??Math.min(...all), hi=max??Math.max(...all);
+  const range=hi-lo||1, x=i=>left+(width-left-right)*(labels.length===1?.5:i/(labels.length-1)),y=v=>top+(height-top-bottom)*(1-(v-lo)/range);
+  const ticks=Array.from({length:5},(_,i)=>lo+range*i/4);
+  const grid=ticks.map(v=>'<path class="axis" d="M'+left+' '+y(v)+'H'+(width-right)+'"/><text x="'+(left-8)+'" y="'+(y(v)+4)+'" text-anchor="end">'+esc(format(v))+'</text>').join('');
+  const tickStep=Math.ceil((labels.length-1)/6);
+  const axis=labels.map((label,i)=>labels.length<=8||i===labels.length-1||(i%tickStep===0&&labels.length-1-i>=tickStep/2)?'<text x="'+x(i)+'" y="'+(height-8)+'" text-anchor="'+(i===0&&labels.length>1?'start':i===labels.length-1&&labels.length>1?'end':'middle')+'">'+esc(label)+'</text>':'').join('');
+  const traces=series.map(s=>{
+    let path='',prev=false;
+    s.values.forEach((v,i)=>{if(!Number.isFinite(v)){prev=false;return;}path+=(prev?'L':'M')+x(i)+' '+y(v)+' ';prev=true;});
+    const dots=s.values.map((v,i)=>Number.isFinite(v)&&labels.length<=12?'<circle data-point tabindex="0" aria-label="'+esc(labels[i]+' '+s.name+' '+format(v))+'" cx="'+x(i)+'" cy="'+y(v)+'" r="4" fill="'+s.color+'"><title>'+esc(labels[i]+' · '+s.name+' · '+format(v))+'</title></circle>':'').join('');
+    return '<path d="'+path+'" fill="none" stroke="'+s.color+'" stroke-width="2.6" '+(s.dash?'stroke-dasharray="6 5"':'')+'/>'+dots;
+  }).join('');
+  return '<svg class="chart" viewBox="0 0 '+width+' '+height+'" role="group" aria-label="'+esc(series.map(s=>s.name).join(', '))+'">'+grid+axis+traces+'</svg><div class="legend">'+series.map(s=>'<span><i class="key" style="background:'+s.color+'"></i>'+esc(s.name)+'</span>').join('')+'</div>';
+}
+const gold='#f1cc79',green='#a5d3a7',red='#ffa79b';
+const compact = v => (v<0?'−':'')+'$'+(Math.abs(v)>=1e6?n(Math.abs(v)/1e6,2)+'m':n(Math.abs(v)/1000)+'k');
+const signedPct = v => v==null?'—':(v>0?'+':'')+pct(v);
+function scope(){
+  const dates=data.dates.filter(d=>month(d)>=state.from&&month(d)<=state.to);
+  const start=data.dates.indexOf(dates[0]),end=data.dates.indexOf(dates.at(-1));
+  const rows=auditRows.filter(r=>r.d>=start&&r.d<=end&&(!state.bank||r.bank===state.bank));
+  return {dates,start,end,rows,props:data.property.slice(start,end+1)};
+}
+function reviewAction(machine){
+  if(machine.flags.includes('Inspect hold'))return 'Inspect payout';
+  if(machine.flags.includes('Downtime'))return 'Review uptime';
+  if(machine.flags.includes('Short exposure'))return 'Review placement dates';
+  if(machine.id===move.id&&machine.flags.includes('Quiet zone'))return 'Relocation pilot candidate';
+  if(machine.flags.includes('Low peer demand'))return 'Investigate weak demand';
+  if(machine.flags.includes('Quiet zone'))return 'Keep in service · monitor location';
+  return 'Monitor';
+}
+function renderAudit(s){
+  const all=summarize(s.rows,s.dates.length).sort((a,b)=>a.win-b.win);
+  const bottom=all.slice(0,10);
+  const mapHot=new Set(bottom.flatMap(x=>x.banks));
+  if(!all.some(x=>x.id===state.machine))state.machine=bottom[0]?.id??'';
+  const chosen=all.find(x=>x.id===state.machine);
+  const displayed=(state.all?all:bottom).slice().sort((a,b)=>{
+    const x=a[state.sort],y=b[state.sort];
+    if(x==null)return y==null?0:1;if(y==null)return -1;
+    return (state.reverse?-1:1)*(typeof x==='string'?x.localeCompare(y):x-y);
+  });
+  const columns=[['id','Machine'],['win','House win'],['days',state.bank?'Days in bank':'Days on floor'],['local','Local peer'],['zone','Zone vs floor'],['down','Down hours'],['res','Hold gap']];
+  const table=rowsTable(['#',...columns.map(([key,title])=>'<button data-sort="'+key+'" title="Sort by '+title+'">'+title+(state.sort===key?(state.reverse?' ↓':' ↑'):'')+'</button>'),'Suggested action'],
+    displayed.map(x=>[all.indexOf(x)+1,'<button data-machine="'+x.id+'" aria-pressed="'+(x.id===state.machine)+'">'+x.id+'</button>',cash(x.win),n(x.days),pct(x.local,0),pct(x.zone,0),n(x.down,1),pp(x.res),'<strong>'+reviewAction(x)+'</strong>']));
+  const map='<div class="map" aria-label="Floor banks by position">'+zoneBanks.map(r=>{
+    const left=5+r[4]*.67,top=8+r[5]*.69;
+    return '<button class="'+(mapHot.has(r[0])?'hot':'')+'" style="left:'+left+'%;top:'+top+'%" data-bank="'+r[0]+'" aria-pressed="'+(state.bank===r[0])+'" aria-label="'+r[0]+', '+esc(zones[r[2]])+'" title="'+r[0]+' · '+esc(zones[r[2]])+'">'+r[0].slice(2)+'</button>';
+  }).join('')+data.locations.filter(r=>r[1]==='zone').map(r=>'<span class="maplabel" style="left:'+(5+r[4]*.67)+'%;top:'+Math.max(4,8+r[5]*.69-13)+'%">'+esc(r[3])+'</span>').join('')+'</div>';
+  let drill=note('No machines in this bank and period.');
+  if(chosen){
+    const x=chosen, latest=x.g.at(-1);
+    const blocks=[...by(x.g,r=>data.dates[r.d].slice(0,7)).entries()];
+    drill='<div class="eyebrow">'+esc(latest.theme)+' · '+esc(latest.volatility)+' volatility</div>'+
+      line('Banks during selection',x.banks.join(', '))+line('Zones during selection',x.zones.map(z=>esc(zones[z])).join(', '))+
+      line('Latest slot in selection',esc(latest.slot))+line('Expected house win',cash(x.theo))+line('Coin-in per available hour',cash(x.rate))+
+      line('Review signals',x.flags.join(' · ')||'No threshold crossed')+line('Observed vs configured hold',pct(x.hold,2)+' / '+pct(ratio(x.theo,x.coin),2))+
+      line('Hold gap, approximate 95% interval',x.lo==null?'Insufficient weeks':pp(x.lo)+' to '+pp(x.hi))+
+      line('Adjusted q · weeks with play',(x.q==null?'—':x.q<.001?'&lt;0.001':n(x.q,3))+' · '+x.k)+
+      line('Hold gap, first / second half',x.halves.map(v=>pp(v)).join(' / '))+
+      line('Zone peers vs floor peers',pct(x.zone,0))+
+      line('Hours with zone-specific benchmark',pct(x.zoneCover,0))+
+      line('Availability',pct(ratio(x.h,x.h+x.down),2))+
+      line('Estimated downtime coin-in / theo',cash(x.lost)+' / '+cash(x.lostTheo))+
+      line('Contribution after supplied machine costs',cash(x.contrib))+
+      '<p class="muted">Monthly house win and configured expectation</p>'+
+      chart([{name:'House win',color:gold,values:blocks.map(([,a])=>sum(a,r=>r.win))},{name:'Expected win',color:green,values:blocks.map(([,a])=>sum(a,r=>r.theo))}],blocks.map(([m])=>months[month(m+'-01')]),{format:compact,height:200});
+  }
+  return metrics(card('Bottom cohort',n(bottom.length)+' / '+n(all.length),'Machines by raw house win'),card('Inspect hold',n(bottom.filter(x=>x.flags.includes('Inspect hold')).length),'Persistent shortfall with q < 0.05'),card('Below local peers',n(bottom.filter(x=>x.flags.includes('Low peer demand')).length),'Under 80% of matched coin-in/hour'),card('Bottom cohort downtime',n(sum(bottom,x=>x.down),1)+' h',cash(sum(bottom,x=>x.lost))+' estimated coin-in at risk'))+
+    '<div class="stack">'+panel('The replacement shortlist',note('Rank #1 earned the least. Local peer compares this cabinet with matched games in its zone. Zone vs floor compares those peers with matching games across the property. Click a machine for its full evidence and screening flags. Suggested actions reflect the selected scope.')+'<div class="controls"><button id="show-all" aria-pressed="'+state.all+'">'+(state.all?'Show bottom 10':'Show all machines')+'</button></div>'+table)+
+    '<div class="grid split">'+panel(chosen?'Machine file · '+chosen.id:'Machine file',drill+(chosen?.id===inspect.id?'<button data-evidence="M-1158" data-section="hold-check">Open weekly payout check</button>':''))+panel('Floor map',note('Gold outlines mark banks with a machine in this shortlist. Select a bank to filter the review.')+map)+'</div>'+
+    (chosen?.id===inspect.id?renderHoldCheck():'')+panel('How to read the audit',details('Exposure, local demand and placement','We compare observed coin-in with expected coin-in at the same available hours. Each day uses other cabinets with the same configuration in the same zone when at least four peers exist. Sparse groups use a six-month zone index normalized against same-day floor peers and excluding the focal cabinet; where the pooled denominator is below $5,000, the comparator falls back to the floor. Zone peers vs floor peers isolates a location association, with fallback days included. A quiet-zone flag requires at least half of available hours to have a zone-specific comparison. Moves are reflected on their effective dates.')+
+    details('Payout variation and review thresholds','Hold gap = (house win − configured theoretical win) ÷ total coin-in. Intervals use a weekly clustered standard error with a normal approximation and at least six wagering weeks. Two-sided p-values receive Benjamini–Hochberg adjustment across eligible machines in the current scope. An inspection flag also requires negative gaps in both halves. Intervals are pointwise and are less reliable with few weeks or rare jackpots. Thresholds of 80% peer demand, 70% exposure and 2% downtime are screening rules. The peer demand analysis is retrospective and cannot establish placement causality.'))+'</div>';
+}
+function demandBridge(base,current){
+  if(!base||!current||base.m===current.m||!base.intensity||!current.intensity){
+    return note('Select at least two months with occupied play to compare the drivers of daily wagers.');
+  }
+  const timeEffect=(current.occupied-base.occupied)*(base.intensity+current.intensity)/2;
+  const rateEffect=(current.intensity-base.intensity)*(base.occupied+current.occupied)/2;
+  const change=(a,b)=>a?signedPct(b/a-1):'—';
+  return note('From '+months[base.m]+' to '+months[current.m]+', daily wagers changed '+change(base.coin,current.coin)+
+    '. Playing time contributed '+cash(timeEffect)+' per day and wagers per occupied hour contributed '+cash(rateEffect)+' per day.')+
+    rowsTable(['Driver',months[base.m],months[current.m],'Change'],[
+      ['Coin-in per day',cash(base.coin),cash(current.coin),change(base.coin,current.coin)],
+      ['Available machine-hours per day',n(base.available,1),n(current.available,1),change(base.available,current.available)],
+      ['Occupied machine-hours per day',n(base.occupied,1),n(current.occupied,1),change(base.occupied,current.occupied)],
+      ['Coin-in per occupied hour',cash(base.intensity),cash(current.intensity),change(base.intensity,current.intensity)]
+    ])+note('Daily wagers equal occupied hours per day × wagers per occupied hour. The dollar bridge weights each change by the other factor’s two-month average, so both effects add to the total change. The comparison describes where wagers changed. Visitor traffic, game mix, and other causes can still influence the result.');
+}
+function renderDemand(s){
+  const daily=[...by(s.rows,r=>r.d).entries()].sort((a,b)=>a[0]-b[0]);
+  const blocks=[...by(daily,([d])=>month(data.dates[d])).entries()];
+  const monthly=blocks.map(([m,days])=>{
+    const records=days.flatMap(([,r])=>r);
+    const p=s.props.filter(r=>month(r[0])===m);
+    const coverage=sum(p,r=>r[7])/p.length;
+    const coin=sum(records,r=>r.coin), occupied=sum(records,r=>r.occupied);
+    return {m,coin:coin/days.length,days:days.length,down:sum(records,r=>r.down),lost:sum(records,r=>r.lost),
+      available:sum(records,r=>r.h)/days.length,occupied:occupied/days.length,intensity:ratio(coin,occupied),
+      entrance:sum(p,r=>r[6])/p.length,coverage,city:data.city.find(c=>month(c[0]+'-01')===m)?.[1]};
+  });
+  const perDay=daily.map(([d,r])=>({date:data.dates[d],coin:sum(r,x=>x.coin),lost:sum(r,x=>x.lost),down:sum(r,x=>x.down)}));
+  const events=data.events.map(([name,start,end,scopeName])=>{
+    const treated=perDay.filter(r=>r.date>=start&&r.date<=end);
+    const reference=treated.map(r=>{
+      const candidates=perDay.filter(x=>x.date.slice(0,7)===r.date.slice(0,7)&&data.property[data.dates.indexOf(x.date)][1]===data.property[data.dates.indexOf(r.date)][1]&&!data.property[data.dates.indexOf(x.date)][2]);
+      return {observed:r.coin,base:ratio(sum(candidates,x=>x.coin),candidates.length)};
+    }).filter(x=>x.base!=null);
+    return {name,scopeName,days:reference.length,lift:ratio(sum(reference,x=>x.observed),sum(reference,x=>x.base))};
+  }).filter(x=>x.days);
+  const down=sum(s.rows,r=>r.down),lost=sum(s.rows,r=>r.lost),theo=sum(s.rows,r=>r.lostTheo);
+  const byMake=[...by(s.rows,r=>r.make).entries()].map(([name,g])=>[name,sum(g,r=>r.down),sum(g,r=>r.lostTheo),ratio(sum(g,r=>r.down),sum(g,r=>r.down+r.h))]).sort((a,b)=>b[1]-a[1]);
+  const worst=perDay.slice().sort((a,b)=>b.lost-a.lost).slice(0,5);
+  const tickets=data.shifts.filter(r=>r[0]>=s.dates[0]&&r[0]<=s.dates.at(-1)&&(!state.bank||r[1]===state.bank));
+  const first=monthly[0],last=monthly.at(-1);
+  const reference=monthly.slice(0,-1).reduce((peak,m)=>!peak||m.coin>peak.coin?m:peak,null);
+  return metrics(card('Coin-in',cash(sum(s.rows,r=>r.coin)),'All play · wagers including replay'),card('Out-of-service time',n(down,1)+' h','Scheduled minus available machine hours'),card('Estimated coin-in at risk',cash(lost),'Historical same-weekday available rate'),card('Estimated theo at risk',cash(theo),'Before guest substitution or incremental costs'))+
+    '<div class="stack">'+panel('Demand across the period',(first&&last&&first!==last?note('Average daily coin-in changed '+pct(last.coin/first.coin-1)+' from '+months[first.m]+' to '+months[last.m]+'. City visitation and property counters provide context, while event comparisons control for weekday within month.'):note('Select multiple months to compare average daily demand.'))+
+    chart([{name:'Average daily coin-in',color:gold,values:monthly.map(r=>r.coin)}],monthly.map(r=>months[r.m]),{format:compact})+
+    rowsTable(['Month','Gaming days with play','Coin-in/day','Property entrance entries/day','Property counter coverage','Vegas visitors/day'],monthly.map(r=>[months[r.m],n(r.days),cash(r.coin),n(r.entrance),pct(r.coverage),n(r.city)]))+
+    note('Entrance counts are observed crossings. Coverage is the property-wide sensor coverage share. City visitation is retrospective context. <a href="'+esc(data.city[0][2])+'">LVCVA revised 2025 summary</a>'))+
+    panel('What drove the change in wagers?',note('Compare the latest selected month with the highest-wager earlier month in the selection.')+demandBridge(reference,last))+
+    '<div class="grid split">'+panel('When downtime cost the most',chart([{name:'Estimated coin-in at risk',color:red,values:monthly.map(r=>r.lost)}],monthly.map(r=>months[r.m]),{format:compact,height:190})+
+    rowsTable(['Highest-risk days','Down hours','Coin-in at risk'],worst.map(r=>[r.date,n(r.down,1),cash(r.lost)])))+
+    panel('Where to look for repairs',rowsTable(['Manufacturer','Down hours','Scheduled share','Theo at risk'],byMake.map(r=>[esc(r[0]),n(r[1],1),pct(r[3],2),cash(r[2])]))+
+    '<h3 style="margin-top:16px">Fault ticket hours by Vegas shift</h3>'+rowsTable(['Shift','Open → restored','Before work started'],shifts.map((name,i)=>[name,n(sum(tickets.filter(r=>r[2]===i),r=>r[3]),1),n(sum(tickets.filter(r=>r[2]===i),r=>r[4]),1)]))+note('Ticket hours can overlap and cover fault repairs only. Meter downtime is the basis for estimated lost play.'))+'</div>'+
+    panel('Event days vs similar weekdays',rowsTable(['Event','Scope','Matched days','Coin-in vs non-event days'],events.map(r=>[esc(r.name),esc(r.scopeName),r.days,(r.lift>=1?'+':'')+pct(r.lift-1)]))+
+    note('Reference days share the weekday and calendar month and have no recorded event. Traffic, promotions and other changes can still confound the comparison.'))+
+    panel('Downtime estimate',details('Counterfactual and uncertainty','For each placed cabinet-day, subtract available time from the actual gaming-day length, including the 23-hour daylight-saving day. Multiply the lost hours by that cabinet’s wager rate on other fully available days of the same weekday, requiring at least 48 such hours. Otherwise use the matched peer rate. Expected house win at risk multiplies by configured hold. This retrospective estimate assumes equal demand across available and unavailable hours within the day. A low-to-high recovery scenario of 25%–75% implies '+cash(.25*theo)+'–'+cash(.75*theo)+' in expected win for the selected historical period before cost. The remainder can reflect substitution, timing or downtime that can’t be avoided.'))+'</div>';
+}
+const regions=[...new Set(data.players.map(r=>r[2]))].sort();
+const tiers=[...new Set(data.players.map(r=>r[3]))].sort();
+function renderGuests(s){
+  const filtered=data.players.filter(r=>r[1]>=state.from&&r[1]<=state.to&&(!state.region||state.region===r[2])&&(!state.tier||state.tier===r[3]));
+  const people=new Map();
+  for(const r of filtered){
+    const x=people.get(r[0])??[0,0];
+    x[0]+=r[4];x[1]+=Math.round(r[6]*100);people.set(r[0],x);
+  }
+  const p=[...people.values()], cut=Math.ceil(p.length*.01);
+  const coin=sum(filtered,r=>r[4]), payout=sum(filtered,r=>r[5]),net=sum(p,r=>r[1])/100;
+  const grossLoss=sum(p,r=>Math.max(0,-r[1]));
+  const topCoin=sum(p.slice().sort((a,b)=>b[0]-a[0]).slice(0,cut),r=>r[0]);
+  const topLoss=sum(p.slice().sort((a,b)=>a[1]-b[1]).slice(0,cut),r=>Math.max(0,-r[1]));
+  const groupCost=sum(filtered,r=>r[8]), allCost=sum(s.props,r=>r[9]),face=sum(s.props,r=>r[8]);
+  const blocks=[...by(s.props,r=>month(r[0])).entries()].map(([m,r])=>[m,sum(r,x=>x[8]),sum(r,x=>x[9]),sum(r,x=>x[5]),sum(filtered.filter(p=>p[1]===m),p=>p[8])]);
+  const high=n(p.filter(r=>r[1]>0).length), low=n(p.filter(r=>r[1]<0).length);
+  return '<div class="controls"><label>Home region<select id="region">'+opt('','All regions')+regions.map(r=>opt(r,r)).join('')+'</select></label><label>Opening tier<select id="tier">'+opt('','All tiers')+tiers.map(t=>opt(t,t)).join('')+'</select></label><small>Guest filters apply to carded play and the selected group’s comps. Bank filters do not apply on this tab.</small></div>'+
+    metrics(card('Carded coin-in',cash(coin),n(p.length)+' distinct tracked players'),card('Returned to players',cash(payout),'Payouts on tracked play'),card('Player net',cash(net),'Payouts minus wagers'),card('Property comp cost',cash(allCost),cash(face)+' face value · selected months'))+
+    '<div class="stack"><div class="grid split">'+panel('Who accounted for play and losses',line('Top 1% of players by wagers',pct(ratio(topCoin,coin))+' of tracked wagers')+line('Top 1% by losses',pct(ratio(topLoss,grossLoss))+' of gross tracked losses')+line('Players ending ahead / behind',high+' / '+low)+line('Gross losses among losing players',cash(grossLoss/100))+note('Players are aggregated across selected months before ranking. Rankings are independent and use aggregate groups. Zero-net players are excluded from the ahead/behind count.'))+
+    panel('What comps actually cost',line('Selected group cost',cash(groupCost))+line('Group comp face value',cash(sum(filtered,r=>r[7])))+line('Group cost / tracked expected win',pct(ratio(groupCost,sum(filtered,r=>r[9])),2))+line('Property cost / face value',pct(ratio(allCost,face),2))+note('Property comp cost is included in POS cost of goods. Subtract it once when calculating contribution. Player results cover loyalty-card play only.'))+'</div>'+
+    panel('Monthly loyalty economics',chart([{name:'Property comp cost as share of expected slot win',color:gold,values:blocks.map(r=>r[3]?r[2]/r[3]:null)}],blocks.map(r=>months[r[0]]),{format:v=>pct(v,2),height:190})+
+    rowsTable(['Month','Property face value','Property comp cost','Cost / expected win','Selected group cost'],blocks.map(r=>[months[r[0]],cash(r[1]),cash(r[2]),pct(ratio(r[2],r[3]),2),cash(r[4])]))+
+    note('A higher dollar cost can reflect more redemptions or a different mix. Cost per expected slot dollar is an intensity measure and does not identify a policy change.'))+'</div>';
+}
+const holdout=data.property.filter(r=>r[0]>='2025-05-01');
+const mae=(a,i)=>sum(a,r=>Math.abs(r[3]-r[i]))/a.length;
+const m1=mae(holdout,10),m0=mae(holdout,11);
+const peakThreshold=1500000, quietThreshold=1250000;
+const schedulingTier=coin=>coin>=peakThreshold?'Peak':coin<quietThreshold?'Quiet':'Regular';
+function schedulingScore(tier,column){
+  let hits=0, missed=0, falseFlags=0;
+  for(const day of holdout){
+    const actual=schedulingTier(day[3])===tier, predicted=schedulingTier(day[column])===tier;
+    if(actual&&predicted)hits++;
+    if(actual&&!predicted)missed++;
+    if(!actual&&predicted)falseFlags++;
+  }
+  return {hits,missed,falseFlags};
+}
+function renderSchedulingScores(){
+  const rows=['Peak','Quiet'].flatMap(tier=>[['Weekday forecast',10],['Constant baseline',11]].map(([model,column])=>{
+    const {hits,missed,falseFlags}=schedulingScore(tier,column);
+    return [tier,model,n(hits+missed),n(hits),n(missed),n(falseFlags)];
+  }));
+  return note('Use the existing scheduling cutoffs on the same 61 holdout days. Peak means at least '+cash(peakThreshold)+' wagered and quiet means below '+cash(quietThreshold)+'. A false flag is a day assigned to that tier whose actual wagers fell outside it.')+
+    rowsTable(['Day type','Model','Actual days','Correct flags','Missed days','False flags'],rows);
+}
+function renderModel(){
+  const weekday=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const july=Array.from({length:30},(_,i)=>new Date(Date.UTC(2025,6,i+1))).map(d=>({date:d.toISOString().slice(0,10),day:weekday[(d.getUTCDay()+6)%7]}));
+  const sample=Object.fromEntries(data.property.slice(0,14).map(r=>[r[1],r[10]]));
+  const peak=july.filter(d=>schedulingTier(sample[d.day])==='Peak').map(d=>d.date.slice(8));
+  const monthly=[...by(holdout,r=>month(r[0])).entries()];
+  return metrics(card('Weekday forecast MAE',cash(m1),'May–Jun holdout · 61 gaming days'),card('Constant baseline MAE',cash(m0),'Same holdout'),card('Error reduction',pct(1-m1/m0),'Versus constant training average'),card('July peak days',n(peak.length),'Forecast ≥ $1.5m daily coin-in'))+
+    '<div class="stack">'+panel('A fair test on future days',note('The models were fit on Jan 1–Apr 30 and frozen before testing May 1–Jun 30. This validation view always uses the full property and fixed holdout.')+
+    chart([{name:'Actual',color:gold,values:holdout.map(r=>r[3])},{name:'Weekday forecast',color:green,values:holdout.map(r=>r[10])},{name:'Constant baseline',color:red,dash:true,values:holdout.map(r=>r[11])}],holdout.map(r=>r[0].slice(5)),{format:compact})+
+    rowsTable(['Holdout','Days','Weekday MAE','Baseline MAE'],monthly.map(([m,r])=>[months[m],r.length,cash(mae(r,10)),cash(mae(r,11))])))+
+    panel('Did the forecast flag the right days?',renderSchedulingScores())+
+    panel('Use the forecast to schedule disruptions',note('Use existing coverage on peak days and schedule cabinet work in quieter weekday windows. The weekday model flags July '+peak.join(', ')+'. The constant model assigns the same workload to every day.')+
+    rowsTable(['Weekday','Frozen daily coin-in forecast','Scheduling tier'],weekday.map(day=>[day,cash(sample[day]),schedulingTier(sample[day])]))+
+    details('Inputs, limits and reproducibility','The weekday forecast is the training-set mean coin-in for each weekday. The baseline is the training-set daily mean. MAE averages the absolute dollar error per holdout day. Neither model uses holdout wagers, traffic, revised tourism data or event outcomes. The $1.5m and $1.25m tiers are operational planning assumptions. The model ranks days at property level. For within-day scheduling, confirm low bank traffic with live observations.'))+'</div>';
+}
+const inspect=fullSummary.find(x=>x.id==='M-1158');
+const focalWeeks=[...by(inspect.g,r=>week(r.d)).entries()];
+const holdGap = g=>ratio(sum(g,r=>r.win-r.theo),sum(g,r=>r.coin));
+const worstWeek=focalWeeks.reduce((worst,current)=>holdGap(current[1])<holdGap(worst[1])?current:worst);
+const leaveOneOut=focalWeeks.map(([w])=>{
+  const [estimate]=summarize(inspect.g.filter(r=>week(r.d)!==w),fullDays);
+  adjustPValues(fullSummary.map(r=>r.id===inspect.id?estimate:{p:r.p}));
+  return estimate;
+});
+const withoutWorst=leaveOneOut[focalWeeks.indexOf(worstWeek)];
+const maxLeaveOneOutQ=Math.max(...leaveOneOut.map(r=>r.q));
+const inspectPeers=auditRows.filter(r=>r.id!==inspect.id&&r.config===inspect.g[0].config);
+const peerWeeks=by(inspectPeers,r=>week(r.d));
+const weekLabel=w=>data.dates[Math.max(0,w*7-2)].slice(5);
+function renderHoldCheck(){
+  const labels=focalWeeks.map(([w])=>weekLabel(w));
+  const values=focalWeeks.map(([,g])=>holdGap(g));
+  const peerValues=focalWeeks.map(([w])=>holdGap(peerWeeks.get(w)??[]));
+  const negative=values.filter(v=>v<0).length;
+  return '<section id="hold-check" class="panel" tabindex="-1"><h2>M-1158 · Weekly payout check</h2>'+
+    note('Fixed January–June evidence. M-1158 had a negative hold gap in '+negative+' of '+values.length+' weeks. Same-configuration floor peers are pooled by wagers.')+
+    chart([{name:'M-1158 hold gap',color:red,values},{name:'Same-configuration peers',color:green,values:peerValues},{name:'Configured expectation',color:gold,dash:true,values:labels.map(()=>0)}],labels,{format:pp})+
+    line('Full-period hold gap',pp(inspect.res))+line('After dropping worst week (week of '+weekLabel(worstWeek[0])+')',pp(withoutWorst.res))+
+    line('Sensitivity interval and adjusted q',pp(withoutWorst.lo)+' to '+pp(withoutWorst.hi)+' · q '+(withoutWorst.q<.001?'&lt; 0.001':n(withoutWorst.q,3)))+
+    line('Largest adjusted q after dropping any one week',maxLeaveOneOutQ<.001?'&lt; 0.001':n(maxLeaveOneOutQ,3))+
+    details('How this check works','Drop the week with the most negative observed hold gap, recalculate the machine’s weekly-clustered interval and reapply the multiple-test adjustment with the other cabinets unchanged. Repeat for every single week to check sensitivity to any choice of excluded week. Peer gaps provide context for whether the configuration broadly behaved the same way. The first and last gaming weeks are partial.')+'</section>';
+}
+const move=fullSummary.find(x=>x.id==='M-1181');
+const last=move.g.at(-1);
+const destination=data.vacancies.find(r=>r[0]==='L-07-3');
+const june=move.g.filter(r=>month(data.dates[r.d])===5);
+const destinationPeers=auditRows.filter(r=>r.zone===destination[2]&&r.config===last.config&&month(data.dates[r.d])===5);
+const recentRate=ratio(sum(june,r=>r.theo),sum(june,r=>r.h));
+const destinationRate=ratio(sum(destinationPeers,r=>r.theo),sum(destinationPeers,r=>r.h));
+const catalogue=Object.fromEntries(data.actions.map(r=>[r[0],r]));
+const inspection=catalogue['A-INSPECT'], relocation=catalogue['A-MOVE-MACHINE'];
+const actionCost=a=>(a[2]+a[3]*Math.max(0,30-a[4]))/100;
+const moveCost=actionCost(relocation), inspectionCost=actionCost(inspection);
+const hoursAfterLead=sum(june,r=>r.h)/june.length*(30-relocation[4]);
+const disruption=recentRate*relocation[5]/60;
+const grossLift=(destinationRate-recentRate)*(hoursAfterLead-relocation[5]/60);
+const netMove=(capture,displacement)=>grossLift*capture*(1-displacement)-disruption-moveCost;
+const moveBreakEven=(moveCost+disruption)/grossLift;
+function renderMoveSensitivity(){
+  const displacement=[0,.10,.25,.50];
+  const capture=[.25,.50,.75];
+  return note('Each cell shows July incremental expected house win after move cost, three hours of disruption, and displaced expected win. Displacement is the share of the relocated cabinet’s incremental expected win offset by losses elsewhere.')+
+    rowsTable(['Placement gap captured',...displacement.map(x=>pct(x,0)+' displaced')],capture.map(x=>[pct(x,0),...displacement.map(d=>cash(netMove(x,d)))]))+
+    line('Break-even placement capture at 0% / 25% displacement',pct(moveBreakEven,0)+' / '+pct(moveBreakEven/.75,0))+
+    note('These inputs are scenarios. The placement gap comes from June same-configuration rates; the four historical moves cannot estimate a reliable displacement rate. Other operating costs are outside the estimate.');
+}
+const reserve=100000-moveCost-inspectionCost;
+function renderMoves(){
+  const cases=data.moves.filter(m=>m.main);
+  const positive=cases.filter(m=>m.main.bankPct>0).length;
+  const overview=cases.map(({id,main:m,short})=>[id,m.origin+' → '+m.target,signedPct(m.cabinet),cash(m.originChange),cash(m.targetChange),signedPct(m.bankPct),signedPct(short?.bankPct)]);
+  const detailsRows=cases.map(({id,date,main:m,short})=>[id,date,m.origin+' → '+m.target,n(m.controls),
+    cash(m.pre)+' → '+cash(m.post),signedPct(m.pretrend),signedPct(m.cabinet),signedPct(short?.cabinet),
+    cash(m.originChange),cash(m.targetChange),cash(m.bankChange),signedPct(m.bankPct),signedPct(short?.bankPct)]);
+  return '<section id="move-check" class="panel" tabindex="-1"><h2>What happened after past moves?</h2>'+
+    note('Across '+cases.length+' usable moves, every receiving bank gained wagers relative to its zone benchmark while every source bank lost wagers. Only '+positive+' of '+cases.length+' bank pairs gained in aggregate over 14 days. The closest route, Back Forty to Main Entrance, gained '+pct(cases[0].main.bankPct)+' across the two banks, and the moved cabinet’s play was already improving before the move.')+
+    rowsTable(['Machine','Bank route','Cabinet rate · 14d','Source $/day','Destination $/day','Pair · 14d','Pair · 7d'],overview)+
+    '<details><summary>Full results and pre-move trends</summary>'+rowsTable(['Machine','Move date','Bank route','Cabinet peers','Coin-in/hr before → after','Pre-move relative trend','Cabinet change · 14d','Cabinet change · 7d','Source $/day','Destination $/day','Pair $/day','Pair change · 14d','Pair change · 7d'],detailsRows)+'</details>'+
+    details('Comparison design and limitations','Exclude the move day. Compare 14 days before and after against same-configuration cabinets that stayed at the same slot with complete coverage outside the affected banks. Cabinet change is the before/after ratio divided by the controls’ before/after ratio, minus one. The pre-move trend compares the two preceding seven-day blocks the same way. For each bank, subtract expected daily wagers using its pre-move wagers scaled by the before/after change of other banks in its zone. Combine the two differences and divide by their pre-move daily wagers for the pair percentage. Repeat the comparison with seven days on each side. Moves were selected operationally, pre-trends differ, and other banks could lose displaced wagers. These are descriptive comparisons.')+'</section>';
+}
+function renderPlan(){
+  const suspects=fullSummary.slice(0,10);
+  const ridgeline=auditRows.filter(r=>r.make==='Ridgeline');
+  const julyAtRisk=sum(ridgeline,r=>r.lostTheo)/fullDays*(30-catalogue['A-PREVENTIVE'][4]);
+  return metrics(card('Inspection · 1 unit',cash(inspectionCost),inspect.id+' · '+inspection[4]+' day lead'),card('Relocation · 1 unit',cash(moveCost),move.id+' · '+relocation[4]+' day lead'),card('Reserve',cash(reserve),'July 1–30 · two action types'),card('Move break-even',pct(moveBreakEven,0),'Placement gap captured at zero displacement'))+
+    '<div class="stack">'+panel('The decision and its evidence',note('This plan uses the fixed January–June audit and the June 30 placement snapshot. The global filters do not change the recommended spend.')+
+    '<div class="grid split"><div><h3>1 · Verify '+inspect.id+'’s payout configuration</h3>'+line('Observed / configured hold',pct(inspect.hold,2)+' / '+pct(ratio(inspect.theo,inspect.coin),2))+
+    line('House win below configured expectation',cash(inspect.theo-inspect.win))+line('Coin-in per hour vs local peers',pct(inspect.local,0))+
+    '<p>Book '+inspection[5]+' minutes of cabinet downtime in a quiet window after the one-day lead. Compare approved paytable and configuration, verify meter and payout handling, and review accounting and event logs. Record the findings and any remediation. If a discrepancy is confirmed and corrected, track four weeks of residuals against the same configuration, using a matched comparison.</p>'+
+    note('Budget for information. No recovered dollars are credited to the inspection. Rare outcomes or measurement issues can still explain a shortfall.')+
+    '<button data-evidence="'+inspect.id+'">Open '+inspect.id+' audit</button></div>'+
+    '<div><h3>2 · Test '+move.id+' in Center Pit</h3>'+line('Target slot','B-07 / '+destination[0]+' · vacant June 30')+
+    line('June theo per available hour',cash(recentRate)+' source / '+cash(destinationRate)+' destination peers')+
+    line('Same-config destination cabinets',n(new Set(destinationPeers.map(r=>r.id)).size))+
+    '<p>Confirm slot availability and approvals on July 1, then allow two days of lead time and schedule a three-hour move. Keep the configuration unchanged. Use M-1179 to track the moved cabinet, and pick comparison banks with similar June trends outside the affected area before the move.</p>'+
+    note('Treat the $1,800 as a pilot cost. At 50% capture the net estimate moves from '+cash(netMove(.5,0))+' with no displacement to '+cash(netMove(.5,.10))+' at 10% displacement. The four historical moves make displaced play a material concern.')+
+    '<button data-evidence="'+move.id+'">Open '+move.id+' audit</button></div></div>')+
+    panel('Relocation economics with displaced play',renderMoveSensitivity()+
+      details('Pilot measurement and expansion rule','Before the move, fix the source, destination, nearby banks, and comparison banks. Compare the 28-day July operating window, including the partial move day, with 28 days before the move, matched by weekday. Estimate incremental expected win for the affected banks as a group against the comparison trend, account for move-day downtime once, and check the rest of the floor for offsets. Use M-1179 for the separate cabinet-rate comparison. Expand only if the net floor gain clears $1,800 and the conclusion survives reasonable comparison choices. Hold if the signal is too noisy.'))+
+    renderMoves()+panel('Why keep the rest?',line('Bottom-ten cabinets flagged for quiet placement',n(suspects.filter(x=>x.flags.includes('Quiet zone')).length)+' of '+suspects.length)+
+    line('Bottom-ten cabinets flagged for downtime',n(suspects.filter(x=>x.flags.includes('Downtime')).length)+' of '+suspects.length)+
+    note('Ridgeline accounts for '+pct(sum(ridgeline,r=>r.down)/sum(auditRows,r=>r.down))+' of meter downtime. Its historical daily risk projects to '+cash(julyAtRisk)+' of theo across the 23 days after a preventive sweep’s lead time, even at 100% recovery. The sweep costs '+cash(actionCost(catalogue['A-PREVENTIVE']))+' and also takes 90 minutes per machine. Leave it out of the July plan.')+
+    note('A purchase costs '+cash(actionCost(catalogue['A-REPLACE-BUY']))+' per cabinet and leaves nine operating days after lead time. The evidence supports checking payout and testing placement first.'))+'</div>';
+}
+const renderers={audit:renderAudit,demand:renderDemand,guests:renderGuests,model:renderModel,plan:renderPlan};
+$('from').innerHTML=months.map((m,i)=>opt(i,m+' 2025')).join('');
+$('through').innerHTML=$('from').innerHTML;
+$('bank').innerHTML=opt('','All banks')+zoneBanks.map(r=>opt(r[0],r[0]+' · '+zones[r[2]])).join('');
+$('revision').textContent='Data revision '+data.revision.slice(0,7);
+$('decision-summary').textContent=fullSummary.slice(0,10).filter(x=>x.flags.includes('Quiet zone')).length+' quiet placements · 1 payout inspection · '+cash(reserve)+' reserved';
+function draw(focus){
+  $('from').value=state.from;$('through').value=state.to;$('bank').value=state.bank;
+  const s=scope();
+  $('scope').textContent=(state.tab==='model'||state.tab==='plan'?'Fixed evidence window':s.dates[0]+' – '+s.dates.at(-1))+' · '+(state.bank&&['audit','demand'].includes(state.tab)?state.bank:'Property scope');
+  document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.tab===state.tab)));
+  $('view').innerHTML=renderers[state.tab](s);
+  if(state.tab==='guests'){$('region').value=state.region;$('tier').value=state.tier;}
+  if(focus)document.querySelector(focus)?.focus({preventScroll:true});
+}
+document.addEventListener('change',e=>{
+  const {id,value}=e.target;
+  if(id==='from'){state.from=Number(value);state.to=Math.max(state.to,state.from);state.machine='';}
+  else if(id==='through'){state.to=Number(value);state.from=Math.min(state.to,state.from);state.machine='';}
+  else if(id==='bank'){state.bank=value;state.machine='';}
+  else if(id==='region'||id==='tier'){state[id]=value;}
+  else return;
+  draw('#'+id);
+});
+document.addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;
+  const d=b.dataset;
+  let focus,section;
+  if(d.jump){state.tab='plan';section=d.jump;}
+  else if(d.tab){state.tab=d.tab;}
+  else if(d.bank){state.bank=state.bank===d.bank?'':d.bank;state.machine='';focus='[data-bank="'+d.bank+'"]';}
+  else if(d.machine){state.machine=d.machine;focus='[data-machine="'+d.machine+'"]';}
+  else if(d.sort){state.reverse=state.sort===d.sort&&!state.reverse;state.sort=d.sort;focus='[data-sort="'+d.sort+'"]';}
+  else if(d.evidence){Object.assign(state,{from:0,to:5,bank:'',tab:'audit',machine:d.evidence,all:false,sort:'win',reverse:false});focus='[data-machine="'+d.evidence+'"]';section=d.section;}
+  else if(b.id==='show-all'){state.all=!state.all;focus='#show-all';}
+  else if(b.id==='reset'){Object.assign(state,{from:0,to:5,bank:'',region:'',tier:'',machine:'',sort:'win',reverse:false,all:false});}
+  else return;
+  draw(focus);
+  if(section){const target=$(section);target?.focus();target?.scrollIntoView({block:'start'});}
+});
+draw();
+</script></body></html>

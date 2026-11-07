@@ -1,6 +1,6 @@
 # Dashboard Royale — The Gilded Ace
 
-Extract the ZIP and open `gilded-ace.html` in a modern desktop browser with JavaScript enabled. The file embeds the data and runs offline. Use the opening shortcuts to see the payout stress test and historical moves. The July decision tab shows the budget. The month selectors apply to the descriptive views. Forecast validation and July decision use fixed evidence windows.
+Build the dashboard using the instructions under [Reproduce](#reproduce), then open `dist/index.html` in a modern desktop browser with JavaScript enabled. The generated file embeds the data and runs offline. Use the opening shortcuts to see the payout stress test and historical moves. The July decision tab shows the budget. The month selectors apply to the descriptive views. Forecast validation and July decision use fixed evidence windows.
 
 ## Devpost write-up
 
@@ -14,7 +14,7 @@ Spend $1,200 to inspect M-1158 and $1,800 to test relocating M-1181 to a vacant 
 
 ## Reproduce
 
-Use the official dataset at commit `5f9274bdc3efa6614e6c081becaeadda34c57a32`. The data is synthetic, except for the separately attributed Las Vegas context. The HTML runs without these build steps.
+Use the official dataset at commit `5f9274bdc3efa6614e6c081becaeadda34c57a32`. The data is synthetic, except for the separately attributed Las Vegas context. After building, the HTML opens directly in a browser.
 
 ```bash
 git clone https://github.com/tamu-datathon-org/dashboard-royale.git official-data
