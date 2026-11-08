@@ -1,4 +1,4 @@
-// Recomputes every figure quoted in README.md and CLAIMS-AND-EVIDENCE.md from the dashboard's own model
+// Recomputes every figure quoted in README.md, CLAIMS-AND-EVIDENCE.md and WRITEUP.md from the dashboard's own model
 // and fails if a document no longer contains the freshly computed value (e.g. after a data release or a
 // method change). Run with `npm run check` after `python build_data.py <official-data>`.
 import { readFileSync } from 'node:fs';
@@ -9,7 +9,8 @@ import { CLAIM_IDS, buildClaims } from '../src/lib/claims.js';
 
 const data = JSON.parse(readFileSync('data/dashboard.json', 'utf8'));
 const m = createModel(data);
-const docs = { readme: readFileSync('README.md', 'utf8'), claims: readFileSync('CLAIMS-AND-EVIDENCE.md', 'utf8') };
+const FILES = { readme: 'README.md', claims: 'CLAIMS-AND-EVIDENCE.md', writeup: 'WRITEUP.md' };
+const docs = Object.fromEntries(Object.entries(FILES).map(([k, f]) => [k, readFileSync(f, 'utf8')]));
 // The docs use a typographic minus; some formatters emit a hyphen. Compare on one form.
 const norm = s => s.replace(/−/g, '-');
 
@@ -285,6 +286,25 @@ const CHECKS = [
   ['comp visits test', 'comp users ' + signedPct1(cv.usersChange) + ', other recent guests ' + signedPct1(cv.othersChange) + '; difference ' + signedPct1(cv.did) + ' (95% interval ' + signedPct1(cv.interval[0]) + ' to ' + signedPct1(cv.interval[1]) + ')', ['claims']],
   ['comp visits placebos', 'Placebo splits ' + m.compVisits.placebos.map(x => dayName(x.split) + ' ' + signedPct1(x.did)).join(', '), ['claims']],
   ['comp pilot', cash(m.actionCost(comp)) + ' comp pilot needs about ' + pct(m.actionCost(comp) / compSpend, 0) + ' savings on ' + cash(compSpend), ['claims']],
+  // WRITEUP.md (the 400-word Devpost write-up): every figure it quotes
+  ['write-up budget', 'had ' + cash(m.julyPlan.spent + m.julyPlan.reserve) + ' for July', ['writeup']],
+  ['write-up adjusted overlap', 'Only ' + n(adj.both.length) + ' of the raw bottom ten (' + adj.both.map(r => r.id).join(', ') + ') is in the adjusted bottom ten', ['writeup']],
+  ['write-up at or above peers', n(adj.atOrAbovePeers.length) + ' of the other ' + n(adj.rawOnly.length) + " earn at least their matched peers' expected win per hour", ['writeup']],
+  ['write-up quiet cohort', (['Nine', 'Ten'][m.quietCohort.length - 9] ?? n(m.quietCohort.length)) + ' of ten sit in quiet zones', ['writeup']],
+  ['write-up move pairs', 'only ' + n(m.moveCases.filter(r => r.main.bankPct > 0).length) + ' of ' + n(m.moveCases.length) + ' moved pairs gained across both banks', ['writeup']],
+  ['write-up M-1158 win', m.inspect.id + ' won ' + cash(m.inspect.win) + ' against ' + cash(m.inspect.theo) + ' expected, ' + cash(m.inspect.theo - m.inspect.win) + ' below its configured hold', ['writeup']],
+  ['write-up hit frequency', 'paid on ' + pct(hit.lead.observed) + ' of spins against a published ' + pct(hit.lead.published) + ', above it in ' + n(hit.detail.above) + ' of ' + n(hit.detail.weeks.length) + ' weeks', ['writeup']],
+  ['write-up holdout MAE', 'Its ' + n(m.holdout.length) + '-day holdout MAE was ' + cash(m.m1) + ', against ' + cash(m.m7) + ' for a seven-day lag and ' + cash(m.mae(m.holdout, 11)) + ' for a constant mean', ['writeup']],
+  ['write-up paired wins', 'beat the lag on ' + n(v.frozen.wins) + ' of ' + n(v.frozen.days) + ' days', ['writeup']],
+  ['write-up paired interval', '(' + signed(v.frozen.interval[0]) + ' to ' + signed(v.frozen.interval[1]) + ') includes zero', ['writeup']],
+  ['write-up staffing', (w => 'at a ' + millions(m.peakThreshold) + ' cutoff it caught ' + n(w.caught) + ' of ' + n(w.peaks) + ' peak days')(peakAt(m.peakThreshold, 10)), ['writeup']],
+  ['write-up inspection', 'Inspect ' + m.inspect.id + ', ' + cash(m.inspectionCost), ['writeup']],
+  ['write-up inspection recovery', 'July recovery is ' + cash(m.inspectionCeiling) + ', so it pays if the chance of a full fix exceeds ' + pct(m.inspectionBreakEven, 1), ['writeup']],
+  ['write-up reserve', 'Keep ' + cash(m.reserve) + ' in reserve', ['writeup']],
+  ['write-up ledger', 'The ledger reads ' + m.julyPlan.arithmetic, ['writeup']],
+  ['write-up promotion', 'The ' + cash(m.promoCost) + ' comes from the reserve only if July 4 registrations show it can retain ' + pct(m.promoCost / Math.min(...data.promotions.map(m.retainedTheo)), 1) + ' of the weaker past lift', ['writeup']],
+  ['write-up move', 'move (' + cash(m.actionCost(m.catalogue['A-MOVE-MACHINE'])) + ') is deferred. At 50% capture it nets ' + signed(m.netMove(.5, 0)) + ' with no displaced play and ' + cash(m.netMove(.5, .10)) + ' with 10%', ['writeup']],
+  ['write-up past moves and events', n(m.moveCases.length) === '4' && data.promotions.length === 2 ? 'four past moves and two events' : 'move and event counts changed', ['writeup']],
 ];
 
 // The in-dashboard Claims & evidence page (src/lib/claims.js) must quote the appendix: every claim title and every
@@ -303,7 +323,7 @@ for (const [label, expected, where] of CHECKS) {
   for (const doc of where) {
     if (norm(docs[doc]).includes(norm(expected))) continue;
     failed++;
-    console.log('✗ ' + label + ': ' + (doc === 'readme' ? 'README.md' : 'CLAIMS-AND-EVIDENCE.md') + ' should contain "' + expected + '"');
+    console.log('✗ ' + label + ': ' + FILES[doc] + ' should contain "' + expected + '"');
   }
 }
 const total = CHECKS.reduce((a, c) => a + c[2].length, 0) + refFailures.length;

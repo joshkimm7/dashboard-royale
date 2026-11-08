@@ -56,4 +56,9 @@ Real public data, used only as context and never as forecast inputs (each was pu
 
 ## AI-use disclosure
 
-ChatGPT (OpenAI Codex) helped build and test the dashboard, develop the analysis, and draft and revise the written submission and claims appendix. User-supplied review comments attributed to Claude informed the revisions. The numerical results were calculated from the official challenge files. The actions are recommendations for the fictional scenario.
+Two AI tools were used. Every number in the dashboard, the write-up and the claims appendix is computed from the official challenge files, and `npm run check` recomputes each quoted figure from the dashboard's model. A human reviewed the recommendations. The actions are recommendations for the fictional scenario.
+
+- **ChatGPT (OpenAI Codex)** helped build and test the dashboard, develop the analysis, and draft and revise the written submission and claims appendix. User-supplied review comments attributed to Claude informed those revisions.
+- **Anthropic Claude Code** rewrote the dashboard in React and did the casino visual design, the Evidence map, the "i" explanations, the floor assistant and the sidebar layout. It ran the integrity pass and wrote the claims check (`npm run check`). It added analyses: the adjusted ranking and luck funnel with the payout-config check, the May 1 comp repricing, guest Lorenz curves and outcomes, zones with weather and the Missouri comparison, downtime timing and technician response, and the M-1158 hit-frequency check with the comp-visit test. It added features: the judge workflow (period on every view, zone filter, bank profile, Claims page) and the July budget ledger, plan builder and sensitivity controls. It drafted the submission documents (WRITEUP.md, VIDEO-SCRIPT.md, this disclosure and the README checklist).
+
+The floor assistant inside the dashboard is not an AI service: it answers from the dashboard's own data in the page.
