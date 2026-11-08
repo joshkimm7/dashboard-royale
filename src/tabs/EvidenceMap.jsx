@@ -71,7 +71,8 @@ export default function EvidenceMap() {
   const focus = useMapFocus();
   const [hover, setHover] = useState(null);
   const [selected, setSelectedState] = useState(graph.byId.has(mapView.selected) ? mapView.selected : 'plan');
-  const select = id => { mapView.selected = id; setSelectedState(id); };
+  // A click takes over from the assistant: the clicked box's pathway stays lit until something else is chosen.
+  const select = id => { mapView.selected = id; setSelectedState(id); if (focus) setMapFocus(null); };
   const [paths, setPaths] = useState([]);
   const flowRef = useRef(null);
   const nodeEls = useRef(new Map());
