@@ -7,6 +7,7 @@ Built for the **Dashboard Royale challenge at TAMU Datathon 2026**. The Gilded A
 ## What the dashboard found
 
 - **Cancel the blanket replacement.** Nine of the ten lowest earners were in quiet zones. M-1158 was the only cabinet flagged for an unusual payout gap. Its observed casino win was about **$36,165 below** what its configured payout rate implied, which warrants a meter and paytable check.
+- **The raw list is not the weak list.** Ranked by expected win per available hour against same-game cabinets in the same zone, with thin records shrunk toward average, only 1 of the raw bottom ten (M-1120) is in the adjusted bottom ten. No cabinet's configured payout rate differs from the published game math, and none changed configuration mid-period.
 - **Measure both banks after a move.** All four destination banks gained in the historical comparisons, and only two source–destination pairs gained overall. A busier destination alone gives an incomplete picture.
 - **Fund one inspection.** The July plan allocates **$1,200** to inspect M-1158 and holds **$98,800** in reserve. It defers a relocation and sets a break-even requirement for a promotion pilot.
 
@@ -18,7 +19,7 @@ Navigation sits in a collapsible left sidebar (a drawer on phones); the top bar'
 | --- | --- | --- |
 | **Overview** | — | Read the July recommendation and jump to the evidence behind each action. |
 | **Evidence map** | — | Follow the flow from data sources to evidence (grouped by question), actions and the July plan; hover any box to trace its line of evidence and open it. |
-| **Machine audit** | Bottom-ten verdicts · Machine file & floor map · How to read the audit | Expand the bottom-ten verdicts, filter by bank or month, and inspect the evidence behind each recommendation. |
+| **Machine audit** | Bottom-ten verdicts · Adjusted ranking · Machine file & floor map · How to read the audit | Expand the bottom-ten verdicts, filter by bank or month, and inspect the evidence behind each recommendation. |
 | **Demand & uptime** | Demand trend · Downtime impact · Repairs & tickets · Event days | Compare wagering trends with event timing, traffic, and estimated downtime exposure. |
 | **Guests & comps** | Player concentration · Comps & loyalty | Explore tracked wagering, player concentration, and loyalty costs by guest segment. |
 | **Model validation** | Holdout test · Staffing calls · July forecast | Compare weekday averages with a seven-day lag and a constant forecast on a 61-day holdout, then see how each forecast changes simulated staffing calls. |

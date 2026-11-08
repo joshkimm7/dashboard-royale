@@ -54,6 +54,199 @@ export function summarize(rs, totalDays) {
   return result;
 }
 
+/**
+ * Credibility constant k (in available hours) for the adjusted ranking, by Bühlmann–Straub method of moments:
+ * k = within-cabinet day-to-day variance of the theo index ÷ between-cabinet variance of true indexes, with each
+ * day weighted by its available hours. A cabinet with k benchmark hours gets half weight on its own record.
+ */
+export function credibilityK(rows, hold) {
+  const groups = [...by(rows.filter(r => r.h > 0 && r.local > 0), r => r.id).values()];
+  let within = 0, dof = 0;
+  const cabinets = groups.map(g => {
+    const days = g.map(r => ({ h: r.h, x: r.theo / (r.h * r.local * hold[r.config]) }));
+    const weight = sum(days, d => d.h), mean = sum(days, d => d.h * d.x) / weight;
+    within += sum(days, d => d.h * (d.x - mean) ** 2);
+    dof += g.length - 1;
+    return { weight, mean };
+  });
+  const s2 = within / dof, total = sum(cabinets, c => c.weight), grand = sum(cabinets, c => c.weight * c.mean) / total;
+  const between = (sum(cabinets, c => c.weight * (c.mean - grand) ** 2) - (cabinets.length - 1) * s2) / (total - sum(cabinets, c => c.weight ** 2) / total);
+  return { k: s2 / between, within: s2, between, cabinets: cabinets.length };
+}
+
+/**
+ * Q1 adjusted ranking. For each cabinet in a summarize() result: theo (configured expected win) per available hour,
+ * divided by the theo its matched same-configuration peers in the same zone earned over the same hours (ratio of sums),
+ * shrunk toward 1.0 with credibility weight w = hours / (hours + k). Luck SE comes from game math: payout variance per
+ * spin = multiplier variance × bet², summed and divided by coin-in.
+ */
+export function adjustRanking(summary, { k, hold, luck }) {
+  const raw = summary.slice().sort((a, b) => a.win - b.win);
+  const result = raw.map((x, i) => {
+    const rows = x.g.filter(r => r.h > 0 && r.local != null);
+    const expected = sum(rows, r => r.h * r.local * hold[r.config]);
+    const index = ratio(sum(rows, r => r.theo), expected);
+    const hours = sum(rows, r => r.h), w = hours / (hours + k);
+    const variance = luck.get(x.id);
+    const luckSE = variance != null && x.coin > 0 ? Math.sqrt(variance) / x.coin : null;
+    return {
+      x, id: x.id, rawRank: i + 1, index, hours, w, score: index == null ? null : w * index + (1 - w), expected,
+      luckVar: variance ?? null, luckSE, z: luckSE ? x.res / luckSE : null, volatility: x.g[0].volatility,
+    };
+  });
+  const ordered = result.slice().sort((a, b) => (a.score ?? Infinity) - (b.score ?? Infinity) || a.rawRank - b.rawRank);
+  ordered.forEach((r, i) => { r.adjRank = r.score == null ? null : i + 1; r.change = r.adjRank == null ? null : r.adjRank - r.rawRank; });
+  return { rows: result, ordered: ordered.filter(r => r.score != null) };
+}
+
+/** Seeded uniform generator (mulberry32) so bootstrap intervals are identical in the tabs and the claims check. */
+function seeded(seed) {
+  return () => {
+    seed = (seed + 0x6D2B79F5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const quantile = (sorted, q) => sorted.length ? sorted[Math.min(sorted.length - 1, Math.max(0, Math.round(q * (sorted.length - 1))))] : null;
+
+/** Q5 loyalty metrics. Each is a ratio of sums over a set of days: scale × numerator ÷ denominator. */
+export const LOYALTY_METRICS = [
+  { key: 'price', label: 'Points charged per $1 of comp face value', num: 'spent', den: 'face', scale: 1, digits: 2 },
+  { key: 'costPoint', label: 'Comp cost per 100 points redeemed', num: 'cost', den: 'spent', scale: 100, digits: 2, money: true },
+  { key: 'earn', label: 'Points earned per $100 of carded wagers', num: 'earned', den: 'coin', scale: 100, digits: 2 },
+  { key: 'costFace', label: 'Comp cost per $1 of face value', num: 'cost', den: 'face', scale: 1, digits: 3, money: true },
+  { key: 'rate', label: 'Comps redeemed per $100k of carded wagers', num: 'redemptions', den: 'coin', scale: 1e5, digits: 2 },
+  { key: 'share', label: 'Points redeemed per 100 points earned', num: 'spent', den: 'earned', scale: 100, digits: 2 },
+  { key: 'reinvest', label: 'Comp cost per $100 of expected win from carded play', num: 'cost', den: 'theo', scale: 100, digits: 2, money: true },
+];
+const LOYALTY_FIELDS = ['earned', 'coin', 'theo', 'redemptions', 'spent', 'face', 'cost'];
+const emptyTotals = () => Object.fromEntries(LOYALTY_FIELDS.map(f => [f, 0]));
+const addTotals = (into, t) => { for (const f of LOYALTY_FIELDS) into[f] += t[f]; return into; };
+export const metricValue = (metric, t) => t && t[metric.den] ? metric.scale * t[metric.num] / t[metric.den] : null;
+
+/** Best single split of a series by squared-error reduction (each side at least `min` points; nulls skipped). */
+export function bestSplit(values, min) {
+  const pts = values.map((v, i) => [i, v]).filter(([, v]) => Number.isFinite(v));
+  const sse = a => { if (!a.length) return 0; const m = sum(a, p => p[1]) / a.length; return sum(a, p => (p[1] - m) ** 2); };
+  const total = sse(pts);
+  let best = null;
+  for (let k = min; k <= pts.length - min; k++) {
+    const reduction = total - sse(pts.slice(0, k)) - sse(pts.slice(k));
+    if (!best || reduction > best.reduction) best = { index: pts[k][0], reduction };
+  }
+  return best && { ...best, r2: total ? best.reduction / total : 0 };
+}
+
+/**
+ * Q5 structural-break test on the loyalty ledger cube ([day, region, opening tier, tier at event, earned, coin, theo,
+ * redemptions, points spent, face, cost]). Weekly ratio-of-sums series per metric; the best single split by
+ * squared-error reduction picks the week, the daily series refines it to a day; the break tested is the one found
+ * on the redemption price (points charged per $1 of face value). The break is then tested with
+ * weekday-matched 28-day windows, a weekday-stratified day bootstrap, a placebo split at every other date, and
+ * a within-tier decomposition (policy) vs tier-mix shift.
+ */
+export function loyaltyBreak(rows, { days, tiers, window = 28, reps = 2000, minWeeks = 4 }) {
+  const daily = Array.from({ length: days }, emptyTotals);
+  const byTier = tiers.map(() => Array.from({ length: days }, emptyTotals));
+  for (const r of rows) {
+    const t = { earned: r[4], coin: r[5], theo: r[6], redemptions: r[7], spent: r[8], face: r[9], cost: r[10] };
+    addTotals(daily[r[0]], t); addTotals(byTier[r[3]][r[0]], t);
+  }
+  const totalOf = (series, list) => list.reduce((a, d) => addTotals(a, series[d]), emptyTotals());
+  const range = (a, b) => Array.from({ length: Math.max(0, b - a + 1) }, (_, i) => a + i);
+  const weeks = [...by(range(0, days - 1), week).entries()].map(([w, list]) => ({ w, list, full: list.length === 7 }));
+  const weekly = (series, metric) => weeks.map(w => metricValue(metric, totalOf(series, w.list)));
+  const fullWeeks = weeks.filter(w => w.full);
+
+  // Break search on every metric over full weeks, then daily refinement around the winning week boundary.
+  const searches = LOYALTY_METRICS.map(metric => {
+    const values = fullWeeks.map(w => metricValue(metric, totalOf(daily, w.list)));
+    const split = bestSplit(values, minWeeks);
+    if (!split) return { metric, split: null };
+    const start = fullWeeks[split.index].list[0];
+    const dayValues = daily.map(t => metricValue(metric, t));
+    const candidates = range(Math.max(window, start - 7), Math.min(days - window, start + 7));
+    const scored = candidates.map(c => ({ c, r: bestSplitAt(dayValues, c) })).filter(x => x.r != null);
+    const refined = scored.reduce((b, x) => (!b || x.r > b.r ? x : b), null);
+    return { metric, split, week: fullWeeks[split.index].w, day: refined?.c ?? start };
+  }).filter(s => s.split);
+  if (!searches.length) return null;
+  // The redemption price is the program's policy lever, so it is the pre-specified test metric; the others are reported alongside.
+  const lead = searches.find(s => s.metric.key === 'price') ?? searches.reduce((b, s) => (s.split.r2 > b.split.r2 ? s : b));
+  const breakDay = lead.day;
+
+  // Weekday-matched windows: equal whole weeks on each side of the break.
+  const span = Math.min(window, Math.floor(Math.min(breakDay, days - breakDay) / 7) * 7);
+  const before = range(breakDay - span, breakDay - 1), after = range(breakDay, breakDay + span - 1);
+  const strata = list => [...by(list, d => d % 7).values()];
+  const random = seeded(20250501);
+  const resample = list => strata(list).flatMap(g => g.map(() => g[Math.floor(random() * g.length)]));
+  const compare = (series, metric) => {
+    const b = metricValue(metric, totalOf(series, before)), a = metricValue(metric, totalOf(series, after));
+    return { before: b, after: a, change: a != null && b != null ? a - b : null, rel: a != null && b ? a / b - 1 : null, draws: [] };
+  };
+  const results = LOYALTY_METRICS.map(metric => ({ metric, ...compare(daily, metric) }));
+  const lead_ = LOYALTY_METRICS.indexOf(lead.metric);
+  const tierResults = tiers.map((name, t) => ({ name, ...compare(byTier[t], lead.metric) }));
+  for (let i = 0; i < reps; i++) {
+    const b = resample(before), a = resample(after);
+    const tb = totalOf(daily, b), ta = totalOf(daily, a);
+    for (const r of results) {
+      const vb = metricValue(r.metric, tb), va = metricValue(r.metric, ta);
+      if (vb != null && va != null) r.draws.push(va - vb);
+    }
+    tierResults.forEach((r, t) => {
+      const vb = metricValue(lead.metric, totalOf(byTier[t], b)), va = metricValue(lead.metric, totalOf(byTier[t], a));
+      if (vb != null && va != null) r.draws.push(va - vb);
+    });
+  }
+  for (const r of [...results, ...tierResults]) {
+    const sorted = r.draws.sort((x, y) => x - y);
+    r.interval = sorted.length >= reps * .9 ? [quantile(sorted, .025), quantile(sorted, .975)] : null;
+    r.excludesZero = r.interval != null && (r.interval[0] > 0 || r.interval[1] < 0);
+    delete r.draws;
+  }
+
+  // Mix vs policy for the lead metric: pooled ratio = Σ (denominator share × tier ratio).
+  const parts = [before, after].map(list => tiers.map((_, t) => totalOf(byTier[t], list)));
+  const denoms = parts.map(p => sum(p, t => t[lead.metric.den]));
+  const weights = parts.map((p, i) => p.map(t => denoms[i] ? t[lead.metric.den] / denoms[i] : 0));
+  const tierRates = parts.map(p => p.map(t => metricValue(lead.metric, t)));
+  let mix = 0, within = 0;
+  tiers.forEach((_, t) => {
+    if (tierRates[0][t] == null || tierRates[1][t] == null) return;
+    mix += (weights[1][t] - weights[0][t]) * tierRates[0][t];
+    within += weights[1][t] * (tierRates[1][t] - tierRates[0][t]);
+  });
+
+  // Placebo: the same weekday-matched split at every date where both windows fit.
+  const placebo = range(span, days - span).map(c => {
+    const b = metricValue(lead.metric, totalOf(daily, range(c - span, c - 1))), a = metricValue(lead.metric, totalOf(daily, range(c, c + span - 1)));
+    return { day: c, change: a != null && b != null ? a - b : null, clean: Math.abs(c - breakDay) >= span };
+  }).filter(p => p.change != null);
+  const real = Math.abs(results[lead_].change);
+  const rank = 1 + placebo.filter(p => p.day !== breakDay && Math.abs(p.change) > real).length;
+  const clean = placebo.filter(p => p.clean);
+  const largestClean = clean.reduce((b, p) => (!b || Math.abs(p.change) > Math.abs(b.change) ? p : b), null);
+
+  const leadResult = results[lead_];
+  // A break counts only if its interval excludes zero, no placebo date beats it, and it exceeds every clean placebo shift.
+  const detected = leadResult.excludesZero && rank === 1 && largestClean != null && real > Math.abs(largestClean.change);
+  return {
+    detected, leadResult, breakDay, lead, searches, span, before, after, results, tierResults, mix, within, weeks,
+    weeklyAll: metric => weekly(daily, metric), weeklyTier: (t, metric) => weekly(byTier[t], metric),
+    placebo, rank, cleanCount: clean.length, largestClean,
+  };
+
+  /** Squared-error reduction for splitting the daily series at day c (nulls skipped). */
+  function bestSplitAt(values, c) {
+    if (!values.some(Number.isFinite)) return null;
+    const sse = a => { const f = a.filter(Number.isFinite); if (!f.length) return 0; const m = sum(f, v => v) / f.length; return sum(f, v => (v - m) ** 2); };
+    return sse(values) - sse(values.slice(0, c)) - sse(values.slice(c));
+  }
+}
+
 export function createModel(data) {
   const dict = data.dicts;
   const zones = Object.fromEntries(data.locations.filter(x => x[1] === 'zone').map(x => [x[0], x[3]]));
@@ -72,12 +265,78 @@ export function createModel(data) {
     const dates = data.dates.filter(d => month(d) >= from && month(d) <= to);
     const start = data.dates.indexOf(dates[0]), end = data.dates.indexOf(dates.at(-1));
     const rows = auditRows.filter(r => r.d >= start && r.d <= end && (!bank || r.bank === bank));
-    return { dates, start, end, rows, props: data.property.slice(start, end + 1) };
+    return { dates, start, end, rows, props: data.property.slice(start, end + 1), from, to, bank };
   }
+
+  // Q1 adjusted ranking: payout hold per configuration, a credibility constant fitted once on the full period,
+  // and spin-level luck variance summed over the selected months and bank.
+  const configHold = Object.fromEntries(data.configs.map(c => [c[0], 1 - c[1]]));
+  const credibility = credibilityK(auditRows, configHold);
+  function luckFor({ from, to, bank }) {
+    const totals = new Map();
+    for (const [machine, mo, b, variance] of data.luck) {
+      if (mo < from || mo > to || (bank && dict.bank_id[b] !== bank)) continue;
+      const id = dict.machine_id[machine];
+      totals.set(id, (totals.get(id) ?? 0) + variance);
+    }
+    return totals;
+  }
+  const ranking = s => adjustRanking(summarize(s.rows, s.dates.length), { k: credibility.k, hold: configHold, luck: luckFor(s) });
+  /** Manager's raw bottom ten against the adjusted bottom ten for one ranking. */
+  function rankingOverlap(r, size = 10) {
+    const rawTen = r.rows.slice(0, size), adjustedTen = r.ordered.slice(0, size);
+    const both = rawTen.filter(x => adjustedTen.includes(x));
+    const rawOnly = rawTen.filter(x => !adjustedTen.includes(x));
+    return { rawTen, adjustedTen, both, rawOnly, atOrAbovePeers: rawOnly.filter(x => x.index >= 1),
+      outsideLuck: r.rows.filter(x => x.z != null && Math.abs(x.z) > 1.96) };
+  }
+  /** Re-ranks at half k, double k and no shrinkage: how many of the base adjusted bottom ten survive, and the raw overlap. */
+  function kSensitivity(summary, luck, base, size = 10) {
+    const ids = new Set(base.ordered.slice(0, size).map(r => r.id));
+    return [.5, 2, 0].map(factor => {
+      const r = adjustRanking(summary, { k: credibility.k * factor, hold: configHold, luck });
+      return { factor, kept: r.ordered.slice(0, size).filter(x => ids.has(x.id)).length, overlap: rankingOverlap(r, size).both.length };
+    });
+  }
+  const fullRanking = ranking(scope({ from: 0, to: 5, bank: '' }));
+  const fullSensitivity = kSensitivity(summarize(scope({ from: 0, to: 5, bank: '' }).rows, fullDays), luckFor({ from: 0, to: 5, bank: '' }), fullRanking);
+  const fullOverlap = rankingOverlap(fullRanking);
 
   // Guests
   const regions = [...new Set(data.players.map(r => r[2]))].sort();
   const tiers = [...new Set(data.players.map(r => r[3]))].sort();
+
+  // Q5 comp-program break test on the loyalty ledger, for the selected home region and opening tier (cached).
+  const loyaltyDicts = data.loyalty.dicts, breakCache = new Map();
+  function compBreak({ region = '', tier = '' } = {}) {
+    const key = region + '|' + tier;
+    if (!breakCache.has(key)) {
+      const rows = data.loyalty.rows.filter(r => (!region || loyaltyDicts.home_region[r[1]] === region) && (!tier || loyaltyDicts.opening_tier[r[2]] === tier));
+      breakCache.set(key, loyaltyBreak(rows, { days: fullDays, tiers: loyaltyDicts.tier_before }));
+    }
+    return breakCache.get(key);
+  }
+  const fullBreak = compBreak();
+  /** Lifetime-point thresholds bracketed by the highest balance below and lowest balance in each tier, all months. */
+  const tierBracket = (below, at) => ({ low: Math.max(...data.loyalty.tierRules.map(r => r[below])), high: Math.min(...data.loyalty.tierRules.map(r => r[at])) });
+  const tierRules = { gold: tierBracket(1, 2), platinum: tierBracket(3, 4), months: data.loyalty.tierRules.length };
+  tierRules.stable = tierRules.gold.low < tierRules.gold.high && tierRules.platinum.low < tierRules.platinum.high;
+  /** Floor-wide Q5 finding as display strings, shared by the plan, the evidence map, the assistant and the claims check. */
+  const compFinding = (b => {
+    const get = key => b.results.find(r => r.metric.key === key);
+    const date = data.dates[b.breakDay], money = v => (v < 0 ? '−' : '') + '$' + n(Math.abs(v), 2);
+    const signed = v => (v > 0 ? '+' : v < 0 ? '−' : '') + n(Math.abs(v * 100), 1) + '%';
+    const price = b.leadResult, rate = get('rate'), reinvest = get('reinvest'), earn = get('earn'), costFace = get('costFace');
+    return {
+      detected: b.detected, date: months[month(date)] + ' ' + Number(date.slice(8)),
+      price: n(price.before, 2) + ' to ' + n(price.after, 2) + ' points per $1 of face value', priceChange: signed(price.rel),
+      priceInterval: price.interval.map(v => (v < 0 ? '−' : '+') + n(Math.abs(v), 2)).join(' to '),
+      rank: 'rank ' + n(b.rank) + ' of ' + n(b.placebo.length) + ' split dates', withinShare: n(100 * b.within / (b.mix + b.within), 0) + '%',
+      rateChange: signed(rate.rel), rateInterval: rate.interval.map(v => (v < 0 ? '−' : '+') + n(Math.abs(v), 2)).join(' to '), rateMoved: rate.excludesZero,
+      reinvest: money(reinvest.before) + ' to ' + money(reinvest.after), reinvestChange: signed(reinvest.rel), reinvestMoved: reinvest.excludesZero,
+      earnFlat: !earn.excludesZero, costFaceFlat: !costFace.excludesZero,
+    };
+  })(fullBreak);
 
   // Forecast validation
   const holdout = data.property.filter(r => r[0] >= '2025-05-01');
@@ -205,5 +464,7 @@ export function createModel(data) {
     inspectionGapPerDay, inspectionCeiling, inspectionBreakEven, inspectionSlot, repairPaybackDays, repairRecoveryShare, windowHold, repairScenarios,
     promotion, promoCost, retainedTheo, promoHurdle,
     moveCases, closestCase, moveControls, bankZone, weeksBelow, cohort, quietCohort, payoutCohort, shortCohort, payoutOverlap, reviewAction, weekdayAdjusted,
+    configHold, credibility, luckFor, ranking, rankingOverlap, kSensitivity, fullRanking, fullOverlap, fullSensitivity, payoutConfig: data.payoutConfig,
+    compBreak, fullBreak, tierRules, compFinding,
   };
 }

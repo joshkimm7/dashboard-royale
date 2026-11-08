@@ -169,7 +169,7 @@ function Promotion() {
 }
 
 function ConsideredActions() {
-  const { data, catalogue, auditRows, fullDays, netMove, actionCost, reserve } = useModel();
+  const { data, catalogue, auditRows, fullDays, netMove, actionCost, reserve, compFinding: f } = useModel();
   const maintenance = catalogue['A-PREVENTIVE'], tech = catalogue['A-TECH-SHIFT'], comp = catalogue['A-COMP-PILOT'];
   const daysAfterLead = action => Math.max(0, 30 - action[4]);
   const projected = (rows, action) => sum(rows, r => r.lostTheo) / fullDays * daysAfterLead(action);
@@ -185,8 +185,14 @@ function ConsideredActions() {
     'A-PREVENTIVE': 'Pass. Ridgeline has ' + cash(ridgeRisk) + ' at risk over ' + daysAfterLead(maintenance) + ' days, before the sweep’s own downtime.',
     'A-INSPECT': 'Fund one. Meter and paytable checks target the persistent payout flag on M-1158.',
     'A-WAYFINDING': 'Deferred. Quiet placement warrants a traffic test before committing to a signage refresh.',
-    'A-COMP-PILOT': 'Deferred. Needs ' + pct(actionCost(comp) / compSpend, 0) + ' savings on ' + cash(compSpend) + ' in projected ' + daysAfterLead(comp) + '-day comp cost to pay back through savings alone.',
-    'A-COMP-CHANGE': 'Pass. Comp cost per face-value dollar was stable. Measure contribution in a controlled pilot before changing the rate floor-wide.',
+    'A-COMP-PILOT': 'Deferred. ' + (f.detected
+      ? 'The loyalty ledger shows comps were repriced on ' + f.date + ' (' + f.price + ', ' + f.priceChange + ', ' + f.withinShare + ' of it within tiers). Comp cost per $100 of carded expected win went from ' + f.reinvest + '. Read that change in July data before paying for a pilot. '
+      : 'The loyalty ledger shows no break in comp prices, earn rates or tier rules. ') +
+      'Savings alone would need ' + pct(actionCost(comp) / compSpend, 0) + ' of ' + cash(compSpend) + ' in projected ' + daysAfterLead(comp) + '-day comp cost. The pilot and a floor-wide change are mutually exclusive, so at most one can run.',
+    'A-COMP-CHANGE': 'Pass. ' + (f.detected
+      ? 'A floor-wide change already took effect on ' + f.date + ': comps redeemed per $100k of carded wagers moved ' + f.rateChange + (f.rateMoved ? '' : ' (no clear change)') + ' while cost per $100 of carded expected win moved ' + f.reinvestChange + '. A second change now would blur the read on the first. '
+      : 'The ledger shows no past change to learn from, and cost per face-value dollar was stable. ') +
+      'It also cannot run alongside the pilot; the catalog makes them mutually exclusive.',
     'A-PROMO': 'Conditional. Prior events justify a shortlist spot. Require a staffed pilot case above the hurdle shown above.',
     'A-SURVEY': 'Deferred. Current traffic data support comparing visits with wagering. Revisit for a specific unanswered conversion question.',
     'A-HOLD': 'Selected. Retain ' + cash(reserve) + ' pending evidence for other actions.',

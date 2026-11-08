@@ -10,7 +10,7 @@ const RANK = { source: 0, evidence: 1, action: 2, decision: 3 };
 // Builds nodes and links from the same analysis objects the tabs use, so the map can't drift from them.
 export function buildEvidenceGraph(m) {
   const { reserve, inspect, inspectionCost, moveCases, peakThreshold, promoCost, quietCohort, payoutCohort, moveBreakEven, m1, m7,
-    schedulingScore, auditRows, fullDays, promoHurdle, cohort, reviewAction, move, data } = m;
+    schedulingScore, auditRows, fullDays, promoHurdle, cohort, reviewAction, move, data, fullOverlap, payoutConfig, compFinding } = m;
   const nodes = [], links = [];
   const add = (id, type, label, summary, value, go) => nodes.push({ id, type, label, summary, value: value ?? '', go: go ?? null });
   const link = (a, b) => links.push({ a, b });
@@ -24,16 +24,21 @@ export function buildEvidenceGraph(m) {
   add('act-staff', 'action', 'Flex staffing', 'Add coverage when forecast wagers reach ' + cash(peakThreshold) + '.', cash(peakThreshold), { jump: 'staffing-check' });
   add('act-promo', 'action', 'Promotion (conditional)', 'Pilot only with registrations above the break-even hurdle.', cash(promoCost), { jump: 'promotion-check' });
   add('act-reserve', 'action', 'Hold reserve', 'Keep unspent budget until other actions have stronger evidence.', cash(reserve), { jump: 'catalog-check' });
-  for (const a of ['act-inspect', 'act-move', 'act-staff', 'act-promo', 'act-reserve']) link('plan', a);
+  add('act-comp', 'action', 'Hold comp changes', 'No comp pilot and no floor-wide comp change in July; the two are mutually exclusive' + (compFinding.detected ? ', and the ' + compFinding.date + ' repricing needs reading first.' : '.'), '$0', { jump: 'catalog-check' });
+  for (const a of ['act-inspect', 'act-move', 'act-staff', 'act-promo', 'act-reserve', 'act-comp']) link('plan', a);
 
   add('q1', 'question', 'Q1 · Machine audit', 'Why do the lowest earners earn so little?', '', { goto: 'audit' });
   add('q2', 'question', 'Q2/Q3 · Demand & uptime', 'How did demand and machine uptime change?', '', { goto: 'demand' });
-  add('q4', 'question', 'Q4/Q5 · Guests & comps', 'Who plays, and what do comps cost?', '', { goto: 'guests' });
+  add('q4', 'question', 'Q4/Q5 · Guests & comps', 'Who plays, what do comps cost, and did the comp program change?', '', { goto: 'guests' });
   add('qm', 'question', 'Model validation', 'Is the forecast good enough to staff from?', '', { goto: 'model' });
   add('q6', 'question', 'Q6 · July decision', 'What should July’s budget fund?', '', { goto: 'plan' });
   link('q6', 'plan');
 
   add('ev-verdicts', 'evidence', 'Bottom-ten verdicts', n(quietCohort.length) + ' of 10 lowest earners sit in quiet zones; ' + n(payoutCohort.length) + ' has a payout flag.', '', { jump: 'verdict-check' });
+  const configLeads = payoutConfig.rtpMismatches.length + payoutConfig.meterMismatches.length + payoutConfig.dailyChanges.length + payoutConfig.placementChanges.length;
+  add('ev-adjusted', 'evidence', 'Adjusted ranking', n(fullOverlap.both.length) + ' of the 10 lowest raw earners stay in the bottom ten once exposure, luck and placement are removed; ' +
+    n(fullOverlap.outsideLuck.length) + ' cabinets fall outside their luck bounds. Payout-config check: ' + (configLeads ? n(configLeads) + ' leads to inspect.' : 'no mismatches or changes.'),
+    n(fullOverlap.both.length) + ' of 10 overlap', { jump: 'adjusted-check' });
   add('ev-hold', 'evidence', 'Weekly payout check', 'M-1158’s week-by-week payout gap against same-configuration peers.', pp(inspect.res), { evidence: inspect.id, section: 'hold-check' });
   add('ev-moves', 'evidence', 'Past moves', 'What happened to cabinets and banks after four historical moves.', pairsGained + ' of ' + moveCases.length + ' pairs gained', { jump: 'move-check' });
   add('ev-move-econ', 'evidence', 'Relocation economics', 'Net July value of moving M-1181 under capture and displacement scenarios.', pct(moveBreakEven, 0) + ' break-even', { goto: 'plan/moves' });
@@ -45,11 +50,14 @@ export function buildEvidenceGraph(m) {
   add('ev-promo', 'evidence', 'Promotion evidence', 'Lift from past promotions and the hurdle a July pilot must clear.', pct(promoHurdle, 1) + ' hurdle', { jump: 'promotion-check' });
   add('ev-players', 'evidence', 'Player concentration', 'How much of carded play and losses came from the top 1%.', '', { goto: 'guests/players' });
   add('ev-comps', 'evidence', 'Comps & loyalty', 'What comps cost relative to play, month by month.', '', { goto: 'guests/comps' });
+  add('ev-comp-break', 'evidence', 'Comp program change', compFinding.detected
+    ? 'On ' + compFinding.date + ' comps were repriced from ' + compFinding.price + ' (' + compFinding.priceChange + ', ' + compFinding.rank + '), within every tier; earn rates' + (compFinding.costFaceFlat ? ' and cost per face-value dollar' : '') + (m.tierRules.stable ? ' held, and so did tier rules.' : ' held, but tier-rule brackets moved.')
+    : 'No break in comp prices, earn rates or tier rules across January–June.', compFinding.detected ? compFinding.date + ' · ' + compFinding.priceChange : 'No break', { jump: 'comp-break-check' });
   add('ev-catalog', 'evidence', 'Action catalog', 'Every priced action and why it was funded, deferred or passed.', n(data.actions.length) + ' actions', { jump: 'catalog-check' });
 
-  for (const [a, list] of Object.entries({ 'act-inspect': ['ev-hold', 'ev-verdicts'], 'act-move': ['ev-moves', 'ev-move-econ'], 'act-staff': ['ev-staffing', 'ev-holdout'],
-    'act-promo': ['ev-promo', 'ev-events'], 'act-reserve': ['ev-catalog'],
-    q1: ['ev-verdicts', 'ev-hold'], q2: ['ev-demand', 'ev-downtime', 'ev-events'], q4: ['ev-players', 'ev-comps'], 'ev-comps': ['ev-catalog'], qm: ['ev-holdout', 'ev-staffing'], q6: ['ev-catalog', 'ev-moves', 'ev-move-econ', 'ev-promo'] }))
+  for (const [a, list] of Object.entries({ 'act-inspect': ['ev-hold', 'ev-verdicts', 'ev-adjusted'], 'act-move': ['ev-moves', 'ev-move-econ'], 'act-staff': ['ev-staffing', 'ev-holdout'],
+    'act-promo': ['ev-promo', 'ev-events'], 'act-reserve': ['ev-catalog', 'ev-adjusted'],
+    q1: ['ev-verdicts', 'ev-adjusted', 'ev-hold'], q2: ['ev-demand', 'ev-downtime', 'ev-events'], q4: ['ev-players', 'ev-comps', 'ev-comp-break'], 'ev-comps': ['ev-catalog'], 'act-comp': ['ev-comp-break', 'ev-comps'], 'ev-comp-break': ['ev-catalog'], qm: ['ev-holdout', 'ev-staffing'], q6: ['ev-catalog', 'ev-moves', 'ev-move-econ', 'ev-promo'] }))
     for (const b of list) link(a, b);
 
   const flagsSeen = new Set();
@@ -69,10 +77,12 @@ export function buildEvidenceGraph(m) {
   add('src-players', 'source', 'Loyalty-card play', 'Carded wagers, results and comps by player and month.', n(data.players.length) + ' records');
   add('src-events', 'source', 'Event calendar', 'Listed events and holidays used to adjust comparisons.', n(data.events.length) + ' events');
   add('src-moves', 'source', 'Move history', 'Past cabinet relocations and their comparison groups.', n(data.moves.length) + ' moves');
+  add('src-gamemath', 'source', 'Game math & placements', 'Published payout rate and variance per game, and which configuration each cabinet ran.', n(payoutConfig.configs) + ' configurations');
+  add('src-ledger', 'source', 'Loyalty ledger', 'Every points award and comp redemption, with tier, face value and cost.', n(sum(data.loyalty.rows, r => r[7])) + ' redemptions');
   add('src-catalog', 'source', 'Action catalog', 'Costs and lead times for every July action.', n(data.actions.length) + ' actions');
   add('src-city', 'source', 'LVCVA visitation', 'Monthly Las Vegas visitor counts for market context.', n(data.city.length) + ' months');
-  for (const [a, list] of Object.entries({ 'src-meters': ['ev-verdicts', 'ev-hold', 'ev-downtime', 'ev-moves', 'ev-demand'], 'src-property': ['ev-demand', 'ev-holdout', 'ev-staffing', 'ev-events'],
-    'src-players': ['ev-players', 'ev-comps'], 'src-events': ['ev-events', 'ev-holdout', 'ev-promo'], 'src-moves': ['ev-moves'], 'src-catalog': ['ev-catalog', 'ev-move-econ'], 'src-city': ['ev-demand'] }))
+  for (const [a, list] of Object.entries({ 'src-meters': ['ev-verdicts', 'ev-adjusted', 'ev-hold', 'ev-downtime', 'ev-moves', 'ev-demand'], 'src-property': ['ev-demand', 'ev-holdout', 'ev-staffing', 'ev-events'],
+    'src-players': ['ev-players', 'ev-comps'], 'src-ledger': ['ev-comp-break'], 'src-events': ['ev-events', 'ev-holdout', 'ev-promo'], 'src-moves': ['ev-moves'], 'src-gamemath': ['ev-adjusted'], 'src-catalog': ['ev-catalog', 'ev-move-econ'], 'src-city': ['ev-demand'] }))
     for (const b of list) link(a, b);
 
   const byId = new Map(nodes.map(nd => [nd.id, nd]));

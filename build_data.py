@@ -35,6 +35,39 @@ assert (daily.available_hours <= daily.scheduled + 0.001).all()
 assert np.allclose(daily.coin_in_usd - daily.payout_usd, daily.house_win_usd)
 assert np.allclose(daily.coin_in_usd * (1-daily.configured_rtp), daily.theo_usd)
 
+# Payout-configuration check: compare every placed day's configured RTP with the published game math, and look for
+# machines whose configuration changed mid-period in the daily view, the raw meters or the placement history.
+game_math = load('game_math')
+placements = load('placements')
+meters = load('machine_day')[['machine_id','gaming_date','config_id','coin_in_cents','theo_cents','sum_bet_squared']]
+published = game_math.set_index('config_id')
+daily_rtp = daily.config_id.map(published.configured_rtp)
+rtp_mismatch = daily[daily_rtp.isna() | (daily.configured_rtp - daily_rtp).abs().gt(1e-9)]
+placed_meters = meters.merge(daily[['machine_id','gaming_date','config_id']], on=['machine_id','gaming_date'],
+                             suffixes=('', '_daily'), validate='one_to_one')
+meter_rtp = placed_meters.config_id.map(published.configured_rtp)
+# Raw meters imply an RTP through theo = coin-in x (1 - RTP); a different implied rate is a lead to inspect.
+implied_gap = (placed_meters.theo_cents - placed_meters.coin_in_cents * (1 - meter_rtp)).abs()
+meter_mismatch = placed_meters[placed_meters.config_id.ne(placed_meters.config_id_daily) | meter_rtp.isna() | implied_gap.gt(1)]
+def changed(frame):
+    counts = frame.groupby('machine_id').config_id.nunique()
+    return [[machine, ' → '.join(frame.loc[frame.machine_id.eq(machine), 'config_id'].drop_duplicates())]
+            for machine in counts.index[counts > 1]]
+payout_config = {
+    'configs': int(len(game_math)), 'machineDays': int(len(daily)), 'machines': int(daily.machine_id.nunique()),
+    'placements': int(len(placements)),
+    'rtpMismatches': [[k[0], k[1], float(k[2]), int(len(g))] for k, g in
+                      rtp_mismatch.groupby(['machine_id','config_id','configured_rtp'])],
+    'meterMismatches': [[machine, int(len(g))] for machine, g in meter_mismatch.groupby('machine_id')],
+    'dailyChanges': changed(daily.sort_values('gaming_date')),
+    'placementChanges': changed(placements.sort_values('effective_from_utc')),
+}
+print('Payout-config check:', {k: (len(v) if isinstance(v, list) else v) for k, v in payout_config.items()})
+# Spin-level luck: payout variance per spin is the game's multiplier variance times the bet squared (cents² → dollars²).
+daily = daily.merge(placed_meters[['machine_id','gaming_date','sum_bet_squared']], on=['machine_id','gaming_date'], validate='one_to_one')
+daily['luck_var'] = daily.config_id.map(published.payout_multiplier_variance) * daily.sum_bet_squared / 1e4
+assert daily.luck_var.notna().all()
+
 def peer_rate(groups, min_peers):
     group = daily.groupby(groups)
     hours = group.available_hours.transform('sum') - daily.available_hours
@@ -199,6 +232,52 @@ assert np.allclose(players.tracked_payout_usd - players.tracked_coin_in_usd, pla
 players['person'] = pd.factorize(players.player_id, sort=True)[0]
 players['month'] = players.period_month.str[-2:].astype(int) - 1
 
+# Q5 loyalty ledger: award and redemption totals per gaming day x home region x opening tier x tier at the event.
+# Awards take the gaming day and wagers of the carded segment that earned them; redemptions use the Vegas
+# 06:00-06:00 gaming day of the event. Economic cost equals the linked POS cogs, so it is counted once, here only.
+def guide_path(name):
+    path, = (repo / 'data').rglob(f'{name}.csv.gz')
+    return path
+ledger = pd.read_csv(guide_path('loyalty_ledger'), usecols=['player_id','event_at_utc','event_type','points_delta','tier_before','tier_after',
+                                                             'face_value_cents','economic_cost_cents','source_segment_id'])
+assert set(ledger.event_type) == {'award', 'redeem'}
+segments = pd.read_csv(guide_path('sessions'), usecols=['session_segment_id','gaming_date','coin_in_cents','theo_cents'])
+members = pd.read_csv(guide_path('players'), usecols=['player_id','home_region','opening_tier'])
+awards = ledger[ledger.event_type.eq('award')].merge(segments, left_on='source_segment_id', right_on='session_segment_id',
+                                                       how='left', validate='one_to_one')
+assert awards.gaming_date.notna().all()
+redeems = ledger[ledger.event_type.eq('redeem')].copy()
+redeem_local = pd.to_datetime(redeems.event_at_utc, utc=True).dt.tz_convert('America/Los_Angeles').dt.tz_localize(None)
+redeems['gaming_date'] = (redeem_local - pd.Timedelta(hours=6)).dt.date.astype(str)
+loyalty_keys = ['gaming_date','home_region','opening_tier','tier_before']
+earned = awards.merge(members, on='player_id', validate='many_to_one').groupby(loyalty_keys).agg(
+    earned=('points_delta','sum'), coin=('coin_in_cents','sum'), theo=('theo_cents','sum'))
+spent = redeems.merge(members, on='player_id', validate='many_to_one').groupby(loyalty_keys).agg(
+    redemptions=('points_delta','size'), spent=('points_delta','sum'), face=('face_value_cents','sum'), cost=('economic_cost_cents','sum'))
+loyalty = earned.join(spent, how='outer').fillna(0).reset_index()
+assert loyalty.gaming_date.isin(set(cal.gaming_date)).all()
+loyalty['day'] = loyalty.gaming_date.map({d: i for i, d in enumerate(cal.gaming_date)})
+loyalty['spent'] = -loyalty.spent
+for col in ['coin','theo','face','cost']:
+    loyalty[col] = loyalty[col] / 100  # cents -> dollars, once
+loyalty_dicts = {}
+for col in ['home_region','opening_tier','tier_before']:
+    loyalty[col], values = pd.factorize(loyalty[col], sort=True)
+    loyalty_dicts[col] = values.tolist()
+# Tier rules: lifetime points = opening lifetime points + awards to date. Per month, the lowest lifetime balance seen
+# in each tier and the highest seen in the tier below it bracket the threshold; a rule change would move the bracket.
+opening = pd.read_csv(guide_path('players'), usecols=['player_id','opening_lifetime_points']).set_index('player_id').opening_lifetime_points
+ledger_events = pd.concat([awards[['player_id','event_at_utc','points_delta','tier_after','gaming_date']].assign(kind=0),
+                    redeems[['player_id','event_at_utc','points_delta','tier_after','gaming_date']].assign(kind=1)], ignore_index=True)
+ledger_events = ledger_events.sort_values(['player_id','event_at_utc','kind'], kind='stable')
+ledger_events['lifetime'] = ledger_events.player_id.map(opening) + ledger_events.points_delta.where(ledger_events.kind.eq(0), 0).groupby(ledger_events.player_id).cumsum()
+assert len(ledger_events) == len(ledger) and ledger_events.lifetime.notna().all()
+ledger_events['month'] = ledger_events.gaming_date.str[5:7].astype(int) - 1
+bands = ledger_events.groupby(['month','tier_after']).lifetime.agg(['min','max']).unstack()
+tier_rules = [[int(mo), int(bands.loc[mo, ('max','Base')]), int(bands.loc[mo, ('min','Gold')]),
+               int(bands.loc[mo, ('max','Gold')]), int(bands.loc[mo, ('min','Platinum')])] for mo in bands.index]
+print(f'Loyalty ledger: {len(awards):,} awards and {len(redeems):,} redemptions in {len(loyalty):,} day-segment rows')
+
 # Allocate ticket duration across shifts by actual elapsed hour, using Vegas wall time for shift labels.
 operations = load('operations')
 ops = operations[operations.event_type.eq('fault_repair')].copy()
@@ -317,6 +396,10 @@ for col in columns[1:8] + ['location_id']:
     indexes, values = pd.factorize(daily[col], sort=True)
     daily[col] = indexes
     dictionaries[col] = values.tolist()
+# Luck variance aggregated to machine x month x bank (dictionary codes), so the funnel honours period and bank filters.
+daily['month_index'] = daily.gaming_date.str[5:7].astype(int) - 1
+luck = daily.groupby(['machine_id','month_index','bank_id'], as_index=False).luck_var.sum()
+configs = game_math.assign(volatility=game_math.volatility_class)
 data = {
     'revision': subprocess.check_output(['git','-C',str(repo),'rev-parse','HEAD'],text=True).strip(),
     'dates': dates, 'moves': moves, 'dicts': dictionaries, 'daily': rows(daily, columns),
@@ -328,6 +411,12 @@ data = {
     'shifts': rows(shift_parts, ['day','bank','shift','hours','wait']),
     'city': rows(city, ['month','mean_visitors_per_calendar_day','source_url']),
     'events': rows(events, ['name','start_date','end_date','local_scope']),
+    'payoutConfig': payout_config,
+    'loyalty': {'dicts': loyalty_dicts, 'rows': rows(loyalty, ['day','home_region','opening_tier','tier_before','earned','coin','theo',
+                                                              'redemptions','spent','face','cost'], 2),
+                'tierRules': tier_rules},
+    'configs': rows(configs, ['config_id','configured_rtp','volatility','payout_multiplier_variance']),
+    'luck': rows(luck, ['machine_id','month_index','bank_id','luck_var'], 1),
     'actions': rows(actions, ['action_type_id','name','unit_cost_cents','recurring_cost_cents_per_day','lead_days','downtime_minutes','quantity_limit']),
 }
 payload = json.dumps(data, separators=(',',':'), ensure_ascii=False, allow_nan=False).replace('</','<\\/')

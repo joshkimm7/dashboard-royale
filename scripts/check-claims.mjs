@@ -64,6 +64,23 @@ const ridgeRisk = sum(ridge, r => r.lostTheo) / m.fullDays * daysAfterLead(maint
 const techRisk = sum(m.auditRows, r => r.lostTheo) / m.fullDays * daysAfterLead(tech);
 const compSpend = sum(data.property, r => r[9]) / m.fullDays * daysAfterLead(comp);
 
+// ---- Q1 adjusted ranking (same model functions as src/tabs/Audit.jsx → Adjusted ranking, full period, all banks) ----
+const adj = m.fullOverlap, cfg = m.payoutConfig;
+const focalRank = m.fullRanking.rows.find(r => r.id === m.inspect.id);
+const seRatios = m.fullRanking.rows.filter(r => r.x.se && r.luckSE).map(r => r.x.se / r.luckSE).sort((a, b) => a - b);
+
+// ---- Q5 comp-program break (same model function as src/tabs/Guests.jsx → Comps & loyalty, all regions and tiers) ----
+const cb = m.fullBreak, cf = m.compFinding, dayName = d => ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'][month(d)] + ' ' + Number(d.slice(8));
+const metricOf = key => cb.results.find(r => r.metric.key === key);
+const fromTo = (r, d) => n(r.before, d) + ' to ' + n(r.after, d);
+const signedN = (v, d) => (v > 0 ? '+' : v < 0 ? '−' : '') + n(Math.abs(v), d);
+const tierText = cb.tierResults.map(r => r.name + ' ' + fromTo(r, 2)).join(', ');
+const reinvestBy = col => [...by(data.players, r => r[col]).entries()].sort((a, b) => a[0].localeCompare(b[0]))
+  .map(([k, rows]) => [k, pct(sum(rows, r => r[8]) / sum(rows, r => r[9]), 2)]);
+const [tierCells, regionCells] = [reinvestBy(3), reinvestBy(2)];
+const localBase = (rows => pct(sum(rows, r => r[8]) / sum(rows, r => r[9]), 2))(data.players.filter(r => r[2] === 'Local' && r[3] === 'Base'));
+const visitorCells = regionCells.filter(([k]) => k !== 'Local');
+
 const CHECKS = [
   // Headline decision (README + appendix)
   ['reserve', cash(m.reserve), ['readme', 'claims']],
@@ -82,6 +99,18 @@ const CHECKS = [
   ['interval without worst week', pp2(m.withoutWorst.lo) + ' to ' + pp2(m.withoutWorst.hi), ['claims']],
   ['weeks below configured hold', n(m.weeksBelow) + ' of ' + n(m.focalWeeks.length), ['claims']],
   ['M-1158 local demand', pct(m.inspect.local, 0), ['claims']],
+  // Q1 adjusted ranking and payout-config check
+  ['credibility k', 'k = ' + n(m.credibility.k) + ' hours', ['claims']],
+  ['adjusted overlap', n(adj.both.length) + ' of the raw bottom ten (' + adj.both.map(r => r.id).join(', ') + ') is in the adjusted bottom ten', ['readme', 'claims']],
+  ['raw-only at or above peers', n(adj.atOrAbovePeers.length) + ' of the other ' + n(adj.rawOnly.length), ['claims']],
+  ['outside luck bounds', n(adj.outsideLuck.length) + ' of ' + n(m.fullRanking.rows.filter(r => r.z != null).length) + ' cabinets', ['claims']],
+  ['M-1158 luck z', (focalRank.z < 0 ? '−' : '') + Math.abs(focalRank.z).toFixed(2) + ' standard errors', ['claims']],
+  ['k sensitivity', '(' + m.fullSensitivity.filter(x => x.factor).map(x => n(x.kept) + ' of 10').join(' / ') + ')', ['claims']],
+  ['no-shrinkage overlap', 'raw overlap is ' + n(m.fullSensitivity.find(x => !x.factor).overlap) + ' of 10', ['claims']],
+  ['SE agreement', 'median ratio ' + n(seRatios[seRatios.length >> 1], 2), ['claims']],
+  ['payout-config check', (cfg.rtpMismatches.length ? n(cfg.rtpMismatches.length) + ' RTP mismatches' : 'no RTP mismatches') + ' in ' + n(cfg.machineDays) + ' machine-days, ' +
+    (cfg.meterMismatches.length ? n(cfg.meterMismatches.length) + ' meter theo mismatches' : 'no meter theo mismatches') + ' and ' +
+    (cfg.dailyChanges.length + cfg.placementChanges.length ? n(cfg.dailyChanges.length + cfg.placementChanges.length) + ' mid-period configuration changes' : 'no mid-period configuration changes') + ' across ' + n(cfg.placements) + ' placements', ['claims']],
   // Q2
   ['February with Super Bowl', millions(sum(febDays, r => r.coin) / febDays.length, 3), ['claims']],
   ['February without Super Bowl', millions(sum(febNoSB, r => r.coin) / febNoSB.length, 3), ['claims']],
@@ -115,6 +144,22 @@ const CHECKS = [
   ['comp face value', cash(sum(data.property, r => r[8])), ['claims']],
   ['comp intensity January', pct(sum(data.property.filter(r => month(r[0]) === 0), r => r[9]) / sum(data.property.filter(r => month(r[0]) === 0), r => r[5]), 2), ['claims']],
   ['comp intensity June', pct(sum(data.property.filter(r => month(r[0]) === 5), r => r[9]) / sum(data.property.filter(r => month(r[0]) === 5), r => r[5]), 2), ['claims']],
+  ['comp break date', 'Break found on ' + cf.date + ' (' + pct(cb.lead.split.r2, 1) + ' of weekly variation explained)', ['claims']],
+  ['comp price change', cf.price + ' (' + cf.priceChange + '; 95% interval ' + cf.priceInterval + ' points)', ['claims']],
+  ['comp windows', dayName(data.dates[cb.before[0]]) + '–' + Number(data.dates[cb.before.at(-1)].slice(8)) + ' vs ' + dayName(data.dates[cb.after[0]]) + '–' + Number(data.dates[cb.after.at(-1)].slice(8)), ['claims']],
+  ['comp placebo rank', 'The real break is ' + cf.rank, ['claims']],
+  ['largest clean placebo', signedN(cb.largestClean.change, 2) + ' points (' + dayName(data.dates[cb.largestClean.day]) + ')', ['claims']],
+  ['earn rate flat', '(' + fromTo(metricOf('earn'), 2) + ')', ['claims']],
+  ['cost per face flat', '(' + fromTo(metricOf('costFace'), 3) + ')', ['claims']],
+  ['tier thresholds', m.tierRules.stable ? 'Gold ' + n(m.tierRules.gold.high) + ' and Platinum ' + n(m.tierRules.platinum.high) + ' lifetime points in all six months' : 'tier brackets moved', ['claims']],
+  ['redemption rate', 'rose ' + cf.rateChange + ' (interval ' + cf.rateInterval + ')', ['claims']],
+  ['comp reinvestment shift', 'went from ' + cf.reinvest + ' (' + cf.reinvestChange + ')', ['claims']],
+  ['comp price by tier', '(' + tierText + ')', ['claims']],
+  ['tier mix share', 'tier mix explains ' + signedN(cb.mix, 2) + ' of the ' + signedN(cb.mix + cb.within, 2) + '-point change', ['claims']],
+  ['reinvestment by tier', 'By opening tier: ' + tierCells.map(([k, v]) => k + ' ' + v).join(', '), ['claims']],
+  ['reinvestment by region', 'Local ' + regionCells.find(([k]) => k === 'Local')[1] + ' vs ' + visitorCells.slice(0, -1).map(([k, v]) => k + ' ' + v).join(', ') + ' and ' + visitorCells.at(-1).join(' '), ['claims']],
+  ['upper tiers are Local', data.players.every(r => r[3] === 'Base' || r[2] === 'Local') ? 'Every Gold and Platinum opening-tier player is Local' : 'upper tiers span regions', ['claims']],
+  ['Local Base reinvestment', 'within Local, Base reinvestment is ' + localBase, ['claims']],
   // Model
   ['weekday MAE', cash(m.m1), ['claims']],
   ['last-week MAE', cash(m.m7), ['claims']],
