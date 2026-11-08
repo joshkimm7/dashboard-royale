@@ -15,10 +15,13 @@ export const CARD_INFO = {
   'Estimated coin-in at risk': "Wagers the floor probably missed while machines were down. Each lost hour is priced at that cabinet's usual wager rate on fully available days of the same weekday.",
   'Estimated theo at risk': "The house's expected share of the wagers at risk, using each cabinet's configured hold. It assumes every lost wager would have been played, so treat it as a ceiling.",
   // Guests & comps
-  'Carded coin-in': "Wagers recorded on loyalty cards for the selected region, tier and months. Uncarded play is missing, so this is smaller than total floor coin-in.",
+  'Carded coin-in': "Wagers recorded on loyalty cards for the selected region, tier, age band and months. Uncarded play is missing, so this is smaller than total floor coin-in.",
   'Returned to players': "What machines paid back to loyalty-card players on their tracked wagers. Set it against carded coin-in to see how much the house kept from that play.",
   'Player net': "Card players' combined payouts minus their wagers. A negative number is the amount these guests lost to the house overall, with winners and losers netted together.",
-  'Property comp cost': "What the property actually spent to supply redeemed comps across the whole floor in the selected months. Face value is the retail price guests saw. Region and tier filters don't change it.",
+  'Property comp cost': "What the property actually spent to supply redeemed comps across the whole floor in the selected months. Face value is the retail price guests saw. Region, tier and age filters don't change it.",
+  'Players behind': "Active card players whose payouts over the selected months fell short of what they wagered. Most slot players end behind because the games keep a share of every bet.",
+  'Players ahead': "Active card players whose payouts over the selected months beat what they wagered. These are lucky results, and their wins are already netted out of house win.",
+  'Players even': "Active card players whose payouts exactly matched their wagers over the selected months, to the cent. It is usually a handful of very small players.",
   // Model validation
   'Weekday forecast MAE': "Average dollar miss per day for a forecast that predicts each day's wagers as the January to April average for that weekday. It was scored on 61 May and June days it never saw.",
   'Same weekday last week MAE': "Average daily dollar miss when the forecast simply repeats the actual total from seven days earlier. It is the simple benchmark the weekday forecast has to beat.",
@@ -81,8 +84,14 @@ export const LINE_INFO = {
   'Active players ahead / behind / even': "Card players with tracked wagers, split by whether their payouts over the selected months beat, fell short of, or matched what they wagered.",
   'Cardholders with zero recorded wagers': "Loyalty members in the selected group and months who show no tracked wagers. They hold cards but have no recorded slot play here.",
   'Gross losses among losing players': "Total lost by players who ended behind, without subtracting what winning players took home. It is larger than the house's net take from carded play.",
+  // Carded play against all play
+  'Carded share of coin-in': "Share of all machine wagers that were recorded to a loyalty card, from the machine meters. The rest was played without a card and is invisible in player data.",
+  'Carded share of house win': "Share of the floor's actual house win that came from carded play. It can differ from the coin-in share because luck lands unevenly on carded and uncarded players.",
+  'Hold on carded vs uncarded play': "House win as a share of wagers, separately for carded play and for the uncarded remainder. Similar values mean carded guests are not unusually lucky or unlucky.",
+  'Machine-months where carded win beat total win': "Machine-months where carded players lost more to the machine than all players combined, which happens when uncarded players won as a group there.",
+  'Player-table wagers vs carded meters': "Carded wagers from the player-month table next to the carded wagers on the machine meters for the same months. Matching totals mean the two sources agree.",
   // What comps actually cost
-  'Selected group cost': "What the property spent to supply the comps redeemed by players in the selected region, tier and months.",
+  'Selected group cost': "What the property spent to supply the comps redeemed by players in the selected region, tier, age band and months.",
   'Group comp face value': "Retail value of the comps that group redeemed, meaning the price a guest would see. The property's real cost is a fraction of it.",
   'Selected group comp cost / expected win from that group’s carded play': "Comp spending as a share of what the house should keep from these players' tracked wagers at configured payout settings. Higher means rewards eat more of the group's value.",
   'Property cost / face value': "What the property paid per dollar of comp face value redeemed across the floor. A steady rate means rising comp cost comes from more redemptions, not pricier items.",
@@ -134,6 +143,11 @@ export const PANEL_INFO = {
   'Event days vs similar weekdays': "Wagers on each listed event's days compared with event-free days on the same weekday in the same month. A positive figure means the event days ran busier.",
   // Guests & comps
   'Who accounted for play and losses': "How concentrated loyalty-card play and losses are. Each player's months are added together first, so one guest counts once.",
+  'How concentrated are wagers and losses?': "Lorenz curves and top shares for tracked wagers and gross losses. The further the curves bow below the diagonal, the more a few players account for the total.",
+  'Who ended ahead and who ended behind?': "How active card players' net results spread out, from big losses to big wins, in dollar bins. It shows how many ended behind, ahead or even.",
+  'Losses call for safeguards, not targeting': "Why concentrated losses point to responsible-gaming protections rather than marketing, and how a future comp pilot could build those protections in.",
+  'Results by tier, region and age': "Carded wagers, payouts, player net, hold, expected win and comp cost for each opening tier, home region and age band in the current filters.",
+  'Carded play against all play': "Reconciles loyalty-card play with the machine meters, which count everyone. It shows how much play the player tables cover and why their totals never match.",
   'What comps actually cost': "Compares what comps cost the property with their retail face value and with the expected win from the players who received them.",
   'Monthly loyalty economics': "Tracks comp spending month by month against slot expected win and against face value, to separate rising redemptions from a change in cost per comp.",
   'Did the comp program change?': "Searches the loyalty ledger for one date where the comp program shifted, then tests it. It covers points earned, points charged per comp, cost per comp and tier rules.",
@@ -159,6 +173,9 @@ export const PANEL_INFO = {
 };
 
 export const CHART_INFO = {
+  'How concentrated are wagers and losses?': "Players sorted from smallest to largest along the bottom; the height shows the share of the total they hold together. The dashed diagonal is perfect equality.",
+  'Who ended ahead and who ended behind?': "Number of active card players in each net-result bin. Rose columns lost money, blue columns won, and the middle column broke exactly even.",
+  'Carded play against all play': "Monthly house win from all machine play next to house win from carded play only. The gap is play that nobody recorded on a loyalty card.",
   'Payout gap vs luck bounds': "Payout gap per dollar wagered against total wagers on a log scale. Dashed lines show the 95% luck range for the chosen volatility class; marks colored rose or blue sit outside their own range.",
   'Machine file': "Actual house win each month against what the cabinet's payout settings say it should have kept. A win line that keeps sitting below expected win suggests a payout problem rather than bad luck.",
   'M-1158 · Weekly payout check': "Weekly hold gap for M-1158 against the wager-weighted gap of every cabinet running the same game. Zero means paying exactly as configured; points below it mean the house kept less.",

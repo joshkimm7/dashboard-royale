@@ -27,7 +27,7 @@ function barPath(x, w, y0, y1) {
 }
 
 /**
- * series: [{ name, color, values, kind?: 'line'|'bar', dash?, area?, muted?, diverging?: {below, above} }]
+ * series: [{ name, color, values, kind?: 'line'|'bar', dash?, area?, muted?, diverging?: {below, above, sides?, neutral?} }]
  * type: default kind for series without one. baseline: label for the zero line (shown when 0 is in range).
  * title: the panel title, used to look up the chart's "i" explanation.
  */
@@ -57,7 +57,10 @@ export function Chart({ series, labels, format = n, min = null, max = null, heig
   const tickStep = Math.ceil(labels.length / 7);
   const showX = i => labels.length <= 8 || i === labels.length - 1 || (i % tickStep === 0 && labels.length - 1 - i >= tickStep * .8);
   const anchor = i => hasBars ? 'middle' : i === 0 && labels.length > 1 ? 'start' : i === labels.length - 1 && labels.length > 1 ? 'end' : 'middle';
-  const colorAt = (s, v) => s.diverging ? (v < 0 ? s.diverging.below : s.diverging.above) : s.color;
+  // Diverging colors follow the value's sign, or an explicit side per column (-1 below, 0 neutral, 1 above) for histograms.
+  const colorAt = (s, v, i) => !s.diverging ? s.color
+    : s.diverging.sides ? [s.diverging.below, s.diverging.neutral ?? s.color, s.diverging.above][Math.sign(s.diverging.sides[i]) + 1]
+    : v < 0 ? s.diverging.below : s.diverging.above;
 
   const linePath = values => {
     let d = '', prev = false;
@@ -132,7 +135,7 @@ export function Chart({ series, labels, format = n, min = null, max = null, heig
           {hover != null && <rect className="hover-band" x={hasBars ? LEFT + band * hover : x(hover) - 0.5} y={TOP} width={hasBars ? band : 1} height={plotH} />}
 
           {barSeries.map((s, bi) => s.values.map((v, i) => Number.isFinite(v) ? (
-            <path key={s.name + i} className={'bar' + (hover === i ? ' lit' : '')} fill={colorAt(s, v)}
+            <path key={s.name + i} className={'bar' + (hover === i ? ' lit' : '')} fill={colorAt(s, v, i)}
               d={barPath(x(i) - groupW / 2 + bi * (barW + gap), barW, y0, y(v))} />
           ) : null))}
           {fillBetween && (() => {
@@ -175,7 +178,7 @@ export function Chart({ series, labels, format = n, min = null, max = null, heig
             <div className="chart-tip-head">{labels[hover]}</div>
             {series.map((s, si) => (
               <div className="chart-tip-row" key={s.name}>
-                <i className={kinds[si] === 'bar' ? 'key-rect' : 'key-line'} style={{ '--c': colorAt(s, s.values[hover] ?? 0) }} />
+                <i className={kinds[si] === 'bar' ? 'key-rect' : 'key-line'} style={{ '--c': colorAt(s, s.values[hover] ?? 0, hover) }} />
                 <strong>{format(s.values[hover])}</strong><span>{s.name}</span>
               </div>
             ))}

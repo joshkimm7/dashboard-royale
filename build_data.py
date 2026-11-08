@@ -232,6 +232,48 @@ assert np.allclose(players.tracked_payout_usd - players.tracked_coin_in_usd, pla
 players['person'] = pd.factorize(players.player_id, sort=True)[0]
 players['month'] = players.period_month.str[-2:].astype(int) - 1
 
+# Q4 age band: one value per card holder from `players` (missing for some, shown as "Unknown"), joined to the
+# person index after the player-month table is keyed, and shipped as one digit per person to stay small.
+holders = load('players')[['player_id','age_band']].assign(age_band=lambda f: f.age_band.fillna('Unknown'))
+person_ids = pd.Index(sorted(players.player_id.unique()))
+assert holders.player_id.is_unique and person_ids.isin(holders.player_id).all()
+age_bands = sorted(holders.age_band.unique())
+assert len(age_bands) <= 10
+age_codes = holders.set_index('player_id').age_band.reindex(person_ids).map({b: i for i, b in enumerate(age_bands)})
+assert players.age_band.fillna('Unknown').eq(players.player_id.map(holders.set_index('player_id').age_band)).all()
+player_age = {'bands': age_bands, 'codes': ''.join(map(str, age_codes.astype(int)))}
+
+# Q4 concentration reference for the whole carded population: per-person totals first, then the top 1/10/20% shares
+# and Gini of wagers and of gross losses among active players. The client recomputes these for any filter; the claims
+# check compares its full-population result with this independent pandas calculation.
+per_person = players.groupby('person').agg(coin=('tracked_coin_in_usd','sum'), net=('tracked_net_usd','sum'))
+per_person = per_person[per_person.coin > 0]
+def concentration(values):
+    v = np.sort(values.to_numpy())[::-1]
+    total, count = v.sum(), len(v)
+    top = {f'top{q}': float(v[:int(np.ceil(count * q / 100))].sum() / total) for q in (1, 10, 20)}
+    ascending = v[::-1]
+    gini = float(2 * np.sum(np.arange(1, count + 1) * ascending) / (count * total) - (count + 1) / count)
+    return {**top, 'gini': gini, 'players': int(count)}
+concentration_ref = {'wagers': concentration(per_person.coin.round(2)),
+                     'losses': concentration((-per_person.net).clip(lower=0).round(2))}
+print('Concentration reference:', concentration_ref)
+
+# Carded vs all play (guide §4.2): monthly machine meters for placed, reported machine-days, with the carded subset.
+# Carded win can exceed total win for a machine-month when uncarded players won as a group on that machine.
+carded = load('machine_day')
+carded = carded[carded.location_id.notna() & carded.meter_status.eq('reported')].copy()
+carded['month'] = carded.gaming_date.str[5:7].astype(int) - 1
+carded['win'] = carded.coin_in_cents - carded.payout_cents
+carded['carded_win'] = carded.carded_coin_in_cents - carded.carded_payout_cents
+machine_months = carded.groupby(['month','machine_id'])[['win','carded_win']].sum()
+machine_months['above'] = machine_months.carded_win > machine_months.win
+carded_monthly = carded.groupby('month')[['coin_in_cents','payout_cents','theo_cents','carded_coin_in_cents','carded_payout_cents','carded_theo_cents']].sum() / 100
+carded_monthly['machine_months'] = machine_months.groupby(level='month').size()
+carded_monthly['machine_months_above'] = machine_months.groupby(level='month').above.sum()
+carded_monthly = carded_monthly.reset_index()
+assert np.allclose(carded_monthly.coin_in_cents.sum(), daily.coin_in_usd.sum())
+
 # Q5 loyalty ledger: award and redemption totals per gaming day x home region x opening tier x tier at the event.
 # Awards take the gaming day and wagers of the carded segment that earned them; redemptions use the Vegas
 # 06:00-06:00 gaming day of the event. Economic cost equals the linked POS cogs, so it is counted once, here only.
@@ -412,6 +454,9 @@ data = {
     'city': rows(city, ['month','mean_visitors_per_calendar_day','source_url']),
     'events': rows(events, ['name','start_date','end_date','local_scope']),
     'payoutConfig': payout_config,
+    'playerAge': player_age, 'concentration': concentration_ref,
+    'carded': rows(carded_monthly, ['month','coin_in_cents','payout_cents','theo_cents','carded_coin_in_cents','carded_payout_cents',
+                                    'carded_theo_cents','machine_months','machine_months_above'], 2),
     'loyalty': {'dicts': loyalty_dicts, 'rows': rows(loyalty, ['day','home_region','opening_tier','tier_before','earned','coin','theo',
                                                               'redemptions','spent','face','cost'], 2),
                 'tierRules': tier_rules},

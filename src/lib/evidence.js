@@ -48,7 +48,10 @@ export function buildEvidenceGraph(m) {
   add('ev-downtime', 'evidence', 'Downtime impact', 'Whether lost play from downtime explains the demand trend.', cash(sum(auditRows, r => r.lost) / fullDays) + '/day at risk', { goto: 'demand/downtime' });
   add('ev-events', 'evidence', 'Event days', 'Wagers on event days vs similar ordinary days.', n(data.events.length) + ' events', { goto: 'demand/events' });
   add('ev-promo', 'evidence', 'Promotion evidence', 'Lift from past promotions and the hurdle a July pilot must clear.', pct(promoHurdle, 1) + ' hurdle', { jump: 'promotion-check' });
-  add('ev-players', 'evidence', 'Player concentration', 'How much of carded play and losses came from the top 1%.', '', { goto: 'guests/players' });
+  const outcomes = m.fullOutcomes;
+  add('ev-players', 'evidence', 'Player concentration', 'The top 10% of active carded players placed ' + pct(outcomes.wagers.top10) + ' of tracked wagers and ' + pct(outcomes.losses.top10) +
+    ' of gross losses; ' + n(outcomes.behind) + ' of ' + n(outcomes.active) + ' ended behind. Concentrated losses call for safeguards, not targeting; carded play is reconciled with the machine meters.',
+    'Loss Gini ' + n(outcomes.losses.gini, 2), { jump: 'players-check' });
   add('ev-comps', 'evidence', 'Comps & loyalty', 'What comps cost relative to play, month by month.', '', { goto: 'guests/comps' });
   add('ev-comp-break', 'evidence', 'Comp program change', compFinding.detected
     ? 'On ' + compFinding.date + ' comps were repriced from ' + compFinding.price + ' (' + compFinding.priceChange + ', ' + compFinding.rank + '), within every tier; earn rates' + (compFinding.costFaceFlat ? ' and cost per face-value dollar' : '') + (m.tierRules.stable ? ' held, and so did tier rules.' : ' held, but tier-rule brackets moved.')
@@ -57,7 +60,7 @@ export function buildEvidenceGraph(m) {
 
   for (const [a, list] of Object.entries({ 'act-inspect': ['ev-hold', 'ev-verdicts', 'ev-adjusted'], 'act-move': ['ev-moves', 'ev-move-econ'], 'act-staff': ['ev-staffing', 'ev-holdout'],
     'act-promo': ['ev-promo', 'ev-events'], 'act-reserve': ['ev-catalog', 'ev-adjusted'],
-    q1: ['ev-verdicts', 'ev-adjusted', 'ev-hold'], q2: ['ev-demand', 'ev-downtime', 'ev-events'], q4: ['ev-players', 'ev-comps', 'ev-comp-break'], 'ev-comps': ['ev-catalog'], 'act-comp': ['ev-comp-break', 'ev-comps'], 'ev-comp-break': ['ev-catalog'], qm: ['ev-holdout', 'ev-staffing'], q6: ['ev-catalog', 'ev-moves', 'ev-move-econ', 'ev-promo'] }))
+    q1: ['ev-verdicts', 'ev-adjusted', 'ev-hold'], q2: ['ev-demand', 'ev-downtime', 'ev-events'], q4: ['ev-players', 'ev-comps', 'ev-comp-break'], 'ev-comps': ['ev-catalog'], 'act-comp': ['ev-comp-break', 'ev-comps', 'ev-players'], 'ev-comp-break': ['ev-catalog'], qm: ['ev-holdout', 'ev-staffing'], q6: ['ev-catalog', 'ev-moves', 'ev-move-econ', 'ev-promo'] }))
     for (const b of list) link(a, b);
 
   const flagsSeen = new Set();
@@ -81,7 +84,7 @@ export function buildEvidenceGraph(m) {
   add('src-ledger', 'source', 'Loyalty ledger', 'Every points award and comp redemption, with tier, face value and cost.', n(sum(data.loyalty.rows, r => r[7])) + ' redemptions');
   add('src-catalog', 'source', 'Action catalog', 'Costs and lead times for every July action.', n(data.actions.length) + ' actions');
   add('src-city', 'source', 'LVCVA visitation', 'Monthly Las Vegas visitor counts for market context.', n(data.city.length) + ' months');
-  for (const [a, list] of Object.entries({ 'src-meters': ['ev-verdicts', 'ev-adjusted', 'ev-hold', 'ev-downtime', 'ev-moves', 'ev-demand'], 'src-property': ['ev-demand', 'ev-holdout', 'ev-staffing', 'ev-events'],
+  for (const [a, list] of Object.entries({ 'src-meters': ['ev-verdicts', 'ev-adjusted', 'ev-hold', 'ev-downtime', 'ev-moves', 'ev-demand', 'ev-players'], 'src-property': ['ev-demand', 'ev-holdout', 'ev-staffing', 'ev-events'],
     'src-players': ['ev-players', 'ev-comps'], 'src-ledger': ['ev-comp-break'], 'src-events': ['ev-events', 'ev-holdout', 'ev-promo'], 'src-moves': ['ev-moves'], 'src-gamemath': ['ev-adjusted'], 'src-catalog': ['ev-catalog', 'ev-move-econ'], 'src-city': ['ev-demand'] }))
     for (const b of list) link(a, b);
 

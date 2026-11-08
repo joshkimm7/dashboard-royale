@@ -18,12 +18,12 @@ export const SECTION_SUB = {
   'machine-check': ['audit', 'machine'], 'hold-check': ['audit', 'machine'],
   'staffing-check': ['model', 'staffing'], 'action-summary': ['plan', 'summary'], 'inspection-plan': ['plan', 'inspection'],
   'move-check': ['plan', 'moves'], 'promotion-check': ['plan', 'promotion'], 'catalog-check': ['plan', 'catalog'],
-  'comp-break-check': ['guests', 'comps'],
+  'players-check': ['guests', 'players'], 'comp-break-check': ['guests', 'comps'],
 };
 export const firstSub = tab => SUBTABS[tab]?.[0]?.[0] ?? '';
 
-export const DEFAULTS = { from: 0, to: 5, bank: '', tab: 'overview', sub: '', machine: '', sort: 'win', reverse: false, all: false, region: '', tier: '' };
-const HASH_KEYS = ['tab', 'sub', 'from', 'to', 'bank', 'machine', 'sort', 'reverse', 'all', 'region', 'tier'];
+export const DEFAULTS = { from: 0, to: 5, bank: '', tab: 'overview', sub: '', machine: '', sort: 'win', reverse: false, all: false, region: '', tier: '', age: '' };
+const HASH_KEYS = ['tab', 'sub', 'from', 'to', 'bank', 'machine', 'sort', 'reverse', 'all', 'region', 'tier', 'age'];
 const SORT_KEYS = ['id', 'win', 'days', 'availability', 'local', 'zone', 'down', 'res'];
 
 const normalize = s => ({ ...s, sub: SUBTABS[s.tab].some(([k]) => k === s.sub) ? s.sub : firstSub(s.tab) });
@@ -37,7 +37,7 @@ function readHash(model) {
     if (value !== null && /^[0-5]$/.test(value)) s[key] = Number(value);
   }
   if (s.from > s.to) s.to = s.from;
-  const allowed = { tab: Object.keys(SUBTABS), bank: model.zoneBanks.map(r => r[0]), machine: model.dict.machine_id, sort: SORT_KEYS, region: model.regions, tier: model.tiers };
+  const allowed = { tab: Object.keys(SUBTABS), bank: model.zoneBanks.map(r => r[0]), machine: model.dict.machine_id, sort: SORT_KEYS, region: model.regions, tier: model.tiers, age: model.ageBands };
   for (const [key, values] of Object.entries(allowed)) {
     const value = params.get(key);
     if (values.includes(value)) s[key] = value;
@@ -152,7 +152,7 @@ export function NavProvider({ model, children }) {
     toggleBank: bank => go(s => ({ bank: s.bank === bank ? '' : bank, machine: '' }), { focus: '[data-bank="' + bank + '"]' }),
     sortBy: key => go(s => ({ reverse: s.sort === key && !s.reverse, sort: key }), { focus: '[data-sort="' + key + '"]' }),
     toggleAll: () => go(s => ({ all: !s.all }), { focus: '#show-all' }),
-    reset: () => go({ from: 0, to: 5, bank: '', region: '', tier: '', machine: '', sort: 'win', reverse: false, all: false }),
+    reset: () => go({ from: 0, to: 5, bank: '', region: '', tier: '', age: '', machine: '', sort: 'win', reverse: false, all: false }),
     /** Mirrors the original change handler for the filter and picker selects. */
     setFilter: (id, value) => {
       const patch = {
@@ -161,6 +161,7 @@ export function NavProvider({ model, children }) {
         bank: () => ({ bank: value, machine: '' }),
         region: () => ({ region: value }),
         tier: () => ({ tier: value }),
+        age: () => ({ age: value }),
         'machine-pick': () => ({ machine: value }),
       }[id];
       go(patch, { focus: '#' + id });

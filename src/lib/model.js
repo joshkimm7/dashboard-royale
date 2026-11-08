@@ -247,6 +247,61 @@ export function loyaltyBreak(rows, { days, tiers, window = 28, reps = 2000, minW
   }
 }
 
+/** Net-outcome bins for the Q4 histogram, symmetric around zero, in dollars per player over the selected months. */
+export const OUTCOME_EDGES = [25, 100, 250, 1000, 2500];
+const kLabel = v => v >= 1000 ? n(v / 1000, v % 1000 ? 1 : 0) + 'k' : n(v);
+export const OUTCOME_BINS = [
+  ...OUTCOME_EDGES.map((e, i) => ({ side: -1, lo: e, hi: OUTCOME_EDGES[i + 1] ?? Infinity })).reverse(),
+  ...[{ side: -1, lo: 0, hi: OUTCOME_EDGES[0] }, { side: 0, lo: 0, hi: 0 }, { side: 1, lo: 0, hi: OUTCOME_EDGES[0] }],
+  ...OUTCOME_EDGES.map((e, i) => ({ side: 1, lo: e, hi: OUTCOME_EDGES[i + 1] ?? Infinity })),
+].map(b => ({ ...b, label: b.side === 0 ? 'Even' : (b.side < 0 ? '−' : '+') + '$' + (b.hi === Infinity ? kLabel(b.lo) + '+' : (b.lo ? kLabel(b.lo) : '0') + '–' + kLabel(b.hi)) }));
+
+/** Concentration of non-negative per-player amounts: top 1/10/20% shares, Gini and a Lorenz curve with `points` steps. */
+export function concentrationOf(values, points = 100) {
+  const asc = values.slice().sort((a, b) => a - b), count = asc.length, total = sum(asc, v => v);
+  if (!count || !total) return null;
+  const cum = new Float64Array(count + 1);
+  let weighted = 0;
+  asc.forEach((v, i) => { cum[i + 1] = cum[i] + v; weighted += (i + 1) * v; });
+  const top = q => (total - cum[count - Math.ceil(count * q)]) / total;
+  return {
+    players: count, top1: top(.01), top10: top(.1), top20: top(.2),
+    gini: 2 * weighted / (count * total) - (count + 1) / count,
+    curve: Array.from({ length: points + 1 }, (_, k) => cum[Math.round(k * count / points)] / total),
+  };
+}
+
+/** Q4 outcomes for a set of player-month rows. Each player's months are totaled first (net in cents, so even is exact). */
+export function playerOutcomes(rows) {
+  const people = new Map();
+  for (const r of rows) {
+    const x = people.get(r[0]) ?? [0, 0];
+    x[0] += r[4]; x[1] += Math.round(r[6] * 100); people.set(r[0], x);
+  }
+  const all = [...people.values()], active = all.filter(r => r[0] > 0);
+  const bins = OUTCOME_BINS.map(b => ({ ...b, players: 0 }));
+  for (const [, cents] of active) {
+    const dollars = Math.abs(cents) / 100, side = Math.sign(cents);
+    bins.find(b => b.side === side && (side === 0 || (dollars >= b.lo && dollars < b.hi))).players++;
+  }
+  return {
+    holders: all.length, active: active.length,
+    ahead: active.filter(r => r[1] > 0).length, behind: active.filter(r => r[1] < 0).length, even: active.filter(r => r[1] === 0).length,
+    net: sum(all, r => r[1]) / 100, grossLoss: sum(all, r => Math.max(0, -r[1])) / 100,
+    wagers: concentrationOf(active.map(r => r[0])), losses: concentrationOf(active.map(r => Math.max(0, -r[1]))),
+    bins,
+  };
+}
+
+/** Q4 breakdown: carded totals and active players for each value of `key` (a player-month row → group name). */
+export function playerBreakdown(rows, key) {
+  return [...by(rows, key).entries()].sort((a, b) => String(a[0]).localeCompare(String(b[0]))).map(([name, g]) => {
+    const wagers = sum(g, r => r[4]), payout = sum(g, r => r[5]);
+    return { name, players: new Set(g.filter(r => r[4] > 0).map(r => r[0])).size, wagers, payout, net: payout - wagers,
+      hold: ratio(wagers - payout, wagers), theo: sum(g, r => r[9]), comps: sum(g, r => r[8]) };
+  });
+}
+
 export function createModel(data) {
   const dict = data.dicts;
   const zones = Object.fromEntries(data.locations.filter(x => x[1] === 'zone').map(x => [x[0], x[3]]));
@@ -305,6 +360,13 @@ export function createModel(data) {
   // Guests
   const regions = [...new Set(data.players.map(r => r[2]))].sort();
   const tiers = [...new Set(data.players.map(r => r[3]))].sort();
+  // Age band per card holder (from the players table), one digit per person index; filters on the Guests tab use it.
+  const ageBands = data.playerAge.bands, ageCodes = data.playerAge.codes;
+  const ageOf = person => ageBands[ageCodes.charCodeAt(person) - 48];
+  /** Player-month rows for the selected months, home region, opening tier and age band. */
+  const playerRows = ({ from = 0, to = 5, region = '', tier = '', age = '' } = {}) => data.players.filter(r => r[1] >= from && r[1] <= to &&
+    (!region || region === r[2]) && (!tier || tier === r[3]) && (!age || age === ageOf(r[0])));
+  const fullOutcomes = playerOutcomes(data.players);
 
   // Q5 comp-program break test on the loyalty ledger, for the selected home region and opening tier (cached).
   const loyaltyDicts = data.loyalty.dicts, breakCache = new Map();
@@ -456,7 +518,7 @@ export function createModel(data) {
   }
 
   return {
-    data, dict, zones, fullDays, auditRows, zoneBanks, fullSummary, scope, regions, tiers, months,
+    data, dict, zones, fullDays, auditRows, zoneBanks, fullSummary, scope, regions, tiers, ageBands, ageOf, playerRows, fullOutcomes, months,
     holdout, mae, pairedSummary, m1, m7, mCalendar, peakThreshold, quietThreshold, schedulingTier, schedulingScore,
     inspect, focalWeeks, holdGap, worstWeek, leaveOneOut, withoutWorst, maxLeaveOneOutQ, inspectPeers, peerWeeks, weekLabel, matchedPayoutPeers,
     move, last, destination, june, destinationPeers, recentRate, destinationRate, catalogue, inspection, relocation, actionCost,

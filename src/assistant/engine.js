@@ -36,15 +36,10 @@ function questionFacts(qid, m) {
   if (qid === 'q4') {
     const face = sum(data.property, r => r[8]), cost = sum(data.property, r => r[9]);
     return [
-      (() => {
-        // Same aggregation as the Guests tab: total each player's carded wagers, rank active players, take the top 1%.
-        const people = new Map();
-        for (const r of data.players) people.set(r[0], (people.get(r[0]) ?? 0) + r[4]);
-        const active = [...people.values()].filter(v => v > 0).sort((a, b) => b - a);
-        const total = sum(active, v => v);
-        const top = sum(active.slice(0, Math.ceil(active.length * .01)), v => v);
-        return n(active.length) + ' cardholders recorded carded play; the top 1% of them placed ' + pct(top / total) + ' of all carded wagers.';
-      })(),
+      (o => n(o.active) + ' cardholders recorded carded play; the top 1% of them placed ' + pct(o.wagers.top1) + ' of carded wagers and the top 10% placed ' + pct(o.wagers.top10) +
+        ' (Gini ' + n(o.wagers.gini, 2) + '). Losses are concentrated too: the 10% of active players who lost the most account for ' + pct(o.losses.top10) + ' of gross losses (Gini ' + n(o.losses.gini, 2) + ').')(m.fullOutcomes),
+      (o => n(o.behind) + ' active players ended behind, ' + n(o.ahead) + ' ahead and ' + n(o.even) + ' even. That loss concentration is a reason for responsible-gaming safeguards such as loss-limit and cool-off messages, never for targeting heavy losers.')(m.fullOutcomes),
+      (r => 'Loyalty cards recorded ' + pct(sum(r, x => x[4]) / sum(r, x => x[1])) + ' of all machine coin-in; the rest is uncarded play the player tables cannot see, so carded and total house win never match.')(data.carded),
       'Comps cost ' + cash(cost) + ' over January–June, about ' + pct(cost / face, 1) + ' of their face value, and that rate held steady month to month.',
       (f => f.detected
         ? 'The loyalty ledger shows one program change: on ' + f.date + ' comps were repriced from ' + f.price + ' (' + f.priceChange + ', 95% interval ' + f.priceInterval + ' points; ' + f.rank + '). ' +

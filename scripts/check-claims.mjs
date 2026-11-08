@@ -2,7 +2,7 @@
 // and fails if a document no longer contains the freshly computed value (e.g. after a data release or a
 // method change). Run with `npm run check` after `python build_data.py <official-data>`.
 import { readFileSync } from 'node:fs';
-import { createModel } from '../src/lib/model.js';
+import { createModel, playerBreakdown, playerOutcomes } from '../src/lib/model.js';
 import { by, cash, month, n, pct, ratio, sum } from '../src/lib/format.js';
 
 const data = JSON.parse(readFileSync('data/dashboard.json', 'utf8'));
@@ -28,6 +28,27 @@ const cardedCoin = sum(data.players, r => r[4]), cardedPayout = sum(data.players
 const grossLoss = sum(p, r => Math.max(0, -r[1]));
 const topCoin = sum(active.slice().sort((a, b) => b[0] - a[0]).slice(0, cut), r => r[0]);
 const topLoss = sum(active.slice().sort((a, b) => a[1] - b[1]).slice(0, cut), r => Math.max(0, -r[1]));
+
+// ---- Q4 Lorenz curves, outcome histogram, age breakdown and carded reconciliation (same model functions as Guests → Player concentration) ----
+const fo = m.fullOutcomes, refFailures = [];
+// The browser's concentration figures must equal the independent pandas calculation in build_data.py.
+for (const key of ['wagers', 'losses']) for (const f of ['top1', 'top10', 'top20', 'gini']) {
+  if (!(Math.abs(fo[key][f] - data.concentration[key][f]) < 1e-9)) refFailures.push(key + ' ' + f + ': model ' + fo[key][f] + ' vs build_data.py ' + data.concentration[key][f]);
+}
+const lorenzPart = c => [c.top1, c.top10, c.top20].map(v => pct(v)).join(' / ');
+const lorenzText = 'Top 1% / 10% / 20% of active players: ' + lorenzPart(fo.wagers) + ' of tracked wagers (Gini ' + n(fo.wagers.gini, 2) + ') and ' + lorenzPart(fo.losses) + ' of gross losses (Gini ' + n(fo.losses.gini, 2) + ')';
+const mostBin = fo.bins.reduce((b, x) => x.players > b.players ? x : b);
+const outcomeText = n(fo.behind) + ' of ' + n(fo.active) + ' active players (' + pct(fo.behind / fo.active) + ') ended behind; ' + n(fo.bins[0].players) + ' lost $2,500 or more and ' +
+  n(fo.bins.at(-1).players) + ' won $2,500 or more. The most common result was ' + mostBin.label;
+const ageGroups = playerBreakdown(data.players, r => m.ageOf(r[0]));
+const ageGini = m.ageBands.map(age => playerOutcomes(m.playerRows({ age })).wagers.gini);
+const ageText = 'Hold by age band ranges ' + pct(Math.min(...ageGroups.map(g => g.hold)), 2) + ' to ' + pct(Math.max(...ageGroups.map(g => g.hold)), 2) +
+  '; the wager Gini ranges ' + n(Math.min(...ageGini), 2) + ' to ' + n(Math.max(...ageGini), 2) + '. ' + n(ageGroups.find(g => g.name === 'Unknown')?.players ?? 0) + ' active players have no age band';
+const cardedTot = i => sum(data.carded, r => r[i]);
+const allWin = cardedTot(1) - cardedTot(2), cardedWin = cardedTot(4) - cardedTot(5);
+const cardedText = 'Loyalty cards recorded ' + pct(cardedTot(4) / cardedTot(1)) + ' of all coin-in and ' + pct(cardedWin / allWin) + ' of total house win; carded hold ' + pct(cardedWin / cardedTot(4), 2) +
+  ' vs uncarded ' + pct((allWin - cardedWin) / (cardedTot(1) - cardedTot(4)), 2) + '. Player-table carded wagers ' + millions(cardedCoin) + ' vs carded meters ' + millions(cardedTot(4)) +
+  '. Carded win exceeded total win in ' + n(cardedTot(8)) + ' of ' + n(cardedTot(7)) + ' machine-months and in ' + n(data.carded.filter(r => r[4] - r[5] > r[1] - r[2]).length) + ' of ' + n(data.carded.length) + ' property months';
 
 // ---- Demand and downtime (same monthly logic as src/tabs/Demand.jsx, full period, all banks) ----
 const daily = [...by(m.auditRows, r => r.d).entries()].sort((a, b) => a[0] - b[0]);
@@ -139,6 +160,10 @@ const CHECKS = [
   ['ahead / behind / even', n(active.filter(r => r[1] > 0).length) + ' ended ahead, ' + n(active.filter(r => r[1] < 0).length) + ' behind and ' + n(active.filter(r => r[1] === 0).length) + ' even', ['claims']],
   ['top 1% wagers', pct(ratio(topCoin, cardedCoin)), ['claims']],
   ['top 1% losses', pct(ratio(topLoss, grossLoss)), ['claims']],
+  ['Lorenz shares and Gini', lorenzText, ['claims']],
+  ['outcome histogram', outcomeText, ['claims']],
+  ['age-band breakdown', ageText, ['claims']],
+  ['carded vs all play', cardedText, ['claims']],
   // Q5
   ['comp cost', cash(sum(data.property, r => r[9])), ['claims']],
   ['comp face value', cash(sum(data.property, r => r[8])), ['claims']],
@@ -198,7 +223,8 @@ const CHECKS = [
   ['comp pilot', cash(m.actionCost(comp)) + ' comp pilot needs about ' + pct(m.actionCost(comp) / compSpend, 0) + ' savings on ' + cash(compSpend), ['claims']],
 ];
 
-let failed = 0;
+let failed = refFailures.length;
+for (const f of refFailures) console.log('✗ concentration reference mismatch: ' + f);
 for (const [label, expected, where] of CHECKS) {
   for (const doc of where) {
     if (norm(docs[doc]).includes(norm(expected))) continue;
@@ -206,6 +232,6 @@ for (const [label, expected, where] of CHECKS) {
     console.log('✗ ' + label + ': ' + (doc === 'readme' ? 'README.md' : 'CLAIMS-AND-EVIDENCE.md') + ' should contain "' + expected + '"');
   }
 }
-const total = CHECKS.reduce((a, c) => a + c[2].length, 0);
+const total = CHECKS.reduce((a, c) => a + c[2].length, 0) + refFailures.length;
 console.log(failed ? '\n' + failed + ' of ' + total + ' quoted figures are stale.' : 'All ' + total + ' quoted figures match the model.');
 process.exit(failed ? 1 : 0);
