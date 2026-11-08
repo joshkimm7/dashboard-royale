@@ -1,6 +1,9 @@
 // All dataset-wide analysis, ported unchanged from the original script's top-level code.
 // createModel runs once at startup; components read the result through useModel().
 import { by, cash, month, months, n, ratio, sum, week } from './format.js';
+import { heatGrid, missouriMonthly, zoneContribution, zoneTraffic } from './zones.js';
+import { downtimeFinding } from './downtime.js';
+import { createPlanner } from './plan.js';
 
 export const peerDemandCutoff = .8;
 export const hasPeerBenchmark = (machine, key) => machine.zoneCover >= .5 && machine[key] != null;
@@ -247,6 +250,61 @@ export function loyaltyBreak(rows, { days, tiers, window = 28, reps = 2000, minW
   }
 }
 
+/** Net-outcome bins for the Q4 histogram, symmetric around zero, in dollars per player over the selected months. */
+export const OUTCOME_EDGES = [25, 100, 250, 1000, 2500];
+const kLabel = v => v >= 1000 ? n(v / 1000, v % 1000 ? 1 : 0) + 'k' : n(v);
+export const OUTCOME_BINS = [
+  ...OUTCOME_EDGES.map((e, i) => ({ side: -1, lo: e, hi: OUTCOME_EDGES[i + 1] ?? Infinity })).reverse(),
+  ...[{ side: -1, lo: 0, hi: OUTCOME_EDGES[0] }, { side: 0, lo: 0, hi: 0 }, { side: 1, lo: 0, hi: OUTCOME_EDGES[0] }],
+  ...OUTCOME_EDGES.map((e, i) => ({ side: 1, lo: e, hi: OUTCOME_EDGES[i + 1] ?? Infinity })),
+].map(b => ({ ...b, label: b.side === 0 ? 'Even' : (b.side < 0 ? '−' : '+') + '$' + (b.hi === Infinity ? kLabel(b.lo) + '+' : (b.lo ? kLabel(b.lo) : '0') + '–' + kLabel(b.hi)) }));
+
+/** Concentration of non-negative per-player amounts: top 1/10/20% shares, Gini and a Lorenz curve with `points` steps. */
+export function concentrationOf(values, points = 100) {
+  const asc = values.slice().sort((a, b) => a - b), count = asc.length, total = sum(asc, v => v);
+  if (!count || !total) return null;
+  const cum = new Float64Array(count + 1);
+  let weighted = 0;
+  asc.forEach((v, i) => { cum[i + 1] = cum[i] + v; weighted += (i + 1) * v; });
+  const top = q => (total - cum[count - Math.ceil(count * q)]) / total;
+  return {
+    players: count, top1: top(.01), top10: top(.1), top20: top(.2),
+    gini: 2 * weighted / (count * total) - (count + 1) / count,
+    curve: Array.from({ length: points + 1 }, (_, k) => cum[Math.round(k * count / points)] / total),
+  };
+}
+
+/** Q4 outcomes for a set of player-month rows. Each player's months are totaled first (net in cents, so even is exact). */
+export function playerOutcomes(rows) {
+  const people = new Map();
+  for (const r of rows) {
+    const x = people.get(r[0]) ?? [0, 0];
+    x[0] += r[4]; x[1] += Math.round(r[6] * 100); people.set(r[0], x);
+  }
+  const all = [...people.values()], active = all.filter(r => r[0] > 0);
+  const bins = OUTCOME_BINS.map(b => ({ ...b, players: 0 }));
+  for (const [, cents] of active) {
+    const dollars = Math.abs(cents) / 100, side = Math.sign(cents);
+    bins.find(b => b.side === side && (side === 0 || (dollars >= b.lo && dollars < b.hi))).players++;
+  }
+  return {
+    holders: all.length, active: active.length,
+    ahead: active.filter(r => r[1] > 0).length, behind: active.filter(r => r[1] < 0).length, even: active.filter(r => r[1] === 0).length,
+    net: sum(all, r => r[1]) / 100, grossLoss: sum(all, r => Math.max(0, -r[1])) / 100,
+    wagers: concentrationOf(active.map(r => r[0])), losses: concentrationOf(active.map(r => Math.max(0, -r[1]))),
+    bins,
+  };
+}
+
+/** Q4 breakdown: carded totals and active players for each value of `key` (a player-month row → group name). */
+export function playerBreakdown(rows, key) {
+  return [...by(rows, key).entries()].sort((a, b) => String(a[0]).localeCompare(String(b[0]))).map(([name, g]) => {
+    const wagers = sum(g, r => r[4]), payout = sum(g, r => r[5]);
+    return { name, players: new Set(g.filter(r => r[4] > 0).map(r => r[0])).size, wagers, payout, net: payout - wagers,
+      hold: ratio(wagers - payout, wagers), theo: sum(g, r => r[9]), comps: sum(g, r => r[8]) };
+  });
+}
+
 export function createModel(data) {
   const dict = data.dicts;
   const zones = Object.fromEntries(data.locations.filter(x => x[1] === 'zone').map(x => [x[0], x[3]]));
@@ -260,22 +318,27 @@ export function createModel(data) {
   const zoneBanks = data.locations.filter(r => r[1] === 'bank');
   const fullSummary = summarize(auditRows, fullDays).sort((a, b) => a.win - b.win);
 
-  /** Rows and property days for the selected months and bank. */
-  function scope({ from, to, bank }) {
+  const zoneOfBank = Object.fromEntries(zoneBanks.map(r => [r[0], r[2]]));
+  /** True when a bank passes the bank and zone filters (a bank id, or '' for all; a zone id, or '' for all). */
+  const bankInScope = (id, { bank = '', zone = '' } = {}) => (!bank || id === bank) && (!zone || zoneOfBank[id] === zone);
+
+  /** Rows and property days for the selected months, bank and zone. */
+  function scope({ from, to, bank, zone = '' }) {
     const dates = data.dates.filter(d => month(d) >= from && month(d) <= to);
     const start = data.dates.indexOf(dates[0]), end = data.dates.indexOf(dates.at(-1));
-    const rows = auditRows.filter(r => r.d >= start && r.d <= end && (!bank || r.bank === bank));
-    return { dates, start, end, rows, props: data.property.slice(start, end + 1), from, to, bank };
+    const rows = auditRows.filter(r => r.d >= start && r.d <= end && (!bank || r.bank === bank) && (!zone || r.zone === zone));
+    const banks = zone ? zoneBanks.filter(r => r[2] === zone).map(r => r[0]) : null;
+    return { dates, start, end, rows, props: data.property.slice(start, end + 1), from, to, bank, zone, banks };
   }
 
   // Q1 adjusted ranking: payout hold per configuration, a credibility constant fitted once on the full period,
   // and spin-level luck variance summed over the selected months and bank.
   const configHold = Object.fromEntries(data.configs.map(c => [c[0], 1 - c[1]]));
   const credibility = credibilityK(auditRows, configHold);
-  function luckFor({ from, to, bank }) {
+  function luckFor({ from, to, bank, zone = '' }) {
     const totals = new Map();
     for (const [machine, mo, b, variance] of data.luck) {
-      if (mo < from || mo > to || (bank && dict.bank_id[b] !== bank)) continue;
+      if (mo < from || mo > to || !bankInScope(dict.bank_id[b], { bank, zone })) continue;
       const id = dict.machine_id[machine];
       totals.set(id, (totals.get(id) ?? 0) + variance);
     }
@@ -302,9 +365,57 @@ export function createModel(data) {
   const fullSensitivity = kSensitivity(summarize(scope({ from: 0, to: 5, bank: '' }).rows, fullDays), luckFor({ from: 0, to: 5, bank: '' }), fullRanking);
   const fullOverlap = rankingOverlap(fullRanking);
 
+  // P10 hit-frequency check: share of all-play spins that paid anything, against the published hit probability of
+  // each cabinet's configuration, for the selected months and bank. A binomial z per cabinet, Benjamini–Hochberg across cabinets.
+  const hitData = data.hitCheck;
+  function hitCheck({ from = 0, to = 5, bank = '', zone = '' } = {}) {
+    const totals = new Map();
+    for (const [machine, mo, b, config, spins, hits] of hitData.rows) {
+      if (mo < from || mo > to || !bankInScope(dict.bank_id[b], { bank, zone })) continue;
+      const t = totals.get(machine) ?? { id: dict.machine_id[machine], code: machine, config: dict.config_id[config], expected: 0, spins: 0, hits: 0 };
+      t.spins += spins; t.hits += hits; t.expected += spins * hitData.hitProbability[config];
+      totals.set(machine, t);
+    }
+    const rows = [...totals.values()].filter(t => t.spins > 0).map(t => {
+      const published = t.expected / t.spins, observed = t.hits / t.spins;
+      const z = (t.hits - t.expected) / Math.sqrt(t.spins * published * (1 - published));
+      return { ...t, published, observed, z, p: pNormalTwoSided(z) };
+    });
+    adjustPValues(rows);
+    const flagged = rows.filter(r => r.q < .01).sort((a, b) => Math.abs(b.z) - Math.abs(a.z));
+    const others = rows.filter(r => !flagged.includes(r));
+    const meanZ = others.length ? sum(others, r => r.z) / others.length : null;
+    const sdZ = others.length > 1 ? Math.sqrt(sum(others, r => (r.z - meanZ) ** 2) / (others.length - 1)) : null;
+    return { rows, flagged, others, meanZ, sdZ, maxOther: others.length ? Math.max(...others.map(r => Math.abs(r.z))) : null };
+  }
+  /** Full-period detail for a flagged cabinet: weekly rate, carded vs uncarded and bet-size splits, and how fast the rate verifies a fix. */
+  function hitDetail(row) {
+    if (!row) return null;
+    const weeks = hitData.weeks.filter(w => w[0] === row.code).map(([, w, spins, hits]) => ({ w, spins, hits, rate: hits / spins }));
+    const split = hitData.split.find(r => r[0] === row.code);
+    const [, cardedSpins, cardedHits, allSpins, allHits, bets, medianDaySpins] = split ?? [];
+    const daySe = medianDaySpins ? Math.sqrt(row.published * (1 - row.published) / medianDaySpins) : null;
+    return {
+      weeks, above: weeks.filter(w => w.rate > row.published).length,
+      carded: split ? cardedHits / cardedSpins : null, cardedSpins, uncarded: split ? (allHits - cardedHits) / (allSpins - cardedSpins) : null, uncardedSpins: split ? allSpins - cardedSpins : null,
+      bets: (bets ?? []).map(([bet, spins, hits]) => ({ bet: bet / 100, spins, rate: hits / spins })),
+      medianDaySpins, daySe, daySeparation: daySe ? (row.observed - row.published) / daySe : null,
+    };
+  }
+  const fullHit = hitCheck();
+  const hitFinding = (lead => ({ ...fullHit, lead, detail: hitDetail(lead) }))(fullHit.flagged[0]);
+  const compVisits = data.compVisits;
+
   // Guests
   const regions = [...new Set(data.players.map(r => r[2]))].sort();
   const tiers = [...new Set(data.players.map(r => r[3]))].sort();
+  // Age band per card holder (from the players table), one digit per person index; filters on the Guests tab use it.
+  const ageBands = data.playerAge.bands, ageCodes = data.playerAge.codes;
+  const ageOf = person => ageBands[ageCodes.charCodeAt(person) - 48];
+  /** Player-month rows for the selected months, home region, opening tier and age band. */
+  const playerRows = ({ from = 0, to = 5, region = '', tier = '', age = '' } = {}) => data.players.filter(r => r[1] >= from && r[1] <= to &&
+    (!region || region === r[2]) && (!tier || tier === r[3]) && (!age || age === ageOf(r[0])));
+  const fullOutcomes = playerOutcomes(data.players);
 
   // Q5 comp-program break test on the loyalty ledger, for the selected home region and opening tier (cached).
   const loyaltyDicts = data.loyalty.dicts, breakCache = new Map();
@@ -408,7 +519,6 @@ export function createModel(data) {
   const grossLift = (destinationRate - recentRate) * (hoursAfterLead - relocation[5] / 60);
   const netMove = (capture, displacement) => grossLift * capture * (1 - displacement) - disruption - moveCost;
   const moveBreakEven = (moveCost + disruption) / grossLift;
-  const reserve = 100000 - inspectionCost;
   // Comparison cabinets for a later move: same configuration, same source zone, never moved banks in the period.
   const moveControls = [...by(juneSameConfig.filter(r => r.zone === last.zone && r.id !== move.id), r => r.id).keys()]
     .filter(id => new Set(auditRows.filter(r => r.id === id).map(r => r.bank)).size === 1).sort();
@@ -455,8 +565,40 @@ export function createModel(data) {
     return weekdays.length === 7 ? sum(weekdays, g => sum(g, value) / g.length) / 7 : null;
   }
 
+  // Q2 "why": April → June zone decomposition, zone traffic, the busiest hour, weather and the Missouri market (full floor).
+  const zoneFinding = (() => {
+    const c = zoneContribution(auditRows, data.dates, weekdayAdjusted, 3, 5);
+    const biggest = c.zones.slice().sort((x, y) => Math.abs(y.change) - Math.abs(x.change))[0];
+    const steepest = c.zones.slice().sort((x, y) => x.b.rate / x.a.rate - y.b.rate / y.a.rate)[0];
+    const traffic = zoneTraffic(data.zoneTraffic, data.dates, 0, fullDays - 1);
+    const entryChange = data.zoneTraffic.zones.map(z => traffic.get(z, 5).perDay / traffic.get(z, 3).perDay - 1);
+    const cells = heatGrid(data.heat, null, 0, 5), peak = cells.reduce((x, y) => (y.value > x.value ? y : x));
+    const mo = missouriMonthly(data.missouri), changes = mo.propertyChange(3, 5);
+    const perDay = mm => (rows => sum(rows, r => r[3]) / rows.length)(data.property.filter(r => month(r[0]) === mm));
+    const coverage = sum(data.zoneTraffic.rows, r => r[3]) / (sum(data.zoneTraffic.dayMinutes, v => v) * data.zoneTraffic.zones.length);
+    return {
+      contribution: c, biggest, steepest, hours: sum(c.zones, r => r.hoursEffect), rate: sum(c.zones, r => r.rateEffect),
+      trafficFell: entryChange.filter(v => v < 0).length, trafficZones: entryChange.length, coverage,
+      offline: sum(data.zoneTraffic.rows, r => r[4]), peak: { day: data.heat.weekdays[peak.weekday], hour: peak.hour, value: peak.value },
+      heat: data.weather.weekday.heat.map(v => 10 * v), heatMonth: data.weather.month.heat.map(v => 10 * v), rain: data.weather.weekday.rain,
+      rainDays: data.weather.rainDays, rainGap: data.weather.rainGap, placebo: data.weather.placebo,
+      ownChange: perDay(5) / perDay(3) - 1, moChange: mo.state[5].perDay / mo.state[3].perDay - 1,
+      moFell: changes.filter(r => r.change < 0).length, moCount: changes.length,
+    };
+  })();
+
+  // Q3 downtime: response times, technician staffing and the avoidable share (full period), for the July catalog.
+  const downtime = downtimeFinding({ data, auditRows, fullDays, catalogue, actionCost });
+
+  // Q6 July budget: the recommended plan, its ledger (guide §6 cost formula) and the reserve it leaves.
+  const planner = createPlanner({ data, catalogue, actionCost, auditRows, fullDays, zones, inspect, move, cohort, payoutCohort, inspectionCeiling, netMove, moveCost,
+    promoCost, retainedTheo, downtime });
+  const julyPlan = planner.ledger(planner.recommended);
+  const reserve = julyPlan.reserve;
+
   return {
-    data, dict, zones, fullDays, auditRows, zoneBanks, fullSummary, scope, regions, tiers, months,
+    zoneFinding, downtime, planner, julyPlan,
+    data, dict, zones, fullDays, auditRows, zoneBanks, bankInScope, fullSummary, scope, regions, tiers, ageBands, ageOf, playerRows, fullOutcomes, months,
     holdout, mae, pairedSummary, m1, m7, mCalendar, peakThreshold, quietThreshold, schedulingTier, schedulingScore,
     inspect, focalWeeks, holdGap, worstWeek, leaveOneOut, withoutWorst, maxLeaveOneOutQ, inspectPeers, peerWeeks, weekLabel, matchedPayoutPeers,
     move, last, destination, june, destinationPeers, recentRate, destinationRate, catalogue, inspection, relocation, actionCost,
@@ -466,5 +608,6 @@ export function createModel(data) {
     moveCases, closestCase, moveControls, bankZone, weeksBelow, cohort, quietCohort, payoutCohort, shortCohort, payoutOverlap, reviewAction, weekdayAdjusted,
     configHold, credibility, luckFor, ranking, rankingOverlap, kSensitivity, fullRanking, fullOverlap, fullSensitivity, payoutConfig: data.payoutConfig,
     compBreak, fullBreak, tierRules, compFinding,
+    hitCheck, hitDetail, hitFinding, compVisits,
   };
 }

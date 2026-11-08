@@ -15,10 +15,13 @@ export const CARD_INFO = {
   'Estimated coin-in at risk': "Wagers the floor probably missed while machines were down. Each lost hour is priced at that cabinet's usual wager rate on fully available days of the same weekday.",
   'Estimated theo at risk': "The house's expected share of the wagers at risk, using each cabinet's configured hold. It assumes every lost wager would have been played, so treat it as a ceiling.",
   // Guests & comps
-  'Carded coin-in': "Wagers recorded on loyalty cards for the selected region, tier and months. Uncarded play is missing, so this is smaller than total floor coin-in.",
+  'Carded coin-in': "Wagers recorded on loyalty cards for the selected region, tier, age band and months. Uncarded play is missing, so this is smaller than total floor coin-in.",
   'Returned to players': "What machines paid back to loyalty-card players on their tracked wagers. Set it against carded coin-in to see how much the house kept from that play.",
   'Player net': "Card players' combined payouts minus their wagers. A negative number is the amount these guests lost to the house overall, with winners and losers netted together.",
-  'Property comp cost': "What the property actually spent to supply redeemed comps across the whole floor in the selected months. Face value is the retail price guests saw. Region and tier filters don't change it.",
+  'Property comp cost': "What the property actually spent to supply redeemed comps across the whole floor in the selected months. Face value is the retail price guests saw. Region, tier and age filters don't change it.",
+  'Players behind': "Active card players whose payouts over the selected months fell short of what they wagered. Most slot players end behind because the games keep a share of every bet.",
+  'Players ahead': "Active card players whose payouts over the selected months beat what they wagered. These are lucky results, and their wins are already netted out of house win.",
+  'Players even': "Active card players whose payouts exactly matched their wagers over the selected months, to the cent. It is usually a handful of very small players.",
   // Model validation
   'Weekday forecast MAE': "Average dollar miss per day for a forecast that predicts each day's wagers as the January to April average for that weekday. It was scored on 61 May and June days it never saw.",
   'Same weekday last week MAE': "Average daily dollar miss when the forecast simply repeats the actual total from seven days earlier. It is the simple benchmark the weekday forecast has to beat.",
@@ -32,6 +35,16 @@ export const CARD_INFO = {
 };
 
 export const LINE_INFO = {
+  // Demand → Response times
+  'Fault tickets opened': "Repair tickets for machine faults opened in the selected months and bank. Each ticket runs from the moment the machine went down to the moment it was playable again.",
+  'Response · mean / median': "Minutes from a fault being opened to a technician starting work. The median is often zero because most faults are picked up at once; the mean shows the long waits.",
+  'Work started at once': "Share of fault tickets where the technician started work the moment the machine went down. A falling share means faults are queueing behind busy technicians.",
+  'Repair · mean / median': "Minutes from a technician starting work to the machine being playable again. Extra staff shortens the wait for a technician, not this part.",
+  'Meter downtime': "Scheduled machine-hours the meters show as unavailable in the selection, from every cause: faults, moves, installs and scheduled maintenance. It is the total the other lines are measured against.",
+  'Fault-ticket hours · waiting / repair': "Hours machines spent on fault tickets, split into waiting for a technician and the repair itself. Tickets never overlap on one machine, so nothing is counted twice.",
+  'Technician shift could avoid': "Waiting hours on tickets opened with one technician or none on duty, scaled by how much of the wait a second technician removed in like-for-like shifts.",
+  'Preventive maintenance could avoid · upper bound': "Ticket hours above the other makes' fault rate for any manufacturer that breaks down more often. It assumes a sweep brings that make fully level, so treat it as a ceiling.",
+  'Either action, overlap counted once': "Hours either action could avoid, with the waiting on excess-fault tickets counted once rather than twice. The remainder is repair work neither action shortens.",
   // Machine file
   'Banks during selection': "The floor banks this cabinet sat in during the selected months. More than one bank means it was moved during the period.",
   'Zones during selection': "The floor zones this cabinet occupied in the selected months. Zone matters because the audit compares the cabinet with same-game machines in the same zone.",
@@ -66,6 +79,14 @@ export const LINE_INFO = {
   'Configured RTP vs published game math': "Machine-days whose recorded payout rate differs from the published rate for that game configuration. Any mismatch is a record to inspect, not proof of tampering.",
   'Raw meter theo vs published RTP': "Cabinets whose raw meter expected win implies a payout rate different from their published game math on any day. Zero means the meters apply the published settings.",
   'Mid-period configuration changes': "Cabinets whose game configuration changed during January to June, in the daily records and in the placement history. A change would split a cabinet's record into two games.",
+  // Hit-frequency check
+  'Cabinets tested · flagged at q < 0.01': "How many cabinets had spins in the selection, and how many hit a paying spin more or less often than their published game math, after adjusting for testing many cabinets at once.",
+  'Observed vs published hit rate': "Share of the flagged cabinet's spins that paid anything, next to the share its published game says should. The z-score shows how many standard errors apart they are.",
+  'Every other cabinet (placebo)': "The same test on every unflagged cabinet. If luck is the only force, their z-scores average near 0 with a spread near 1; a far larger spread would mean the test itself is off.",
+  'Weeks above the published rate (full period)': "Weeks in which the flagged cabinet's paying-spin share sat above its published hit probability. A count near all weeks means a steady difference, not a few odd weeks.",
+  'Carded vs uncarded spins (full period)': "The flagged cabinet's hit rate for loyalty-card play and for anonymous play separately. Matching rates mean no single group of players is behind the pattern.",
+  'Hit rate by bet size (carded, full period)': "The flagged cabinet's paying-spin share at each bet size from carded sessions. A paytable difference shows at every bet; a bet-mix quirk would show at only one.",
+  'One day of play to verify a fix': "Spins on a typical day and how many daily standard errors separate the current rate from the published one. A large number means one day of play can confirm a repair.",
   // Demand across the period
   'Observed entrances per day · April to June': "Change in average daily door counts from April to June. Counts are crossings, not unique guests, so treat this as a rough traffic gauge.",
   'Adjusted wagers per observed entrance · April to June': "Change in adjusted daily wagers per door crossing from April to June. Negative means each visit produced less play, on top of any drop in traffic.",
@@ -81,8 +102,14 @@ export const LINE_INFO = {
   'Active players ahead / behind / even': "Card players with tracked wagers, split by whether their payouts over the selected months beat, fell short of, or matched what they wagered.",
   'Cardholders with zero recorded wagers': "Loyalty members in the selected group and months who show no tracked wagers. They hold cards but have no recorded slot play here.",
   'Gross losses among losing players': "Total lost by players who ended behind, without subtracting what winning players took home. It is larger than the house's net take from carded play.",
+  // Carded play against all play
+  'Carded share of coin-in': "Share of all machine wagers that were recorded to a loyalty card, from the machine meters. The rest was played without a card and is invisible in player data.",
+  'Carded share of house win': "Share of the floor's actual house win that came from carded play. It can differ from the coin-in share because luck lands unevenly on carded and uncarded players.",
+  'Hold on carded vs uncarded play': "House win as a share of wagers, separately for carded play and for the uncarded remainder. Similar values mean carded guests are not unusually lucky or unlucky.",
+  'Machine-months where carded win beat total win': "Machine-months where carded players lost more to the machine than all players combined, which happens when uncarded players won as a group there.",
+  'Player-table wagers vs carded meters': "Carded wagers from the player-month table next to the carded wagers on the machine meters for the same months. Matching totals mean the two sources agree.",
   // What comps actually cost
-  'Selected group cost': "What the property spent to supply the comps redeemed by players in the selected region, tier and months.",
+  'Selected group cost': "What the property spent to supply the comps redeemed by players in the selected region, tier, age band and months.",
   'Group comp face value': "Retail value of the comps that group redeemed, meaning the price a guest would see. The property's real cost is a fraction of it.",
   'Selected group comp cost / expected win from that group’s carded play': "Comp spending as a share of what the house should keep from these players' tracked wagers at configured payout settings. Higher means rewards eat more of the group's value.",
   'Property cost / face value': "What the property paid per dollar of comp face value redeemed across the floor. A steady rate means rising comp cost comes from more redemptions, not pricier items.",
@@ -94,6 +121,10 @@ export const LINE_INFO = {
   'Tier thresholds (lifetime points)': "Lifetime points needed for Gold and Platinum, read from the lowest balance in each tier and the highest balance below it each month. Unchanged means tier rules didn't move.",
   'Change explained by tier mix': "Part of the floor-wide price change caused only by redemptions shifting toward tiers with better prices. Each tier's price is held at its before-break value.",
   'Change within tiers (policy)': "Part of the floor-wide price change that comes from prices changing inside each tier. A large share here means the program's rules changed, not who was redeeming.",
+  // Did cheaper comps bring guests back?
+  'Cohort · comp users': "Card holders who visited shortly before the comparison, and how many of them had already redeemed a comp. Comp users are the group the cheaper comps should affect.",
+  'Comp users’ visits per person, 28 days before / after': "Recorded visits per comp user in the four weeks before the repricing and the four weeks after. A lift from cheaper comps would raise the second number.",
+  'Other guests’ visits per person, 28 days before / after': "The same visit counts for recent guests who had not redeemed a comp. Their change is the baseline that strips out season and calendar effects.",
   // Why keep the rest?
   'Bottom-ten cabinets flagged for quiet placement': "Lowest earners over January to June whose zone drew under 80% of the play that the same game drew across the floor. Low earnings there point to location, not the cabinet.",
   'Bottom-ten cabinets flagged for downtime': "Lowest earners over January to June that were unavailable for more than 2% of scheduled time. Zero means breakdowns don't explain their low earnings.",
@@ -110,8 +141,31 @@ export const LINE_INFO = {
   'Same-config destination cabinets': "How many same-game cabinets in the destination zone played in June and set the destination benchmark. Fewer cabinets make that benchmark less reliable.",
   // Relocation economics with displaced play
   'Break-even placement capture at 0% / 25% displacement': "Share of the placement gap the move must capture to pay off in July, first assuming no play is taken from other machines, then assuming a quarter of the gain is.",
+  // July budget ledger and plan builder
+  'Ledger total': "Each funded action's July cost plus the unspent reserve. The two must add up to exactly the $100,000 budget, so no money is double-counted or left unaccounted for.",
+  'Chance the inspection finds and fully corrects a fault': "Your assumed odds that the paytable check finds a real fault and the fix restores normal payout. Expected recovery scales with it; zero recovery is credited otherwise.",
+  'Placement gap the move captures': "How much of the earnings gap between the machine's current spot and similar machines at the destination the move actually closes. Past moves ranged widely, so treat it as uncertain.",
+  'Move gain displaced from other machines': "Share of the moved machine's gain that is play taken from neighbouring machines rather than new play. Displaced play adds nothing to the floor, so it lowers the net.",
+  'Share of past promotion lift a July weekend keeps': "How much of the expected-win lift seen at past promotions a shorter July weekend would repeat, through the week after. Below the break-even share the weekend loses money.",
+  'Inspection expected net': "July recovery at your assumed chance of a full fix, minus the inspection fee. Repair costs and the two-hour interruption are not included.",
+  'Move expected net': "July expected win from the relocation at your capture and displacement settings, after the move fee and three hours of disruption.",
+  'Promotion weekend expected net': "Expected-win lift at your assumed share of the weaker past event, minus the catalog price of one weekend. Extra staffing or prizes would lower it further.",
+  'Plan cost': "Total July cost of the actions in your plan, using the catalog formula with recurring charges only for days after each lead time.",
+  'Remaining reserve': "What is left of the $100,000 after your plan. Keeping money is a valid choice; a negative value means the plan is over budget.",
+  'Expected net of estimated actions': "Expected benefit minus cost for the actions the evidence can price at your assumptions. Actions without a benefit estimate are listed separately as cost only.",
   // Promotion weekend evidence
   'Catalog terms': "Price per promotion weekend, the notice it needs before it can run, and the most weekends the catalog allows in July.",
+  // Demand → Zones & context
+  'Selected bank coin-in per day': "The selected bank's average daily wagers in the first and second comparison month, and the change. Set it beside its zone's row to see whether the bank followed its zone.",
+  'Zones with fewer entries per day': "How many floor zones logged fewer counter entries per day in the later comparison month. Entries count crossings, not guests, so read it as a rough traffic direction.",
+  'Heat effect per +10 °C': "Estimated change in daily wagers when the airport's daily high is 10 °C warmer, holding the weekday fixed. If the interval spans zero, heat shows no measurable effect.",
+  'Rain day effect': "Estimated difference in daily wagers on days with at least 1 mm of rain, compared with the same weekday otherwise. Very few rain days make this fragile.",
+  'Random same-size day sets as low as the rain days': "How often a random set of ordinary days, as many as the rain days, averaged as far below weekday expectation. Rarely means the rain-day dip is unusual.",
+  // Bank profile (Machine audit and Demand & uptime, when a bank is selected)
+  'Machines in the bank': "Cabinets that played in this bank during the selected months, and the slot positions they used. Machines move, so a busy period can show more cabinets than slots.",
+  'Coin-in per available hour vs floor': "Wagers per working machine-hour in this bank against the whole floor over the same months. Under 100% means the bank's cabinets draw less play per hour than the floor's average cabinet.",
+  'Bank downtime': "Machine-hours this bank's cabinets were down during scheduled time, the share of scheduled time they were available, and the wagers those down hours likely cost.",
+  'Zone change · April to June': "How the bank's whole zone moved from April to June: wagers per day, wagers per working machine-hour and counter entries per day. Context for the bank, not its own result.",
 };
 
 export const PANEL_INFO = {
@@ -120,10 +174,13 @@ export const PANEL_INFO = {
   'Machine file': "One cabinet's record for the selected months: where it sat, how it earned against its settings and its neighbors, and which screening flags it triggered.",
   'Floor banks by zone': "A floor map grouped by zone. Use it to see whether low earners cluster in one area, and click a bank to narrow the audit and demand views to it.",
   'M-1158 · Weekly payout check': "Tests whether M-1158's shortfall is steady or driven by a few weeks. It compares each week with its settings and with cabinets running the same game.",
+  'Hit-frequency check': "Weekly share of the flagged cabinet's spins that paid anything, against the dashed published hit probability. A line that never meets the dashed one is a steady difference, not luck.",
   'How to read the audit': "Method notes for the audit: how peer benchmarks are built, how the payout gap and its significance are tested, and which cutoffs trigger each flag.",
   'Adjusted ranking': "Ranks every cabinet by expected win per working hour against same-game cabinets in its zone, with thin records pulled toward average. It shows which cabinets are weak, not just unlucky or badly placed.",
   'Payout gap vs luck bounds': "Each cabinet's payout gap against its wagers. Gaps inside the funnel are ordinary luck; gaps outside it are worth a meter or paytable check before anyone draws conclusions.",
   'Payout-configuration check': "Compares every cabinet's recorded payout rate with the published game math and looks for configuration changes mid-period. A mismatch would be a lead to inspect.",
+  'Hit-frequency check': "Tests how often each cabinet's spins paid anything against its published game math. This signal is far steadier than house win, so a wrong paytable shows within days.",
+  'Did cheaper comps bring guests back?': "Compares comp users' visits before and after the comp repricing with other recent guests, and repeats the test at dates with no change to show ordinary drift.",
   // Demand & uptime
   'Demand across the period': "Monthly wagers for the property, with a version that removes event days and evens out the weekday mix so months compare fairly, plus city visitor context.",
   'What drove the raw change in wagers?': "Splits the change in daily wagers into two parts: more or fewer hours of play on the machines, and more or less wagered per hour played. It shows where the change came from, not why.",
@@ -131,9 +188,20 @@ export const PANEL_INFO = {
   'When downtime cost the most': "Estimated wagers lost to downtime, month by month, with the single worst days listed. Use it to spot whether downtime clusters in time.",
   'Downtime estimate': "How lost wagers are estimated: lost hours times the cabinet's normal rate on fully working days of the same weekday, with a peer rate as fallback.",
   'Where to look for repairs': "Downtime and lost expected win by manufacturer, and fault-ticket hours by shift. Use it to see which makers and shifts carry the most downtime.",
+  'Daily downtime timeline': "Machine-hours out of service on each gaming day, with a seven-day average. Use it to see whether downtime comes in bursts or a steady trickle.",
+  'When machines are down': "Average machine-hours down in each weekday and clock hour, from the hourly meters. It shows which shift carries the downtime a technician would have to cover.",
+  'How fast are faults answered?': "How long faults wait for a technician and how long repairs take, by shift and by how many technicians were on duty, with a like-for-like test of one technician against two.",
+  'Response and repair by manufacturer': "Fault frequency, repeat failures, waiting and repair time for each machine maker. A maker that fails often but repairs normally is a candidate for preventive maintenance.",
+  'Response and repair by month': "Average minutes to start work and to finish repairs each month, next to the number of short-staffed technician shifts. Slow months should line up with staff shortages.",
+  'Which downtime could be avoided?': "Splits meter downtime into the part an extra technician could shorten, the part preventive maintenance could prevent at best, and the repair work neither action reaches.",
   'Event days vs similar weekdays': "Wagers on each listed event's days compared with event-free days on the same weekday in the same month. A positive figure means the event days ran busier.",
   // Guests & comps
   'Who accounted for play and losses': "How concentrated loyalty-card play and losses are. Each player's months are added together first, so one guest counts once.",
+  'How concentrated are wagers and losses?': "Lorenz curves and top shares for tracked wagers and gross losses. The further the curves bow below the diagonal, the more a few players account for the total.",
+  'Who ended ahead and who ended behind?': "How active card players' net results spread out, from big losses to big wins, in dollar bins. It shows how many ended behind, ahead or even.",
+  'Losses call for safeguards, not targeting': "Why concentrated losses point to responsible-gaming protections rather than marketing, and how a future comp pilot could build those protections in.",
+  'Results by tier, region and age': "Carded wagers, payouts, player net, hold, expected win and comp cost for each opening tier, home region and age band in the current filters.",
+  'Carded play against all play': "Reconciles loyalty-card play with the machine meters, which count everyone. It shows how much play the player tables cover and why their totals never match.",
   'What comps actually cost': "Compares what comps cost the property with their retail face value and with the expected win from the players who received them.",
   'Monthly loyalty economics': "Tracks comp spending month by month against slot expected win and against face value, to separate rising redemptions from a change in cost per comp.",
   'Did the comp program change?': "Searches the loyalty ledger for one date where the comp program shifted, then tests it. It covers points earned, points charged per comp, cost per comp and tier rules.",
@@ -155,19 +223,41 @@ export const PANEL_INFO = {
   'What past moves tell us about the assumptions': "Checks how much of the pre-move earnings gap past moves actually captured, which tests the capture rates assumed for moving M-1181.",
   'Relocation economics with displaced play': "July net expected win from moving M-1181 across a grid of assumptions about how much of the gap it captures and how much play it pulls from other machines.",
   'Promotion weekend evidence': "Wager and expected-win lift from two past promotions, during the event and the week after, against matched event-free days, and the share a July weekend must repeat to break even.",
+  'July budget ledger': "The recommended July spending line by line: quantity, targets, catalog cost, the days left after lead time, and the reserve, with each budget rule checked.",
+  'Build your own plan': "Choose up to three catalog actions with quantities and targets. The builder blocks combinations the catalog forbids and saves your plan in the page link.",
+  "Your plan's cost, reserve and benefit": "Your plan's July cost, the reserve it leaves and each action's benefit range from the dashboard's evidence. Actions the evidence cannot price are marked as such.",
+  'Sensitivity: change the assumptions': "Sliders for the assumptions that drive the inspection, move and promotion economics. Expected nets update as you move them, so you can see which assumption flips a decision.",
   'Decisions across the action catalog': "Every action available in the July catalog with its cost per unit and the reason it was funded, deferred or passed over.",
+  'Zone demand per available hour': "Wagers per working machine-hour in each floor zone by month. Because it divides by available hours, zone size and downtime don't distort the comparison.",
+  'Which zones drove the change?': "Splits the change in property wagers per day between the comparison months into each zone's share. The zone rows add up exactly to the property total.",
+  'Zone traffic': "Door and zone counter entries per day by zone, scaled from the minutes counters were working. Offline hours are left out, and entries are crossings, not unique guests.",
+  'When the floor plays': "Average wagers in each clock hour of each gaming-day weekday, from the hourly machine meters. Use it to see when demand peaks and when work disrupts the least play.",
+  'Weather as a competing explanation': "Tests whether hot or rainy days changed daily wagers once the weekday is accounted for. Real NOAA weather, used as context only and never as a forecast input.",
+  'Missouri market comparison': "Compares this property's daily wagers with real Missouri statewide slot handle, both indexed to the first selected month, to see whether the outside market moved the same way.",
+  'Bank profile': "A one-panel summary of the selected bank: its machines, demand per available hour against the floor, downtime, monthly trend, slot positions and its zone's recent change.",
+  'Claim-by-claim evidence trail': "Every claim the submission makes, with the calculation behind it, the computed result and the competing explanation or limitation tested. Each claim links to the view holding its evidence.",
 };
 
 export const CHART_INFO = {
+  'How concentrated are wagers and losses?': "Players sorted from smallest to largest along the bottom; the height shows the share of the total they hold together. The dashed diagonal is perfect equality.",
+  'Who ended ahead and who ended behind?': "Number of active card players in each net-result bin. Rose columns lost money, blue columns won, and the middle column broke exactly even.",
+  'Carded play against all play': "Monthly house win from all machine play next to house win from carded play only. The gap is play that nobody recorded on a loyalty card.",
   'Payout gap vs luck bounds': "Payout gap per dollar wagered against total wagers on a log scale. Dashed lines show the 95% luck range for the chosen volatility class; marks colored rose or blue sit outside their own range.",
   'Machine file': "Actual house win each month against what the cabinet's payout settings say it should have kept. A win line that keeps sitting below expected win suggests a payout problem rather than bad luck.",
   'M-1158 · Weekly payout check': "Weekly hold gap for M-1158 against the wager-weighted gap of every cabinet running the same game. Zero means paying exactly as configured; points below it mean the house kept less.",
   'Demand across the period': "Average daily wagers by month as recorded, and with event days removed and each weekday weighted equally. The second line shows the underlying trend without calendar quirks.",
+  'Daily downtime timeline': "Gold area: machine-hours down each gaming day. Dashed blue: the trailing seven-day average. Spikes are single bad days; a rising average is a lasting problem.",
+  'When machines are down': "Each cell is one weekday and clock hour; lighter gold means more machine-hours down on average. Rows are gaming days, so hours after midnight belong to the previous day.",
+  'Response and repair by month': "Gold: average minutes before work starts on a fault. Dashed blue: average minutes of repair once work starts. A gold peak with flat blue means faults queued for technicians.",
   'When downtime cost the most': "Estimated wagers lost to downtime per day, averaged within each month so months of different lengths compare fairly.",
   'Did the comp program change?': "Weekly points charged per $1 of comp face value, by tier at redemption, with all tiers dashed. A step in every tier line at the marked week is a price change.",
   'Placebo dates': "The before/after price shift if the split were placed at each date. Ordinary dates sit near zero; the marked date is the detected break.",
   'Monthly loyalty economics': "Each month's comp cost as a share of the expected win from all slot play. A rising line means rewards are taking a bigger slice of what the floor should earn.",
   'A fair test on future days': "Actual daily wagers for May and June against three forecasts made without seeing those days. The closer a forecast tracks the actual line, the better it would have planned staffing.",
+  'Zone demand per available hour': "Each line is a zone's wagers per available machine-hour by month. The gold line is the zone in focus; muted lines are the other zones for context.",
+  'When the floor plays': "Each cell is one weekday and clock hour; lighter gold means more wagers in that hour. Rows are gaming days, so hours after midnight belong to the previous day.",
+  'Missouri market comparison': "Both lines start at 100 in the first selected month. If they move together, the change looks market-wide; if only the gold line moves, look at the property.",
+  'Bank demand trend': "The selected bank's wagers per working machine-hour each month, against the whole floor as a dashed line. A gap that widens means the bank is losing ground to the floor.",
 };
 
 export const DECISION_INFO = {

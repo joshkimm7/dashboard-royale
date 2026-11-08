@@ -5,6 +5,7 @@ import { useModel } from '../modelContext.js';
 import { useNav } from '../nav.jsx';
 import { SERIES, by, cash, compact, month, months, n, pct, pp, qText, ratio, sum } from '../lib/format.js';
 import { adjustRanking, hasPeerBenchmark, peerDemandCutoff, summarize, underPeerCutoff } from '../lib/model.js';
+import BankProfile from '../components/BankProfile.jsx';
 import { Card, Chart, Details, Line, Metrics, Note, Panel, Table, Tabbed, Takeaway } from '../components/ui.jsx';
 import { niceTicks } from '../components/Chart.jsx';
 import { Info, infoFor } from '../components/Info.jsx';
@@ -371,6 +372,42 @@ function PayoutConfigCheck() {
   );
 }
 
+/** P10 · How often each cabinet's spins paid anything, against the published hit probability of its game (all play). */
+function HitFrequencyCheck({ state }) {
+  const m = useModel();
+  const h = m.hitCheck(state);
+  const lead = h.flagged[0];
+  const d = m.hitDetail(lead), full = m.hitFinding;
+  const ratePct = v => pct(v, 1);
+  if (!h.rows.length) return <Panel title="Hit-frequency check" id="hit-check"><Note>No spins recorded in this selection.</Note></Panel>;
+  return (
+    <Panel title="Hit-frequency check" id="hit-check">
+      <Takeaway>{lead
+        ? lead.id + '’s spins paid something ' + ratePct(lead.observed) + ' of the time against ' + ratePct(lead.published) + ' in the published math for ' + lead.config + ' (' + n(lead.z, 0) + ' standard errors). ' +
+          'That gives the payout gap a likely mechanism: the cabinet behaves as if its paytable differs from the published one, which an inspection can check directly. A lead, not an accusation.'
+        : 'No cabinet’s hit frequency differs from its published game math after adjusting for ' + n(h.rows.length) + ' tests.'}</Takeaway>
+      <Line label="Cabinets tested · flagged at q < 0.01" value={n(h.rows.length) + ' · ' + n(h.flagged.length)} />
+      {lead ? <Line label="Observed vs published hit rate" value={ratePct(lead.observed) + ' vs ' + ratePct(lead.published) + ' on ' + n(lead.spins) + ' spins · z ' + n(lead.z, 1)} /> : null}
+      <Line label="Every other cabinet (placebo)" value={'z mean ' + n(h.meanZ, 2) + ', SD ' + n(h.sdZ, 2) + ', largest |z| ' + n(h.maxOther, 2)} />
+      {d ? <>
+        <Line label="Weeks above the published rate (full period)" value={n(d.above) + ' of ' + n(d.weeks.length)} />
+        <Line label="Carded vs uncarded spins (full period)" value={ratePct(d.carded) + ' on ' + n(d.cardedSpins) + ' · ' + ratePct(d.uncarded) + ' on ' + n(d.uncardedSpins)} />
+        <Line label="Hit rate by bet size (carded, full period)" value={d.bets.map(b => '$' + n(b.bet, 2) + ' ' + ratePct(b.rate)).join(' · ')} />
+        <Line label="One day of play to verify a fix" value={n(d.medianDaySpins) + ' spins on a median day · gap = ' + n(d.daySeparation, 1) + ' daily standard errors'} />
+        <Chart title="Hit-frequency check" labels={d.weeks.map(w => m.weekLabel(w.w))} format={v => pct(v, 1)} height={220} min={0.25} max={0.45}
+          series={[{ name: lead.id + ' weekly hit rate', color: SERIES.rose, values: d.weeks.map(w => w.rate) },
+            { name: 'Published ' + lead.config + ' hit probability', color: SERIES.muted, dash: '4 3', muted: true, values: d.weeks.map(() => lead.published) }]} />
+      </> : null}
+      <Note>{'All-play meters for the selected months and bank; the weekly chart and the carded, bet-size and one-day lines use the full period. ' +
+        (full.lead && (!lead || lead.id !== full.lead.id) ? 'Over January–June the flagged cabinet is ' + full.lead.id + '. ' : '') +
+        'A hit is any spin that paid more than zero, the same definition as the published hit probability.'}</Note>
+      <Details title="Why this test is sharper than house win">{'House win swings with rare large awards, so a payout gap needs months of wagers to stand out. Whether a spin paid anything is a near coin-flip with tiny spin-to-spin noise, so a different paytable shows up within days. ' +
+        (d ? 'Alternatives checked for ' + lead.id + ': a group of lucky players (carded ' + ratePct(d.carded) + ', uncarded ' + ratePct(d.uncarded) + '), bet mix (' + d.bets.map(b => ratePct(b.rate)).join(', ') + ' by bet size), a recent fault (first week ' + ratePct(d.weeks[0]?.rate) + ') and chance across ' + n(h.rows.length) + ' tests (the other cabinets’ z-scores have SD ' + n(h.sdZ, 2) + ', as luck alone predicts 1). ' : '') +
+        'After an inspection, one ordinary day of play is enough to confirm the rate is back at the published value, rather than four weeks of hold.'}</Details>
+    </Panel>
+  );
+}
+
 function Drill({ x }) {
   const m = useModel();
   if (!x) return <Note>No machines in this bank and period.</Note>;
@@ -414,7 +451,7 @@ function BankMap({ mapHot }) {
               const hot = mapHot.has(r[0]);
               return (
                 <button key={r[0]} className={hot ? 'hot' : ''} data-bank={r[0]} aria-pressed={nav.state.bank === r[0]}
-                  aria-label={r[0] + ', ' + m.zones[zone] + (hot ? ', shortlist bank' : '')} onClick={() => nav.toggleBank(r[0])}>{r[0].slice(2)}</button>
+                  aria-label={r[0] + ', ' + m.zones[zone] + (hot ? ', shortlist bank' : '')} onClick={() => nav.toggleBank(r[0])}>{hot ? <span className="hot-mark" aria-hidden="true">◆</span> : null}{r[0].slice(2)}</button>
               );
             })}
           </div>
@@ -455,6 +492,7 @@ export default function Audit({ scope: s }) {
 
   return (
     <>
+      {s.bank ? <BankProfile scope={s} /> : null}
       <Metrics>
         <Card label="Bottom cohort" value={n(bottom.length) + ' / ' + n(all.length)} sub="Machines by raw house win" />
         <Card label="Cabinets to inspect" value={n(bottom.filter(x => x.flags.includes('Inspect hold')).length) + ' of ' + n(bottom.length)} sub="Persistent payout shortfall" />
@@ -488,6 +526,7 @@ export default function Audit({ scope: s }) {
                 <FunnelPlot points={ranking.rows} title="Payout gap vs luck bounds" label={m.inspect.id} />
               </Panel>
               <PayoutConfigCheck />
+              <HitFrequencyCheck state={state} />
             </>
           );
         },
@@ -506,7 +545,7 @@ export default function Audit({ scope: s }) {
                 {isInspect ? <button data-evidence="M-1158" data-section="hold-check" onClick={() => nav.openEvidence('M-1158', 'hold-check')}>Open weekly payout check</button> : null}
               </Panel>
               <Panel title="Floor banks by zone">
-                <Note>Gold banks hold a bottom-ten cabinet. Click a bank to filter; click again to clear.</Note>
+                <Note>Gold banks marked ◆ hold a bottom-ten cabinet. Click a bank to filter and open its profile; click again to clear.</Note>
                 <BankMap mapHot={mapHot} />
               </Panel>
             </div>

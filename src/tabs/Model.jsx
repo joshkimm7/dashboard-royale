@@ -104,7 +104,7 @@ export default function Model() {
   const views = {
     holdout: () => (
       <>
-        <Panel title="A fair test on future days">
+        <Panel title="A fair test on future days" id="holdout-check">
           <Takeaway>Use weekday averages to plan routine staffing. Calendar flags made little difference overall and were less accurate on June event days.</Takeaway>
           <Note>{'Models learn from Jan–Apr and are scored on the same ' + n(holdout.length) + ' days (' + dayLabel(holdout[0][0]) + '–' + dayLabel(holdout.at(-1)[0]) + '). “Last week” simply repeats the total from seven days earlier.'}</Note>
           <ForecastMultiples holdout={holdout} mae={mae} spike={spike} replay={replay} eventDay={eventDay} replayDay={replayDay} />

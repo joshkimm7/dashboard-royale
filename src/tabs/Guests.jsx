@@ -1,7 +1,8 @@
 import { useModel } from '../modelContext.js';
 import { useNav } from '../nav.jsx';
 import { Card, Chart, How, Line, Metrics, Note, Panel, Table, Tabbed, Takeaway } from '../components/ui.jsx';
-import { SERIES, by, cash, month, months, n, pct, ratio, signedPct, sum, week } from '../lib/format.js';
+import { SERIES, by, cash, compact, month, months, n, pct, ratio, signedPct, sum, week } from '../lib/format.js';
+import { playerBreakdown, playerOutcomes } from '../lib/model.js';
 
 const dayLabel = d => months[month(d)] + ' ' + Number(d.slice(8));
 /** A loyalty metric value in its own units: dollars for cost metrics, plain numbers otherwise. */
@@ -19,7 +20,7 @@ const capitalize = t => t.charAt(0).toUpperCase() + t.slice(1);
 function CompBreak({ state }) {
   const { compBreak, data, tierRules, weekLabel } = useModel();
   const b = compBreak(state);
-  const scopeNote = 'Uses all six months for ' + (state.region || 'every region') + ' and ' + (state.tier ? state.tier + ' opening tier' : 'every opening tier') + '; the month filter does not apply, because a break test needs the whole timeline.';
+  const scopeNote = 'Uses all six months for ' + (state.region || 'every region') + ' and ' + (state.tier ? state.tier + ' opening tier' : 'every opening tier') + '; the month filter does not apply, because a break test needs the whole timeline' + (state.age ? ', and the age-band filter does not apply, because the ledger is summarized by region and tier only.' : '.');
   if (!b) {
     return (
       <Panel title="Did the comp program change?" id="comp-break-check">
@@ -87,6 +88,29 @@ function CompBreak({ state }) {
   );
 }
 
+/** P10 · Did the cheaper comps bring comp users back more often? Difference in differences on recorded visits, with placebo dates. */
+function CompVisits() {
+  const { compVisits: v, compFinding: f } = useModel();
+  const r = v.real, dateText = d => months[month(d)] + ' ' + Number(d.slice(8));
+  const placeboRange = [Math.min(...v.placebos.map(p => p.did)), Math.max(...v.placebos.map(p => p.did))];
+  const inside = r.interval[0] < 0 && r.interval[1] > 0;
+  const row = (x, label) => [label, signedPct(x.usersChange), signedPct(x.othersChange), signedPct(x.did), signedPct(x.interval[0]) + ' to ' + signedPct(x.interval[1])];
+  return (
+    <Panel title="Did cheaper comps bring guests back?" id="comp-visits-check">
+      <Takeaway>{(inside ? 'No measurable lift. ' : 'Possible change. ') + 'In the 28 days after the ' + dateText(r.split) + ' repricing, comp users’ visits changed ' + signedPct(r.usersChange) + ' against ' + signedPct(r.othersChange) +
+        ' for other recent guests, a difference of ' + signedPct(r.did) + ' (95% interval ' + signedPct(r.interval[0]) + ' to ' + signedPct(r.interval[1]) + '). Dates with no program change give ' + signedPct(placeboRange[0]) + ' to ' + signedPct(placeboRange[1]) +
+        ', so the repricing ' + (r.did <= placeboRange[1] ? 'sits inside ordinary drift' : 'stands above ordinary drift') + ' while comp cost per $100 of expected win went from ' + f.reinvest + '.'}</Takeaway>
+      <Line label="Cohort · comp users" value={n(r.cohort) + ' recent guests · ' + n(r.users) + ' had redeemed a comp'} />
+      <Line label="Comp users’ visits per person, 28 days before / after" value={n(r.perMember[0], 2) + ' / ' + n(r.perMember[1], 2)} />
+      <Line label="Other guests’ visits per person, 28 days before / after" value={n(r.perMember[2], 2) + ' / ' + n(r.perMember[3], 2)} />
+      <Table headers={['Split date', 'Comp users', 'Others', 'Difference', '95% interval']}
+        rows={[row(r, dateText(r.split) + ' (repricing)'), ...v.placebos.map(p => row(p, dateText(p.split) + ' (placebo)'))]} />
+      <Note>Cohort: card holders with a recorded visit in the 28 days before the “before” window; comp users had redeemed at least one comp by then. Visits are recorded visits to this casino only. Uses all regions, tiers and ages and the whole timeline, so the filters above do not apply.</Note>
+      <How>Each row compares visits in the 28 days from the split date with the 28 days before it (four of each weekday), as a ratio of sums within each group, then subtracts the other guests’ change from the comp users’ change. The interval resamples guests 2,000 times. Comp users are far more frequent visitors, so the two groups drift apart even without a policy change; the placebo rows measure that drift. A null here means the repricing bought no visits large enough to see in two months, not that it had no effect at all.</How>
+    </Panel>
+  );
+}
+
 /** Comp reinvestment (comp cost ÷ theo) by opening tier and home region, from player_period for the selected months. */
 function Reinvestment({ filtered }) {
   const regions = [...new Set(filtered.map(r => r[2]))].sort(), tiers = [...new Set(filtered.map(r => r[3]))].sort();
@@ -109,21 +133,111 @@ function Reinvestment({ filtered }) {
   );
 }
 
+const scopeText = state => [state.region || 'all regions', state.tier ? state.tier + ' opening tier' : 'all opening tiers', state.age ? 'age ' + state.age : 'all ages'].join(', ');
+const share = v => pct(v, 1);
+
+/** Q4: Lorenz curves of tracked wagers and gross losses for the selected group, with top shares and Gini. */
+function Concentration({ o }) {
+  const { wagers: w, losses: l } = o;
+  if (!w) return <Panel title="How concentrated are wagers and losses?"><Note>No carded wagers in this selection.</Note></Panel>;
+  const points = w.curve.length - 1;
+  const labels = w.curve.map((_, k) => n(100 * k / points) + '%');
+  const series = [
+    { name: 'Tracked wagers', color: SERIES.gold, values: w.curve },
+    ...(l ? [{ name: 'Gross losses', color: SERIES.rose, values: l.curve }] : []),
+    { name: 'Perfect equality', color: SERIES.muted, values: w.curve.map((_, k) => k / points), dash: '4 3', muted: true },
+  ];
+  const row = (name, c) => c ? [name, share(c.top1), share(c.top10), share(c.top20), n(c.gini, 2)] : [name, '—', '—', '—', '—'];
+  return (
+    <Panel title="How concentrated are wagers and losses?">
+      <Takeaway>{'The top 10% of active carded players placed ' + share(w.top10) + ' of tracked wagers' + (l ? ' and accounted for ' + share(l.top10) + ' of gross losses' : '') +
+        '. Gini is ' + n(w.gini, 2) + ' for wagers' + (l ? ' and ' + n(l.gini, 2) + ' for losses' : '') + ' (0 means everyone equal, 1 means one player holds it all).'}</Takeaway>
+      <Chart type="line" title="How concentrated are wagers and losses?" labels={labels} format={v => pct(v, 0)} min={0} max={1} height={260} valueLabels={false} series={series} />
+      <Table headers={['Measure', 'Top 1%', 'Top 10%', 'Top 20%', 'Gini']} rows={[row('Tracked wagers', w), row('Gross losses', l)]} />
+      <Note>Players are sorted from smallest to largest, so the curve shows the share held by the bottom part of the group; the gap to the diagonal is the concentration. Each player’s months are totaled first. Gross losses count only players who ended behind; winners and even players hold zero. The curves follow the month, region, tier and age filters and cover carded play only.</Note>
+    </Panel>
+  );
+}
+
+/** Q4: per-player net outcome in bins symmetric around zero, losers in rose and winners in blue. */
+function Outcomes({ o }) {
+  const bins = o.bins;
+  const most = bins.reduce((b, x) => x.players > b.players ? x : b, bins[0]);
+  return (
+    <Panel title="Who ended ahead and who ended behind?">
+      <Takeaway>{n(o.behind) + ' of ' + n(o.active) + ' active carded players (' + share(ratio(o.behind, o.active)) + ') ended behind, ' + n(o.ahead) + ' ended ahead and ' + n(o.even) + ' broke exactly even. The most common result was ' + most.label + '.'}</Takeaway>
+      <Chart type="bar" title="Who ended ahead and who ended behind?" labels={bins.map(b => b.label)} format={v => n(v)} height={240}
+        series={[{ name: 'Active players', color: SERIES.muted, values: bins.map(b => b.players), diverging: { below: SERIES.rose, above: SERIES.blue, neutral: SERIES.muted, sides: bins.map(b => b.side) } }]} />
+      <Metrics>
+        <Card label="Players behind" value={n(o.behind)} sub={share(ratio(o.behind, o.active)) + ' of active players'} />
+        <Card label="Players ahead" value={n(o.ahead)} sub={share(ratio(o.ahead, o.active)) + ' of active players'} />
+        <Card label="Players even" value={n(o.even)} sub="Payouts exactly matched wagers" />
+      </Metrics>
+      <Note>Net is payouts minus wagers, totaled per player over the selected months. Rose columns are players who lost, blue columns players who won; bins are in dollars and mirror each other around zero. A winning month and a losing month for the same player net out.</Note>
+    </Panel>
+  );
+}
+
+/** Q4: carded totals by opening tier, home region and age band for the selected filters. */
+function Breakdown({ filtered }) {
+  const { ageOf } = useModel();
+  const groups = [['Opening tier', r => r[3]], ['Home region', r => r[2]], ['Age band', r => ageOf(r[0])]];
+  const rows = groups.flatMap(([label, key]) => playerBreakdown(filtered, key).map(g => [label + ' · ' + g.name, n(g.players), cash(g.wagers), cash(g.payout), cash(g.net), pct(g.hold, 2), cash(g.theo), cash(g.comps)]));
+  const ages = playerBreakdown(filtered, r => ageOf(r[0])).filter(g => g.wagers > 0).sort((a, b) => b.wagers - a.wagers);
+  return (
+    <Panel title="Results by tier, region and age">
+      {ages.length > 1 && <Takeaway>{'By age band, ' + ages[0].name + ' placed the most carded wagers (' + cash(ages[0].wagers) + ') and ' + ages.at(-1).name + ' the least (' + cash(ages.at(-1).wagers) + '). Hold runs from ' + pct(Math.min(...ages.map(g => g.hold)), 2) + ' to ' + pct(Math.max(...ages.map(g => g.hold)), 2) + ' across bands' + (Math.max(...ages.map(g => g.hold)) - Math.min(...ages.map(g => g.hold)) < .01 ? ', within one point, so the groups differ mainly in how much they play, not in what the games kept.' : '.')}</Takeaway>}
+      <Table headers={['Group', 'Active players', 'Wagers', 'Payout', 'Player net', 'Hold', 'Expected win (theo)', 'Comp cost']} rows={rows} />
+      <Note>Each block splits the same filtered play a different way, so the blocks each add up to the same total. Age band comes from the players table; “Unknown” means the card holder gave no age. Player net is payouts minus wagers; hold is the house’s share of wagers.</Note>
+    </Panel>
+  );
+}
+
+/** Q4 reconciliation: machine meters count everyone; the carded columns count loyalty-card play only. */
+function CardedVsAll({ state }) {
+  const { data } = useModel();
+  const rows = data.carded.filter(r => r[0] >= state.from && r[0] <= state.to);
+  if (!rows.length) return null;
+  const tot = i => sum(rows, r => r[i]);
+  const win = tot(1) - tot(2), cardedWin = tot(4) - tot(5), uncardedCoin = tot(1) - tot(4);
+  const tracked = sum(data.players.filter(r => r[1] >= state.from && r[1] <= state.to), r => r[4]);
+  const above = tot(8), machineMonths = tot(7);
+  return (
+    <Panel title="Carded play against all play">
+      <Takeaway>{'Loyalty cards recorded ' + share(ratio(tot(4), tot(1))) + ' of all coin-in and ' + share(ratio(cardedWin, win)) + ' of total house win in the selected months. The rest is uncarded play, which the player tables cannot see.'}</Takeaway>
+      <Chart type="bar" title="Carded play against all play" labels={rows.map(r => months[r[0]])} format={compact} height={220}
+        series={[{ name: 'House win, all play', color: SERIES.gold, values: rows.map(r => r[1] - r[2]) }, { name: 'House win, carded play', color: SERIES.blue, values: rows.map(r => r[4] - r[5]) }]} />
+      <Line label="Carded share of coin-in" value={share(ratio(tot(4), tot(1)))} />
+      <Line label="Carded share of house win" value={share(ratio(cardedWin, win))} />
+      <Line label="Hold on carded vs uncarded play" value={pct(ratio(cardedWin, tot(4)), 2) + ' vs ' + pct(ratio(win - cardedWin, uncardedCoin), 2)} />
+      <Line label="Machine-months where carded win beat total win" value={n(above) + ' of ' + n(machineMonths)} />
+      <Line label="Player-table wagers vs carded meters" value={cash(tracked) + ' vs ' + cash(tot(4))} />
+      <Table headers={['Month', 'All coin-in', 'Carded coin-in', 'Carded share', 'House win, all', 'House win, carded', 'Machine-months with carded win above total']}
+        rows={rows.map(r => [months[r[0]], cash(r[1]), cash(r[4]), share(ratio(r[4], r[1])), cash(r[1] - r[2]), cash(r[4] - r[5]), n(r[8]) + ' of ' + n(r[7])])} />
+      <Note>Machine meters count every wager, carded or not; the carded columns count only play recorded to a loyalty card, and the player tables see only that part. The two never match because uncarded play is missing from player data. On a single machine in a month, carded win can exceed total win when uncarded players won as a group there. Region, tier and age filters don’t apply: meters carry no player attributes.</Note>
+    </Panel>
+  );
+}
+
+/** Q4 protective note: loss concentration is a reason for safeguards, never for targeting heavy losers. */
+function Safeguards({ o }) {
+  const { catalogue, actionCost } = useModel();
+  const pilot = catalogue['A-COMP-PILOT'];
+  if (!o.losses) return null;
+  return (
+    <Panel title="Losses call for safeguards, not targeting">
+      <Takeaway>{'The 1% of active players who lost the most account for ' + share(o.losses.top1) + ' of gross losses, and the top 10% for ' + share(o.losses.top10) + '. That concentration is a reason to protect these guests, not to court them.'}</Takeaway>
+      <Note>No recommendation in this dashboard targets players by how much they lost. If the comp policy pilot from the catalog ({pilot ? pilot[1].toLowerCase() + ', ' + cash(actionCost(pilot)) : 'not priced'}) is funded later, design it protectively: never trigger offers from recent or large losses, add loss-limit and cool-off messages at the card reader and kiosk, show each guest their own session result on request, and point any guest who asks to responsible-gaming help, including self-exclusion. Measure the pilot on comp cost and guest satisfaction, not on extra wagers from losing players.</Note>
+    </Panel>
+  );
+}
+
 export default function Guests({ scope: s }) {
-  const { data, regions, tiers } = useModel();
+  const { regions, tiers, ageBands, playerRows } = useModel();
   const { state, setFilter } = useNav();
-  const filtered = data.players.filter(r => r[1] >= state.from && r[1] <= state.to && (!state.region || state.region === r[2]) && (!state.tier || state.tier === r[3]));
-  const people = new Map();
-  for (const r of filtered) {
-    const x = people.get(r[0]) ?? [0, 0];
-    x[0] += r[4]; x[1] += Math.round(r[6] * 100); people.set(r[0], x);
-  }
-  const p = [...people.values()], active = p.filter(r => r[0] > 0), cut = Math.ceil(active.length * .01);
-  const even = active.filter(r => r[1] === 0).length;
-  const coin = sum(filtered, r => r[4]), payout = sum(filtered, r => r[5]), net = sum(p, r => r[1]) / 100;
-  const grossLoss = sum(p, r => Math.max(0, -r[1]));
-  const topCoin = sum(active.slice().sort((a, b) => b[0] - a[0]).slice(0, cut), r => r[0]);
-  const topLoss = sum(active.slice().sort((a, b) => a[1] - b[1]).slice(0, cut), r => Math.max(0, -r[1]));
+  const filtered = playerRows(state);
+  const o = playerOutcomes(filtered);
+  const coin = sum(filtered, r => r[4]), payout = sum(filtered, r => r[5]);
   const groupCost = sum(filtered, r => r[8]), allCost = sum(s.props, r => r[9]), face = sum(s.props, r => r[8]);
   const blocks = [...by(s.props, r => month(r[0])).entries()].map(([m, r]) => [m, sum(r, x => x[8]), sum(r, x => x[9]), sum(r, x => x[5]), sum(filtered.filter(p => p[1] === m), p => p[8]), r.length]);
   const rates = blocks.map(r => ratio(r[2], r[1])).filter(Number.isFinite);
@@ -132,7 +246,6 @@ export default function Guests({ scope: s }) {
   const compTakeaway = blocks.length > 1 && rates.length && faceChange != null
     ? <Takeaway>{'From ' + months[first[0]] + ' to ' + months[last[0]] + ', face value redeemed per day changed ' + signedPct(faceChange) + ' (' + cash(first[1] / first[5]) + ' to ' + cash(last[1] / last[5]) + '). Cost per face-value dollar ranged from ' + pct(Math.min(...rates), 1) + ' to ' + pct(Math.max(...rates), 1) + '. ' + (Math.max(...rates) - Math.min(...rates) < .003 && faceChange > .01 ? 'The cost increase reflects more face value redeemed, with a stable cost rate.' : '')}</Takeaway>
     : null;
-  const high = n(active.filter(r => r[1] > 0).length), low = n(active.filter(r => r[1] < 0).length);
 
   return (
     <>
@@ -145,24 +258,35 @@ export default function Guests({ scope: s }) {
           <option value="">All tiers</option>
           {tiers.map(t => <option key={t} value={t}>{t}</option>)}
         </select></label>
+        <label>Age band<select id="age" value={state.age} onChange={e => setFilter('age', e.target.value)}>
+          <option value="">All ages</option>
+          {ageBands.map(a => <option key={a} value={a}>{a}</option>)}
+        </select></label>
         <small>Filters apply to loyalty-card play and comps. The bank filter doesn’t apply here.</small>
       </div>
       <Metrics>
-        <Card label="Carded coin-in" value={cash(coin)} sub={n(active.length) + ' active carded players'} />
+        <Card label="Carded coin-in" value={cash(coin)} sub={n(o.active) + ' active carded players'} />
         <Card label="Returned to players" value={cash(payout)} sub="Payouts on tracked play" />
-        <Card label="Player net" value={cash(net)} sub="Payouts minus wagers" />
+        <Card label="Player net" value={cash(o.net)} sub="Payouts minus wagers" />
         <Card label="Property comp cost" value={cash(allCost)} sub={cash(face) + ' face value · selected months'} />
       </Metrics>
       <Tabbed tab="guests" views={{
         players: () => (
-          <Panel title="Who accounted for play and losses">
-            <Line label="Top 1% of players by wagers" value={pct(ratio(topCoin, coin)) + ' of tracked wagers'} />
-            <Line label="Top 1% by losses" value={pct(ratio(topLoss, grossLoss)) + ' of gross tracked losses'} />
-            <Line label="Active players ahead / behind / even" value={high + ' / ' + low + ' / ' + n(even)} />
-            <Line label="Cardholders with zero recorded wagers" value={n(p.length - active.length) + ' of ' + n(p.length)} />
-            <Line label="Gross losses among losing players" value={cash(grossLoss / 100)} />
-            <Note>“Active” means the player recorded card play in the selected group and months. Results are totaled per player.</Note>
-          </Panel>
+          <>
+            <Panel title="Who accounted for play and losses" id="players-check">
+              <Line label="Top 1% of players by wagers" value={pct(o.wagers?.top1) + ' of tracked wagers'} />
+              <Line label="Top 1% by losses" value={pct(o.losses?.top1) + ' of gross tracked losses'} />
+              <Line label="Active players ahead / behind / even" value={n(o.ahead) + ' / ' + n(o.behind) + ' / ' + n(o.even)} />
+              <Line label="Cardholders with zero recorded wagers" value={n(o.holders - o.active) + ' of ' + n(o.holders)} />
+              <Line label="Gross losses among losing players" value={cash(o.grossLoss)} />
+              <Note>{'“Active” means the player recorded card play in the selected group and months (' + scopeText(state) + '). Results are totaled per player.'}</Note>
+            </Panel>
+            <Concentration o={o} />
+            <Outcomes o={o} />
+            <Safeguards o={o} />
+            <Breakdown filtered={filtered} />
+            <CardedVsAll state={state} />
+          </>
         ),
         comps: () => (
           <>
@@ -174,6 +298,7 @@ export default function Guests({ scope: s }) {
               <Note>Comp cost is already inside POS cost of goods, so don’t subtract it twice.</Note>
             </Panel>
             <CompBreak state={state} />
+            <CompVisits />
             <Reinvestment filtered={filtered} />
             <Panel title="Monthly loyalty economics">
               {compTakeaway}

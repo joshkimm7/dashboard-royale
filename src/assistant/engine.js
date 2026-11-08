@@ -2,14 +2,16 @@
 // Each answer carries the evidence-map boxes it is about, so the map can point at them.
 import { by, cash, month, months, n, pct, pp, sum } from '../lib/format.js';
 import { FLAG_LABELS } from '../lib/evidence.js';
+import { downHeat } from '../lib/downtime.js';
 
 const QUESTION_PATTERNS = [
-  ['q1', /\bq\s*1\b|machine audit|bottom[\s-]*(ten|10)|lowest|low earn|underperform|verdict|replace/],
-  ['q2', /\bq\s*[23]\b|demand|uptime|downtime|traffic|visitor|entrance|repair|ticket|outage/],
+  ['q1', /\bq\s*1\b|machine audit|hit (rate|frequency)|paytable|bottom[\s-]*(ten|10)|lowest|low earn|underperform|verdict|replace/],
+  ['q2', /\bq\s*[23]\b|demand|uptime|downtime|traffic|visitor|entrance|repair|ticket|outage|zone|weather|missouri|heat ?map|technician|maintenance|response time/],
   ['q4', /\bq\s*[45]\b|guest|player|comp\b|comps|loyalty|carded|reward/],
   ['qm', /model|forecast|holdout|validation|predict|staff|mae|accuracy/],
   ['q6', /\bq\s*6\b|july|decision|plan\b|budget|reserve|catalog|spend|fund/],
 ];
+const REAL_SOURCES = ['src-city', 'src-weather', 'src-missouri'];
 const STOP = new Set('the a an and or of to in on for is are was were what who how why when about me tell show everything all it this that with do does did give summary summarize explain please can you i we our there their which any from by at be has have'.split(' '));
 const words = s => s.toLowerCase().replace(/[^a-z0-9\s-]/g, ' ').split(/\s+/).filter(w => w.length > 2 && !STOP.has(w));
 
@@ -22,6 +24,10 @@ function questionFacts(qid, m) {
       m.inspect.id + ' kept ' + cash(m.inspect.theo - m.inspect.win) + ' less than its settings imply (payout gap ' + pp(m.inspect.res) + '), which is why it is the one cabinet to inspect.',
       (o => 'Once exposure, luck and placement are removed, ' + (o.both.length ? o.both.length + ' of the ten (' + o.both.map(r => r.id).join(', ') + ')' : 'none of the ten') +
         ' stay in the adjusted bottom ten; the weakest cabinets by that measure are ' + o.adjustedTen.slice(0, 3).map(r => r.id).join(', ') + '.')(m.fullOverlap),
+      (h => h.lead
+        ? 'A second, independent signal points the same way: ' + h.lead.id + '’s spins paid something ' + pct(h.lead.observed, 1) + ' of the time against ' + pct(h.lead.published, 1) + ' in its published game math (z ' + n(h.lead.z, 0) + '), in ' + n(h.detail.above) + ' of ' + n(h.detail.weeks.length) +
+          ' weeks, for carded (' + pct(h.detail.carded, 1) + ') and uncarded (' + pct(h.detail.uncarded, 1) + ') play alike; no other cabinet is outside luck (largest |z| ' + n(h.maxOther, 1) + '). That is a paytable lead, not an accusation, and one ordinary day of play after an inspection would show whether the rate is back to published.'
+        : 'No cabinet’s share of paying spins differs from its published game math.')(m.hitFinding),
     ];
   }
   if (qid === 'q2') {
@@ -30,26 +36,38 @@ function questionFacts(qid, m) {
     return [
       'Daily wagers averaged ' + cash(first[1]) + ' in ' + months[first[0]] + ' and ' + cash(last[1]) + ' in ' + months[last[0]] + ' (raw, before event and weekday adjustment).',
       'Machine downtime put about ' + cash(sum(auditRows, r => r.lost) / fullDays) + ' of wagers at risk per day over ' + n(sum(auditRows, r => r.down), 0) + ' out-of-service hours; even full recovery would not reverse the adjusted decline.',
+      (dt => {
+        const cells = downHeat(data, '', 0, 5), total = sum(cells, c => c.down);
+        const share = k => sum(cells.filter(c => Math.floor(((c.hour - 6 + 24) % 24) / 8) === k), c => c.down) / total;
+        const peak = cells.reduce((a, b) => b.value > a.value ? b : a);
+        return 'When: day, swing and grave shifts carry ' + pct(share(0), 0) + ', ' + pct(share(1), 0) + ' and ' + pct(share(2), 0) + ' of down machine-hours, and the worst slot is ' + data.heat.weekdays[peak.weekday] + ' ' + String(peak.hour).padStart(2, '0') + ':00. Fault tickets explain ' +
+          n(dt.overlap.faultHours, 0) + ' of the ' + n(dt.overlap.meterHours, 0) + ' down hours (they never overlap on one machine); moves, installs and maintenance the rest.';
+      })(m.downtime),
+      (dt => 'Response: with one technician on duty, weekday day-shift faults waited ' + n(dt.tests[0].mean1, 0) + ' min for work to start against ' + n(dt.tests[0].mean2, 0) + ' with two (95% interval for the gap ' + n(dt.tests[0].lo, 0) + ' to ' + n(dt.tests[0].hi, 0) +
+        ' min), and swing shifts ' + n(dt.tests[1].mean1, 0) + ' against ' + n(dt.tests[1].mean2, 0) + '. Still, a second ' + ['day', 'swing', 'grave'][dt.tech.best.shift] + '-shift technician would recover only about ' + cash(dt.tech.best.value) + ' of expected win in July against its ' + cash(dt.tech.cost) +
+        ' cost, and a ' + dt.pm.full.make + ' preventive sweep breaks even only if it removes ' + pct(dt.pm.breakEven, 0) + ' of that make’s excess faults' + (dt.tech.best.value < dt.tech.cost && dt.pm.breakEven > .5 ? ', so neither is funded.' : '.'))(m.downtime),
       n(data.events.length) + ' listed events are compared with similar ordinary days to see how much they lifted play.',
+      (zf => 'April to June, property coin-in moved ' + cash(zf.contribution.total) + ' per day. By zone, ' + m.zones[zf.biggest.zone] + ' moved most (' + cash(zf.biggest.change) + '), and ' + m.zones[zf.steepest.zone] +
+        ' had the steepest drop in coin-in per available hour. Almost all of the change is coin-in per available hour (' + cash(zf.rate) + ') rather than machine-hours (' + cash(zf.hours) + '). Zone entries fell in ' + n(zf.trafficFell) + ' of ' + n(zf.trafficZones) + ' zones (counters covered ' + pct(zf.coverage, 1) + ' of hours; entries are not unique guests).')(m.zoneFinding),
+      (zf => 'Competing explanations from real outside data: ' + (zf.heat[1] < 0 && zf.heat[2] > 0 ? 'heat shows no detectable effect' : 'heat shows an effect') + ' (' + cash(zf.heat[0]) + ' per +10 °C, 95% interval ' + cash(zf.heat[1]) + ' to ' + cash(zf.heat[2]) +
+        '); the ' + n(zf.rainDays) + ' rain days ran ' + cash(zf.rainGap) + ' below weekday expectation' + (rain => rain ? ', and ' + n(rain) + ' of them fell in April or June.' : ', but none fell in April or June, so rain can’t explain that change.')(data.weather.days.filter(([, mm], d) => mm >= 1 && [3, 5].includes(month(data.dates[d]))).length) +
+        ' Missouri slot handle per day moved ' + pct(zf.moChange) + ' April to June versus ' + pct(zf.ownChange) + ' here' + (Math.sign(zf.moChange) === Math.sign(zf.ownChange) ? ', so part of the change looks market-wide.' : ', so the outside market moved the other way.') + ' Weather and Missouri data are context only, never forecast inputs.')(m.zoneFinding),
     ];
   }
   if (qid === 'q4') {
     const face = sum(data.property, r => r[8]), cost = sum(data.property, r => r[9]);
     return [
-      (() => {
-        // Same aggregation as the Guests tab: total each player's carded wagers, rank active players, take the top 1%.
-        const people = new Map();
-        for (const r of data.players) people.set(r[0], (people.get(r[0]) ?? 0) + r[4]);
-        const active = [...people.values()].filter(v => v > 0).sort((a, b) => b - a);
-        const total = sum(active, v => v);
-        const top = sum(active.slice(0, Math.ceil(active.length * .01)), v => v);
-        return n(active.length) + ' cardholders recorded carded play; the top 1% of them placed ' + pct(top / total) + ' of all carded wagers.';
-      })(),
+      (o => n(o.active) + ' cardholders recorded carded play; the top 1% of them placed ' + pct(o.wagers.top1) + ' of carded wagers and the top 10% placed ' + pct(o.wagers.top10) +
+        ' (Gini ' + n(o.wagers.gini, 2) + '). Losses are concentrated too: the 10% of active players who lost the most account for ' + pct(o.losses.top10) + ' of gross losses (Gini ' + n(o.losses.gini, 2) + ').')(m.fullOutcomes),
+      (o => n(o.behind) + ' active players ended behind, ' + n(o.ahead) + ' ahead and ' + n(o.even) + ' even. That loss concentration is a reason for responsible-gaming safeguards such as loss-limit and cool-off messages, never for targeting heavy losers.')(m.fullOutcomes),
+      (r => 'Loyalty cards recorded ' + pct(sum(r, x => x[4]) / sum(r, x => x[1])) + ' of all machine coin-in; the rest is uncarded play the player tables cannot see, so carded and total house win never match.')(data.carded),
       'Comps cost ' + cash(cost) + ' over January–June, about ' + pct(cost / face, 1) + ' of their face value, and that rate held steady month to month.',
       (f => f.detected
         ? 'The loyalty ledger shows one program change: on ' + f.date + ' comps were repriced from ' + f.price + ' (' + f.priceChange + ', 95% interval ' + f.priceInterval + ' points; ' + f.rank + '). ' +
           f.withinShare + ' of the drop is within tiers, so it is a rule change, not tier mix. Earn rates ' + (f.earnFlat ? 'did not change' : 'also moved') + ' and tier thresholds ' + (m.tierRules.stable ? 'held' : 'moved') + '; comp cost per $100 of carded expected win went from ' + f.reinvest + '.'
         : 'The loyalty ledger shows no break in comp prices, earn rates or tier rules across January–June.')(m.compFinding),
+      (v => 'Cheaper comps did not bring comp users back measurably more often: in the 28 days after the ' + months[month(v.split)] + ' ' + Number(v.split.slice(8)) + ' repricing their visits moved ' + pct(v.usersChange) + ' against ' + pct(v.othersChange) + ' for other recent guests, a ' + pct(v.did) +
+        ' difference (95% interval ' + pct(v.interval[0]) + ' to ' + pct(v.interval[1]) + '), inside the ' + pct(Math.min(...m.compVisits.placebos.map(p => p.did))) + ' to ' + pct(Math.max(...m.compVisits.placebos.map(p => p.did))) + ' seen at placebo dates.')(m.compVisits.real),
     ];
   }
   if (qid === 'qm') {
@@ -61,9 +79,10 @@ function questionFacts(qid, m) {
   }
   if (qid === 'q6') {
     return [
-      'The July plan spends ' + cash(m.inspectionCost) + ' to inspect ' + m.inspect.id + ' and keeps ' + cash(m.reserve) + ' in reserve.',
+      'The July plan spends ' + cash(m.inspectionCost) + ' to inspect ' + m.inspect.id + ' and keeps ' + cash(m.reserve) + ' in reserve: ' + m.julyPlan.arithmetic + ', within every catalog rule (' + m.julyPlan.checks.filter(c => c.pass).length + ' of ' + m.julyPlan.checks.length + ' checks pass).',
       'Moving ' + m.move.id + ' would cost ' + cash(m.moveCost) + '; at 50% capture it nets ' + cash(m.netMove(.5, 0)) + ' with no displaced play but ' + cash(m.netMove(.5, .10)) + ' at 10% displacement, so it is deferred.',
-      'A promotion weekend (' + cash(m.promoCost) + ') stays conditional: it must keep more than ' + pct(m.promoHurdle, 1) + ' of the weaker past event lift to break even.',
+      'A promotion weekend (' + cash(m.promoCost) + ') is unfunded: it is paid from the reserve only if registrations by July 4 support keeping more than ' + pct(m.promoHurdle, 1) + ' of the weaker past event lift, its break-even.',
+      'Build your own plan (July decision tab) lets you swap in other actions under the same catalog rules and change the inspection, move and promotion assumptions.',
     ];
   }
   return [];
@@ -84,6 +103,7 @@ function machineAnswer(id, m) {
       'Payout gap ' + pp(x.res) + ', availability ' + pct(x.availability, 1) + ', play vs local peers ' + pct(x.local, 0) + '.',
       (a => a?.adjRank ? 'Adjusted for exposure, luck and placement it ranks #' + a.adjRank + ' of ' + m.fullRanking.ordered.length + ', earning ' + pct(a.index, 0) + ' of matched peers’ expected win per hour.' : 'It has no matched-peer benchmark for the adjusted ranking.')(m.fullRanking.rows.find(r => r.id === id)),
       ...(id === m.inspect.id ? ['It kept ' + cash(x.theo - x.win) + ' less than its settings imply, a shortfall too persistent to be luck, so the July plan funds a ' + cash(m.inspectionCost) + ' meter and paytable inspection.'] : []),
+      ...(m.hitFinding.lead?.id === id ? ['Its spins paid something ' + pct(m.hitFinding.lead.observed, 1) + ' of the time against ' + pct(m.hitFinding.lead.published, 1) + ' in its published game math, in ' + n(m.hitFinding.detail.above) + ' of ' + n(m.hitFinding.detail.weeks.length) + ' weeks: a paytable lead to inspect, and one day of play after a fix would confirm it.'] : []),
       ...(id === m.move.id ? ['Its move to a busier bank is deferred: only ' + m.moveCases.filter(r => r.main.bankPct > 0).length + ' of ' + m.moveCases.length + ' past moves gained across both affected banks, so displaced play is a real risk.'] : []),
     ],
     items: [{ label: id + ' machine file', value: cash(x.win), summary: 'Monthly win, payout check and placement for this cabinet.', go: { evidence: id } }],
@@ -129,7 +149,7 @@ export function answer(text, graph, m) {
   if (/\bdata\b|source|where does|come from|dataset/.test(t)) {
     const sources = graph.nodes.filter(nd => nd.type === 'source');
     return {
-      text: ['Everything on the dashboard is computed from ' + sources.length + ' data sources: ' + (sources.length - 1) + ' from the TAMU Datathon challenge (synthetic January–June 2025 casino data) and LVCVA visitor counts for market context.'],
+      text: ['Everything on the dashboard is computed from ' + sources.length + ' data sources: ' + (sources.length - REAL_SOURCES.length) + ' from the TAMU Datathon challenge (synthetic January–June 2025 casino data) and ' + REAL_SOURCES.length + ' real public sources used only as context (LVCVA visitor counts, NOAA weather and the Missouri Gaming Commission slot benchmark).'],
       items: sources.map(item), focus: { ids: sources.map(s => s.id), label: 'Data sources' },
     };
   }

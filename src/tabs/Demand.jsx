@@ -1,6 +1,11 @@
 import { useModel } from '../modelContext.js';
 import { useNav } from '../nav.jsx';
+import BankProfile from '../components/BankProfile.jsx';
 import { Card, Chart, Details, How, Line, Metrics, Note, Panel, Table, Tabbed, Takeaway } from '../components/ui.jsx';
+import DemandZones from './DemandZones.jsx';
+import DemandResponse from './DemandResponse.jsx';
+import { Heatmap } from '../components/Heatmap.jsx';
+import { downHeat } from '../lib/downtime.js';
 import { SERIES, by, cash, compact, month, months, n, pct, ratio, shifts, signedPct, sum } from '../lib/format.js';
 
 /** Splits the first-to-last change in daily wagers into playing time and wagers per occupied hour. */
@@ -49,11 +54,11 @@ function DemandTrend({ monthly, perDay }) {
   let comparison = null;
   if (wagerChange != null && visitorChange != null) {
     const headline = (
-      <Takeaway>{'April to June, adjusted ' + (state.bank ? 'bank' : 'property') + ' wagers changed ' + signedPct(wagerChange) +
+      <Takeaway>{'April to June, adjusted ' + (state.bank ? 'bank' : state.zone ? 'zone' : 'property') + ' wagers changed ' + signedPct(wagerChange) +
         ' and Las Vegas visitors per day changed ' + signedPct(visitorChange) + '.'}</Takeaway>
     );
-    if (state.bank) {
-      comparison = <>{headline}<Note>City visitation is market context; a single bank also depends on its cabinet mix and placement.</Note></>;
+    if (state.bank || state.zone) {
+      comparison = <>{headline}<Note>{'City visitation is market context; a single ' + (state.bank ? 'bank' : 'zone') + ' also depends on its cabinet mix and placement.'}</Note></>;
     } else {
       const bothFell = wagerChange < 0 && visitorChange < 0;
       const ordering = Math.abs(wagerChange - visitorChange) < .0005 ? 'Both fell by about the same proportion.' :
@@ -125,6 +130,47 @@ function DowntimeScale({ monthly, days, total }) {
   );
 }
 
+const clock = h => String(h).padStart(2, '0') + ':00';
+
+/** Down machine-hours per gaming day across the selection, with a trailing seven-day average. */
+function DowntimeTimeline({ perDay }) {
+  const values = perDay.map(r => r.down);
+  const trailing = values.map((_, i) => i < 6 ? null : sum(values.slice(i - 6, i + 1), v => v) / 7);
+  const worst = perDay.reduce((a, b) => b.down > a.down ? b : a, perDay[0]);
+  const average = sum(perDay, r => r.down) / perDay.length;
+  const heavy = perDay.filter(r => r.down >= 2 * average).length;
+  return (
+    <>
+      <Takeaway>{'Downtime averaged ' + n(average, 1) + ' machine-hours per gaming day. The worst day was ' + worst.date + ' with ' + n(worst.down, 1) + ' hours (' + cash(worst.lost) + ' of wagers at risk); ' +
+        n(heavy) + ' of ' + n(perDay.length) + ' days reached twice the average.'}</Takeaway>
+      <Chart title="Daily downtime timeline" labels={perDay.map(r => r.date.slice(5))} format={v => n(v, 0) + ' h'} height={230} min={0}
+        series={[{ name: 'Down machine-hours per gaming day', color: SERIES.gold, values, area: true }, { name: 'Trailing 7-day average', color: SERIES.blue, dash: '7 5', values: trailing }]} />
+      <Note>Scheduled minus available hours on placed machine-days, so the 23-hour daylight-saving day is handled. Follows the month and bank filters.</Note>
+    </>
+  );
+}
+
+/** Weekday × clock-hour heat map of down machine-hours from the hourly meters. */
+function DowntimeHeat() {
+  const { data, scope, zones } = useModel();
+  const { state } = useNav();
+  const zoneBanks = state.zone ? scope(state).banks : null;
+  const cells = downHeat(data, state.bank || zoneBanks || '', state.from, state.to);
+  const weekdays = data.heat.weekdays;
+  const total = sum(cells, c => c.down);
+  const byShift = [0, 1, 2].map(k => sum(cells.filter(c => Math.floor(((c.hour - 6 + 24) % 24) / 8) === k), c => c.down));
+  const peak = cells.reduce((a, b) => (b.value ?? -1) > (a.value ?? -1) ? b : a);
+  return (
+    <>
+      <Takeaway>{total ? 'Of down machine-hours, day shifts (06:00–14:00) carry ' + pct(byShift[0] / total, 0) + ', swing (14:00–22:00) ' + pct(byShift[1] / total, 0) +
+        ' and grave (22:00–06:00) ' + pct(byShift[2] / total, 0) + '. The worst slot is ' + weekdays[peak.weekday] + ' ' + clock(peak.hour) + ', averaging ' + n(peak.value, 2) + ' machine-hours down.' : 'No downtime in this selection.'}</Takeaway>
+      <Heatmap cells={cells} rows={weekdays} format={v => n(v, 2)} unit="machine-hours down" title="When machines are down"
+        caption={'Average down machine-hours per clock hour' + (state.bank ? ' for ' + state.bank : state.zone ? ' for ' + zones[state.zone] : '') + ', weekday by hour'} />
+      <How>{'From the hourly machine meters: each hour’s scheduled 3,600 seconds minus its available seconds, summed over placed, reported machine-hours (the hourly total equals the daily downtime exactly) and divided by the number of gaming days that contributed each weekday and clock hour. Rows are gaming days, so 02:00 on Friday is early Saturday morning. Shifts: day 06:00–14:00, swing 14:00–22:00, grave 22:00–06:00. Follows the month, zone and bank filters.'}</How>
+    </>
+  );
+}
+
 function DowntimeMethod({ theo }) {
   return (
     <Panel title="Downtime estimate">
@@ -164,11 +210,12 @@ export default function Demand({ scope: s }) {
   const down = sum(s.rows, r => r.down), lost = sum(s.rows, r => r.lost), theo = sum(s.rows, r => r.lostTheo);
   const byMake = [...by(s.rows, r => r.make).entries()].map(([name, g]) => [name, sum(g, r => r.down), sum(g, r => r.lostTheo), ratio(sum(g, r => r.down), sum(g, r => r.down + r.h))]).sort((a, b) => b[1] - a[1]);
   const worst = perDay.slice().sort((a, b) => b.lost - a.lost).slice(0, 5);
-  const tickets = data.shifts.filter(r => r[0] >= s.dates[0] && r[0] <= s.dates.at(-1) && (!state.bank || r[1] === state.bank));
+  const tickets = data.shifts.filter(r => r[0] >= s.dates[0] && r[0] <= s.dates.at(-1) && (!state.bank || r[1] === state.bank) && (!s.banks || s.banks.includes(r[1])));
   const first = monthly[0], last = monthly.at(-1);
 
   return (
     <>
+      {s.bank ? <BankProfile scope={s} /> : null}
       <Metrics>
         <Card label="Coin-in" value={cash(sum(s.rows, r => r.coin))} sub="Total wagered, incl. replayed credits" />
         <Card label="Out-of-service time" value={n(down, 1) + ' h'} sub="Machine hours lost to downtime" />
@@ -188,10 +235,17 @@ export default function Demand({ scope: s }) {
             </Panel>
           </>
         ),
+        zones: () => <DemandZones />,
         downtime: () => (
           <>
             <Panel title="Can downtime explain the demand trend?">
               <DowntimeScale monthly={monthly} days={s.dates.length} total={lost} />
+            </Panel>
+            <Panel title="Daily downtime timeline">
+              <DowntimeTimeline perDay={perDay} />
+            </Panel>
+            <Panel title="When machines are down">
+              <DowntimeHeat />
             </Panel>
             <Panel title="When downtime cost the most">
               <Note>Daily averages, so months of different lengths compare fairly.</Note>
@@ -212,6 +266,7 @@ export default function Demand({ scope: s }) {
             <Note>Tickets cover fault repairs only and can overlap; lost-play estimates use meter downtime.</Note>
           </Panel>
         ),
+        response: () => <DemandResponse scope={s} />,
         events: () => (
           <Panel title="Event days vs similar weekdays">
             <Table headers={['Event', 'Scope', 'Matched days', 'Coin-in vs non-event days']}

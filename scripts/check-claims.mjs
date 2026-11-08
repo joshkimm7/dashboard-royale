@@ -1,18 +1,21 @@
-// Recomputes every figure quoted in README.md and CLAIMS-AND-EVIDENCE.md from the dashboard's own model
+// Recomputes every figure quoted in README.md, CLAIMS-AND-EVIDENCE.md and WRITEUP.md from the dashboard's own model
 // and fails if a document no longer contains the freshly computed value (e.g. after a data release or a
 // method change). Run with `npm run check` after `python build_data.py <official-data>`.
 import { readFileSync } from 'node:fs';
-import { createModel } from '../src/lib/model.js';
+import { createModel, playerBreakdown, playerOutcomes } from '../src/lib/model.js';
 import { by, cash, month, n, pct, ratio, sum } from '../src/lib/format.js';
+import { downHeat, responseStats } from '../src/lib/downtime.js';
+import { CLAIM_IDS, buildClaims } from '../src/lib/claims.js';
 
 const data = JSON.parse(readFileSync('data/dashboard.json', 'utf8'));
 const m = createModel(data);
-const docs = { readme: readFileSync('README.md', 'utf8'), claims: readFileSync('CLAIMS-AND-EVIDENCE.md', 'utf8') };
+const FILES = { readme: 'README.md', claims: 'CLAIMS-AND-EVIDENCE.md', writeup: 'WRITEUP.md' };
+const docs = Object.fromEntries(Object.entries(FILES).map(([k, f]) => [k, readFileSync(f, 'utf8')]));
 // The docs use a typographic minus; some formatters emit a hyphen. Compare on one form.
 const norm = s => s.replace(/−/g, '-');
 
 const signed = v => (v > 0 ? '+' : '') + cash(v);
-const signedPct1 = v => (v > 0 ? '+' : '') + pct(v);
+const signedPct1 = v => (v > 0 ? '+' : v < 0 ? '−' : '') + pct(Math.abs(v));
 const millions = (v, d = 2) => (v < 0 ? '−' : '') + '$' + (Math.abs(v) / 1e6).toFixed(d) + 'm';
 const thousands = v => '$' + Math.round(v / 1000) + 'k';
 const pp2 = v => (v < 0 ? '−' : '') + Math.abs(v * 100).toFixed(2);
@@ -28,6 +31,27 @@ const cardedCoin = sum(data.players, r => r[4]), cardedPayout = sum(data.players
 const grossLoss = sum(p, r => Math.max(0, -r[1]));
 const topCoin = sum(active.slice().sort((a, b) => b[0] - a[0]).slice(0, cut), r => r[0]);
 const topLoss = sum(active.slice().sort((a, b) => a[1] - b[1]).slice(0, cut), r => Math.max(0, -r[1]));
+
+// ---- Q4 Lorenz curves, outcome histogram, age breakdown and carded reconciliation (same model functions as Guests → Player concentration) ----
+const fo = m.fullOutcomes, refFailures = [];
+// The browser's concentration figures must equal the independent pandas calculation in build_data.py.
+for (const key of ['wagers', 'losses']) for (const f of ['top1', 'top10', 'top20', 'gini']) {
+  if (!(Math.abs(fo[key][f] - data.concentration[key][f]) < 1e-9)) refFailures.push(key + ' ' + f + ': model ' + fo[key][f] + ' vs build_data.py ' + data.concentration[key][f]);
+}
+const lorenzPart = c => [c.top1, c.top10, c.top20].map(v => pct(v)).join(' / ');
+const lorenzText = 'Top 1% / 10% / 20% of active players: ' + lorenzPart(fo.wagers) + ' of tracked wagers (Gini ' + n(fo.wagers.gini, 2) + ') and ' + lorenzPart(fo.losses) + ' of gross losses (Gini ' + n(fo.losses.gini, 2) + ')';
+const mostBin = fo.bins.reduce((b, x) => x.players > b.players ? x : b);
+const outcomeText = n(fo.behind) + ' of ' + n(fo.active) + ' active players (' + pct(fo.behind / fo.active) + ') ended behind; ' + n(fo.bins[0].players) + ' lost $2,500 or more and ' +
+  n(fo.bins.at(-1).players) + ' won $2,500 or more. The most common result was ' + mostBin.label;
+const ageGroups = playerBreakdown(data.players, r => m.ageOf(r[0]));
+const ageGini = m.ageBands.map(age => playerOutcomes(m.playerRows({ age })).wagers.gini);
+const ageText = 'Hold by age band ranges ' + pct(Math.min(...ageGroups.map(g => g.hold)), 2) + ' to ' + pct(Math.max(...ageGroups.map(g => g.hold)), 2) +
+  '; the wager Gini ranges ' + n(Math.min(...ageGini), 2) + ' to ' + n(Math.max(...ageGini), 2) + '. ' + n(ageGroups.find(g => g.name === 'Unknown')?.players ?? 0) + ' active players have no age band';
+const cardedTot = i => sum(data.carded, r => r[i]);
+const allWin = cardedTot(1) - cardedTot(2), cardedWin = cardedTot(4) - cardedTot(5);
+const cardedText = 'Loyalty cards recorded ' + pct(cardedTot(4) / cardedTot(1)) + ' of all coin-in and ' + pct(cardedWin / allWin) + ' of total house win; carded hold ' + pct(cardedWin / cardedTot(4), 2) +
+  ' vs uncarded ' + pct((allWin - cardedWin) / (cardedTot(1) - cardedTot(4)), 2) + '. Player-table carded wagers ' + millions(cardedCoin) + ' vs carded meters ' + millions(cardedTot(4)) +
+  '. Carded win exceeded total win in ' + n(cardedTot(8)) + ' of ' + n(cardedTot(7)) + ' machine-months and in ' + n(data.carded.filter(r => r[4] - r[5] > r[1] - r[2]).length) + ' of ' + n(data.carded.length) + ' property months';
 
 // ---- Demand and downtime (same monthly logic as src/tabs/Demand.jsx, full period, all banks) ----
 const daily = [...by(m.auditRows, r => r.d).entries()].sort((a, b) => a[0] - b[0]);
@@ -58,11 +82,19 @@ const pairPcts = m.moveCases.map(r => r.main.bankPct);
 const slot = m.inspectionSlot, hold = m.windowHold;
 const [tournament, locals] = data.promotions;
 const daysAfterLead = a => Math.max(0, 30 - a[4]);
-const ridge = m.auditRows.filter(r => r.make === 'Ridgeline');
-const maint = m.catalogue['A-PREVENTIVE'], tech = m.catalogue['A-TECH-SHIFT'], comp = m.catalogue['A-COMP-PILOT'];
-const ridgeRisk = sum(ridge, r => r.lostTheo) / m.fullDays * daysAfterLead(maint);
-const techRisk = sum(m.auditRows, r => r.lostTheo) / m.fullDays * daysAfterLead(tech);
+const comp = m.catalogue['A-COMP-PILOT'];
 const compSpend = sum(data.property, r => r[9]) / m.fullDays * daysAfterLead(comp);
+
+// ---- Q3 downtime: when, response times and avoidability (same functions as Demand → Downtime impact / Response times) ----
+const dt = m.downtime, [dayTest, swingTest] = dt.tests, [dayAll, swingAll] = dt.robust;
+const testText = t => n(t.mean1, 0) + ' vs ' + n(t.mean2, 0) + ' minutes (gap 95% interval ' + n(t.lo, 0) + ' to ' + n(t.hi, 0) + ')';
+const downCells = downHeat(data, '', 0, 5), downTotal = sum(downCells, c => c.down);
+const shiftShare = k => pct(sum(downCells.filter(c => Math.floor(((c.hour - 6 + 24) % 24) / 8) === k), c => c.down) / downTotal, 0);
+const downPeak = downCells.reduce((a, b) => b.value > a.value ? b : a);
+const perDayDown = [...by(m.auditRows, r => r.d).entries()].map(([d, g]) => ({ date: data.dates[d], down: sum(g, r => r.down) }));
+const worstDay = perDayDown.reduce((a, b) => b.down > a.down ? b : a);
+const repairBy = k => n(responseStats(dt.tickets.filter(t => t.techs === k)).repair, 0);
+const av = dt.avoid, shiftName = ['day', 'swing', 'grave'][dt.tech.best.shift];
 
 // ---- Q1 adjusted ranking (same model functions as src/tabs/Audit.jsx → Adjusted ranking, full period, all banks) ----
 const adj = m.fullOverlap, cfg = m.payoutConfig;
@@ -70,6 +102,7 @@ const focalRank = m.fullRanking.rows.find(r => r.id === m.inspect.id);
 const seRatios = m.fullRanking.rows.filter(r => r.x.se && r.luckSE).map(r => r.x.se / r.luckSE).sort((a, b) => a - b);
 
 // ---- Q5 comp-program break (same model function as src/tabs/Guests.jsx → Comps & loyalty, all regions and tiers) ----
+const hit = m.hitFinding, cv = m.compVisits.real;
 const cb = m.fullBreak, cf = m.compFinding, dayName = d => ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'][month(d)] + ' ' + Number(d.slice(8));
 const metricOf = key => cb.results.find(r => r.metric.key === key);
 const fromTo = (r, d) => n(r.before, d) + ' to ' + n(r.after, d);
@@ -80,6 +113,23 @@ const reinvestBy = col => [...by(data.players, r => r[col]).entries()].sort((a, 
 const [tierCells, regionCells] = [reinvestBy(3), reinvestBy(2)];
 const localBase = (rows => pct(sum(rows, r => r[8]) / sum(rows, r => r[9]), 2))(data.players.filter(r => r[2] === 'Local' && r[3] === 'Base'));
 const visitorCells = regionCells.filter(([k]) => k !== 'Local');
+
+// ---- Q2 zones and real-world context (same model functions as src/tabs/DemandZones.jsx, full floor, April → June) ----
+const zf = m.zoneFinding, zc = zf.contribution, sc = v => (v > 0 ? '+' : '') + cash(v);
+const zname = z => m.zones[z];
+// The zone contributions must sum to the property change, raw and adjusted (adjusted = the Demand trend's April and June values).
+if (!(Math.abs(sum(zc.zones, r => r.change) - zc.total) < 1e-6 && Math.abs(zc.total - (M(5).coin - M(3).coin)) < 1e-6)) refFailures.push('zone contributions do not sum to the raw property change');
+if (!(Math.abs(zc.adjustedTotal - (M(5).adjusted - M(3).adjusted)) < 1e-6)) refFailures.push('adjusted zone contributions do not sum to the adjusted property change');
+if (!(Math.abs(zf.hours + zf.rate - zc.total) < 1e-6)) refFailures.push('hours and rate effects do not sum to the total');
+const ci = (v, f = sc) => f(v[0]) + ' (95% interval ' + f(v[1]) + ' to ' + f(v[2]) + ')';
+const zoneText = 'Property coin-in moved ' + sc(zc.total) + ' per day; ' + zname(zf.biggest.zone) + ' moved most (' + sc(zf.biggest.change) + ', ' + pct(zf.biggest.share, 0) + ') and ' +
+  zname(zf.steepest.zone) + ' had the steepest drop in coin-in per available hour (' + signedPct1(zf.steepest.b.rate / zf.steepest.a.rate - 1) + '). Machine-hours effect ' + sc(zf.hours) + ', rate effect ' + sc(zf.rate) +
+  '; event-free weekday-adjusted ' + sc(zc.adjustedTotal);
+const trafficText = 'Entries per day fell in ' + n(zf.trafficFell) + ' of ' + n(zf.trafficZones) + ' zones. Counters covered ' + pct(zf.coverage, 1) + ' of zone-minutes with ' + n(zf.offline) + ' offline sensor-hours';
+const peakText = 'busiest clock hour is ' + zf.peak.day + ' ' + String(zf.peak.hour).padStart(2, '0') + ':00 (' + cash(zf.peak.value) + ' per hour)';
+const weatherText = 'Heat: ' + ci(zf.heat) + ' per +10 °C weekday-adjusted, ' + ci(zf.heatMonth) + ' with month effects. Rain (' + n(zf.rainDays) + ' days): ' + ci(zf.rain) +
+  '; ' + (zf.placebo === 0 ? 'none of 10,000' : pct(zf.placebo, 2) + ' of') + ' random same-size day sets as low';
+const missouriText = 'Missouri statewide slot handle per day ' + signedPct1(zf.moChange) + ' vs ' + signedPct1(zf.ownChange) + ' at the property; ' + n(zf.moFell) + ' of ' + n(zf.moCount) + ' Missouri casinos fell';
 
 const CHECKS = [
   // Headline decision (README + appendix)
@@ -120,6 +170,13 @@ const CHECKS = [
   ['April to June adjusted wagers', pct(Math.abs(M(5).adjusted / M(3).adjusted - 1)), ['claims']],
   ['April to June visitors', pct(Math.abs(M(5).city / M(3).city - 1)), ['claims']],
   ['April to June entrances', pct(Math.abs(M(5).entrance / M(3).entrance - 1)), ['claims']],
+  ['zone contribution', zoneText, ['claims']],
+  ['zone traffic', trafficText, ['claims']],
+  ['heat map peak', peakText, ['claims']],
+  ['weather test', weatherText, ['claims']],
+  ['weather sample', 'OLS on ' + n(data.weather.weekday.days) + ' event-free gaming days', ['claims']],
+  ['rain dates', 'Rain days were ' + (d => d.slice(0, -1).map(dayName).join(', ') + ' and ' + dayName(d.at(-1)))(data.weather.rainDates), ['claims']],
+  ['Missouri comparison', missouriText, ['claims']],
   // Q3
   ['meter down hours', n(sum(m.auditRows, r => r.down)), ['claims']],
   ['wagers at risk', millions(sum(m.auditRows, r => r.lost), 3), ['claims']],
@@ -139,6 +196,10 @@ const CHECKS = [
   ['ahead / behind / even', n(active.filter(r => r[1] > 0).length) + ' ended ahead, ' + n(active.filter(r => r[1] < 0).length) + ' behind and ' + n(active.filter(r => r[1] === 0).length) + ' even', ['claims']],
   ['top 1% wagers', pct(ratio(topCoin, cardedCoin)), ['claims']],
   ['top 1% losses', pct(ratio(topLoss, grossLoss)), ['claims']],
+  ['Lorenz shares and Gini', lorenzText, ['claims']],
+  ['outcome histogram', outcomeText, ['claims']],
+  ['age-band breakdown', ageText, ['claims']],
+  ['carded vs all play', cardedText, ['claims']],
   // Q5
   ['comp cost', cash(sum(data.property, r => r[9])), ['claims']],
   ['comp face value', cash(sum(data.property, r => r[8])), ['claims']],
@@ -185,6 +246,12 @@ const CHECKS = [
   ['window theo at risk', cash(slot.coin * hold), ['claims']],
   ['average window theo', cash(slot.typical * hold), ['claims']],
   ['window saving', cash((slot.typical - slot.coin) * hold), ['claims']],
+  // July budget ledger (src/lib/plan.js): the total, the reserve and each funded action's cost
+  ['ledger total', m.julyPlan.arithmetic, ['readme', 'claims']],
+  ['ledger reserve', cash(m.julyPlan.reserve) + ' reserve', ['readme', 'claims']],
+  ...m.julyPlan.lines.map(l => ['ledger cost · ' + l.action[0], l.action[0] + ' ' + n(l.item.qty) + ' × ' + l.targets.join(', ') + ' costs ' + cash(l.cost) + ' with ' + n(l.days) + ' July days after lead', ['claims']]),
+  ['unfunded promotion', cash(m.promoCost) + ' promotion weekend unfunded', ['readme']],
+  ['promotion at 25% of the weaker lift', 'nets ' + cash(.25 * Math.min(...data.promotions.map(m.retainedTheo)) - m.promoCost), ['claims']],
   // Promotion
   ['promotion cost', cash(m.promoCost), ['claims']],
   ['event wager lifts', thousands(tournament.during.coin) + ' and ' + thousands(locals.during.coin), ['claims']],
@@ -193,19 +260,72 @@ const CHECKS = [
   // Repair
   ['repair gross benefits', (vals => vals.slice(0, -1).join(', ') + ', and ' + vals.at(-1))(m.repairScenarios.map(s => cash(m.inspectionGapPerDay * s * m.repairPaybackDays))), ['claims']],
   // Alternatives
-  ['Ridgeline sweep', cash(m.actionCost(maint)) + ' Ridgeline sweep vs ' + cash(ridgeRisk), ['claims']],
-  ['technician shift', cash(m.actionCost(tech)) + ' technician needs ' + pct(m.actionCost(tech) / techRisk, 0) + ' of ' + cash(techRisk), ['claims']],
+  ['technician shift', cash(dt.tech.cost) + ' technician package needs ' + n(dt.tech.need, 1) + '× the ' + cash(dt.tech.best.value) + ' a second ' + shiftName + '-shift technician would recover over ' + dt.tech.days + ' days (' + cash(dt.tech.best.low) + '–' + cash(dt.tech.best.high), ['claims']],
+  ['technician all waiting', 'removing all waiting would return ' + cash(dt.tech.best.all), ['claims']],
+  ['preventive sweep', cash(dt.pm.cost) + ' ' + dt.pm.full.make + ' sweep breaks even only if it removes ' + pct(dt.pm.breakEven, 0) + ' of its excess faults (' + pct(dt.pm.breakEvenRecent, 0) + ' at April–June rates)', ['claims']],
+  ['preventive upper bound', 'worth at most ' + cash(dt.pm.full.upper) + ' (' + cash(dt.pm.recent.upper) + ' at April–June rates) before ' + cash(dt.pm.sweepDowntime) + ' of sweep downtime on ' + n(dt.pm.cabinets) + ' cabinets', ['claims']],
+  // Q3 downtime: when, response, overlap and avoidability
+  ['downtime by shift', 'day ' + shiftShare(0) + ', swing ' + shiftShare(1) + ', grave ' + shiftShare(2), ['claims']],
+  ['worst downtime slot', data.heat.weekdays[downPeak.weekday] + ' ' + String(downPeak.hour).padStart(2, '0') + ':00 (' + n(downPeak.value, 2) + ' machine-hours down on average)', ['claims']],
+  ['downtime per day', n(downTotal / data.dates.length, 1) + ' machine-hours per gaming day; worst ' + worstDay.date + ' (' + n(worstDay.down, 1) + ')', ['claims']],
+  ['day-shift response test', 'weekday day shifts ' + testText(dayTest), ['claims']],
+  ['swing response test', 'swing shifts ' + testText(swingTest), ['claims']],
+  ['full-period response test', 'January–June: ' + n(dayAll.lo, 0) + ' to ' + n(dayAll.hi, 0) + ' and ' + n(swingAll.lo, 0) + ' to ' + n(swingAll.hi, 0), ['claims']],
+  ['response load', n(dayTest.load1, 2) + ' vs ' + n(dayTest.load2, 2) + ' tickets per shift-day on the day shift and ' + n(swingTest.load1, 2) + ' vs ' + n(swingTest.load2, 2) + ' on swing', ['claims']],
+  ['pooled waiting share', pct(dt.share.share, 0) + ' of the waiting (95% interval ' + pct(dt.share.lo, 0) + ' to ' + pct(dt.share.hi, 0) + ')', ['claims']],
+  ['grave response', 'shifts, always one technician, averaged ' + n(responseStats(dt.tickets.filter(t => t.shift === 2)).response, 0) + ' minutes', ['claims']],
+  ['repair by staffing', 'repairs took ' + repairBy(1) + ' minutes with one technician and ' + repairBy(2) + ' with two', ['claims']],
+  ['make fault rates', dt.pm.full.make + ' faults ' + n(1000 * dt.pm.full.rate, 1) + ' times per 1,000 machine-days against ' + n(1000 * dt.pm.full.others, 1) + ' for the other makes; ' + pct(dt.pm.full.repeat, 0) + ' recur within 14 days', ['claims']],
+  ['maintenance tickets', 'only ' + n(dt.overlap.maintenance) + ' scheduled-maintenance tickets exist', ['claims']],
+  ['ticket overlap', n(dt.overlap.faultHours, 1) + ' fault-ticket hours + ' + n(dt.overlap.otherHours, 1) + ' other operation hours = ' + n(dt.overlap.meterHours, 1) + ' meter hours; up to ' + n(dt.overlap.maxOpen) + ' faults open at once', ['claims']],
+  ['avoidable downtime', 'technician ' + n(av.tech, 0) + ' h (' + pct(av.tech / av.meter, 0) + '), preventive maintenance at most ' + n(av.pm, 0) + ' h (' + pct(av.pm / av.meter, 0) + '), either ' + n(av.either, 0) + ' h (' + pct(av.either / av.meter, 0) + ') after ' + n(av.overlap, 0) + ' h of overlap', ['claims']],
+  // P10 hidden-pattern hunt (analysis/FINDINGS.md): hit frequency vs game math, and the comp repricing visit test
+  ['hit-frequency check', hit.lead.id + ' paid on ' + pct(hit.lead.observed) + ' of ' + n(hit.lead.spins) + ' all-play spins against a published ' + pct(hit.lead.published) + ' (z ' + n(hit.lead.z, 1) + '), above it in ' + n(hit.detail.above) + ' of ' + n(hit.detail.weeks.length) + ' weeks', ['claims']],
+  ['hit-frequency alternatives', 'carded ' + pct(hit.detail.carded) + ', uncarded ' + pct(hit.detail.uncarded) + '; by bet ' + hit.detail.bets.map(b => pct(b.rate)).join(', ') + '; other ' + n(hit.others.length) + ' cabinets z mean ' + n(hit.meanZ, 2) + ', SD ' + n(hit.sdZ, 2) + ', largest |z| ' + n(hit.maxOther, 2), ['claims']],
+  ['hit-frequency verification', n(hit.detail.medianDaySpins) + ' spins on a median day put the gap at ' + n(hit.detail.daySeparation, 1) + ' daily standard errors', ['claims']],
+  ['comp visits test', 'comp users ' + signedPct1(cv.usersChange) + ', other recent guests ' + signedPct1(cv.othersChange) + '; difference ' + signedPct1(cv.did) + ' (95% interval ' + signedPct1(cv.interval[0]) + ' to ' + signedPct1(cv.interval[1]) + ')', ['claims']],
+  ['comp visits placebos', 'Placebo splits ' + m.compVisits.placebos.map(x => dayName(x.split) + ' ' + signedPct1(x.did)).join(', '), ['claims']],
   ['comp pilot', cash(m.actionCost(comp)) + ' comp pilot needs about ' + pct(m.actionCost(comp) / compSpend, 0) + ' savings on ' + cash(compSpend), ['claims']],
+  // WRITEUP.md (the 400-word Devpost write-up): every figure it quotes
+  ['write-up budget', 'had ' + cash(m.julyPlan.spent + m.julyPlan.reserve) + ' for July', ['writeup']],
+  ['write-up adjusted overlap', 'Only ' + n(adj.both.length) + ' of the raw bottom ten (' + adj.both.map(r => r.id).join(', ') + ') is in the adjusted bottom ten', ['writeup']],
+  ['write-up at or above peers', n(adj.atOrAbovePeers.length) + ' of the other ' + n(adj.rawOnly.length) + " earn at least their matched peers' expected win per hour", ['writeup']],
+  ['write-up quiet cohort', (['Nine', 'Ten'][m.quietCohort.length - 9] ?? n(m.quietCohort.length)) + ' of ten sit in quiet zones', ['writeup']],
+  ['write-up move pairs', 'only ' + n(m.moveCases.filter(r => r.main.bankPct > 0).length) + ' of ' + n(m.moveCases.length) + ' moved pairs gained across both banks', ['writeup']],
+  ['write-up M-1158 win', m.inspect.id + ' won ' + cash(m.inspect.win) + ' against ' + cash(m.inspect.theo) + ' expected, ' + cash(m.inspect.theo - m.inspect.win) + ' below its configured hold', ['writeup']],
+  ['write-up hit frequency', 'paid on ' + pct(hit.lead.observed) + ' of spins against a published ' + pct(hit.lead.published) + ', above it in ' + n(hit.detail.above) + ' of ' + n(hit.detail.weeks.length) + ' weeks', ['writeup']],
+  ['write-up holdout MAE', 'Its ' + n(m.holdout.length) + '-day holdout MAE was ' + cash(m.m1) + ', against ' + cash(m.m7) + ' for a seven-day lag and ' + cash(m.mae(m.holdout, 11)) + ' for a constant mean', ['writeup']],
+  ['write-up paired wins', 'beat the lag on ' + n(v.frozen.wins) + ' of ' + n(v.frozen.days) + ' days', ['writeup']],
+  ['write-up paired interval', '(' + signed(v.frozen.interval[0]) + ' to ' + signed(v.frozen.interval[1]) + ') includes zero', ['writeup']],
+  ['write-up staffing', (w => 'at a ' + millions(m.peakThreshold) + ' cutoff it caught ' + n(w.caught) + ' of ' + n(w.peaks) + ' peak days')(peakAt(m.peakThreshold, 10)), ['writeup']],
+  ['write-up inspection', 'Inspect ' + m.inspect.id + ', ' + cash(m.inspectionCost), ['writeup']],
+  ['write-up inspection recovery', 'July recovery is ' + cash(m.inspectionCeiling) + ', so it pays if the chance of a full fix exceeds ' + pct(m.inspectionBreakEven, 1), ['writeup']],
+  ['write-up reserve', 'Keep ' + cash(m.reserve) + ' in reserve', ['writeup']],
+  ['write-up ledger', 'The ledger reads ' + m.julyPlan.arithmetic, ['writeup']],
+  ['write-up promotion', 'The ' + cash(m.promoCost) + ' comes from the reserve only if July 4 registrations show it can retain ' + pct(m.promoCost / Math.min(...data.promotions.map(m.retainedTheo)), 1) + ' of the weaker past lift', ['writeup']],
+  ['write-up move', 'move (' + cash(m.actionCost(m.catalogue['A-MOVE-MACHINE'])) + ') is deferred. At 50% capture it nets ' + signed(m.netMove(.5, 0)) + ' with no displaced play and ' + cash(m.netMove(.5, .10)) + ' with 10%', ['writeup']],
+  ['write-up past moves and events', n(m.moveCases.length) === '4' && data.promotions.length === 2 ? 'four past moves and two events' : 'move and event counts changed', ['writeup']],
 ];
 
-let failed = 0;
+// The in-dashboard Claims & evidence page (src/lib/claims.js) must quote the appendix: every claim title and every
+// computed result fragment it shows has to appear verbatim in CLAIMS-AND-EVIDENCE.md.
+const pageClaims = buildClaims(m);
+if (pageClaims.map(c => c.id).join() !== CLAIM_IDS.join()) refFailures.push('claims page ids do not match CLAIM_IDS');
+for (const c of pageClaims) CHECKS.push(['claims page · ' + c.claim, '| ' + c.claim + ' |', ['claims']], ...c.result.map((r, i) => ['claims page · ' + c.id + ' result ' + (i + 1), [r].flat().at(-1), ['claims']]));
+
+// The ledger must total exactly the budget and the recommended plan must pass every catalog rule.
+if (m.julyPlan.spent + m.julyPlan.reserve !== 100000) refFailures.push('ledger does not total $100,000');
+for (const c of m.julyPlan.checks) if (!c.pass) refFailures.push('recommended plan fails: ' + c.label);
+if (m.reserve !== m.julyPlan.reserve) refFailures.push('model reserve differs from the ledger reserve');
+let failed = refFailures.length;
+for (const f of refFailures) console.log('✗ reference check: ' + f);
 for (const [label, expected, where] of CHECKS) {
   for (const doc of where) {
     if (norm(docs[doc]).includes(norm(expected))) continue;
     failed++;
-    console.log('✗ ' + label + ': ' + (doc === 'readme' ? 'README.md' : 'CLAIMS-AND-EVIDENCE.md') + ' should contain "' + expected + '"');
+    console.log('✗ ' + label + ': ' + FILES[doc] + ' should contain "' + expected + '"');
   }
 }
-const total = CHECKS.reduce((a, c) => a + c[2].length, 0);
+const total = CHECKS.reduce((a, c) => a + c[2].length, 0) + refFailures.length;
 console.log(failed ? '\n' + failed + ' of ' + total + ' quoted figures are stale.' : 'All ' + total + ' quoted figures match the model.');
 process.exit(failed ? 1 : 0);
