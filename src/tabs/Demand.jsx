@@ -1,7 +1,7 @@
 import { useModel } from '../modelContext.js';
 import { useNav } from '../nav.jsx';
 import { Card, Chart, Details, How, Line, Metrics, Note, Panel, Table, Tabbed, Takeaway } from '../components/ui.jsx';
-import { by, cash, compact, gold, green, month, months, n, pct, ratio, red, shifts, signedPct, sum } from '../lib/format.js';
+import { SERIES, by, cash, compact, month, months, n, pct, ratio, shifts, signedPct, sum } from '../lib/format.js';
 
 /** Splits the first-to-last change in daily wagers into playing time and wagers per occupied hour. */
 function DemandBridge({ base, current }) {
@@ -79,8 +79,8 @@ function DemandTrend({ monthly, perDay }) {
       {comparison}
       {football}
       {after}
-      <Chart series={[{ name: 'Observed daily wagers', color: gold, values: monthly.map(r => r.coin) }, { name: 'Excluding listed events · equal weekday mix', color: green, values: monthly.map(r => r.adjusted) }]}
-        labels={monthly.map(r => months[r.m])} format={compact} min={0} />
+      <Chart title="Demand across the period" labels={monthly.map(r => months[r.m])} format={compact} min={0}
+        series={[{ name: 'Observed daily wagers', color: SERIES.gold, area: true, values: monthly.map(r => r.coin) }, { name: 'Excluding listed events · equal weekday mix', color: SERIES.blue, values: monthly.map(r => r.adjusted) }]} />
       <Table headers={['Month', 'Days', 'Observed $/day', 'Event-free days', 'Weekday-adjusted $/day', 'Entrance counts/day', 'Counter coverage', 'Vegas visitors/day']}
         rows={monthly.map(r => [months[r.m], n(r.days), cash(r.coin), n(r.eventFree), cash(r.adjusted), n(r.entrance), pct(r.coverage), n(r.city)])} />
       <How>The adjusted series drops days with a recorded event, then weights all seven weekdays equally (each month needs every weekday). Unrecorded events and seasonality can still affect it.</How>
@@ -195,8 +195,8 @@ export default function Demand({ scope: s }) {
             </Panel>
             <Panel title="When downtime cost the most">
               <Note>Daily averages, so months of different lengths compare fairly.</Note>
-              <Chart series={[{ name: 'Estimated wagers at risk per day', color: red, values: monthly.map(r => r.lost / r.days) }]}
-                labels={monthly.map(r => months[r.m])} format={cash} height={190} min={0} />
+              <Chart type="bar" title="When downtime cost the most" labels={monthly.map(r => months[r.m])} format={cash} height={200}
+                series={[{ name: 'Estimated wagers at risk per day', color: SERIES.gold, values: monthly.map(r => r.lost / r.days) }]} />
               <Table headers={['Highest-risk days', 'Down hours', 'Coin-in at risk']} rows={worst.map(r => [r.date, n(r.down, 1), cash(r.lost)])} />
             </Panel>
             <DowntimeMethod theo={theo} />

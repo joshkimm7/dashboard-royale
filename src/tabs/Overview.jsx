@@ -1,6 +1,7 @@
 import { useModel } from '../modelContext.js';
 import { useNav } from '../nav.jsx';
 import { cash, n } from '../lib/format.js';
+import { InfoFor } from '../components/Info.jsx';
 
 function MoveTally({ label, count, total }) {
   return (
@@ -36,19 +37,19 @@ export default function Overview({ heroRef, hidden }) {
       </div>
       <div id="decision-cards" className="decision-cards" aria-label="Recommended actions">
         <article className="decision-card">
-          <span className="eyebrow">01 · Inspect M-1158</span>
+          <span className="eyebrow">01 · Inspect M-1158<InfoFor kind="decision" label="01 · Inspect M-1158" /></span>
           <strong className="decision-value">{cash(m.inspectionCost)}</strong>
           <p>{'A ' + cash(m.inspect.theo - m.inspect.win) + ' payout shortfall persisted across the audit.'}</p>
           <button data-evidence="M-1158" data-section="hold-check" onClick={() => nav.openEvidence('M-1158', 'hold-check')}>View payout evidence</button>
         </article>
         <article className="decision-card">
-          <span className="eyebrow">02 · M-1181 relocation</span>
+          <span className="eyebrow">02 · M-1181 relocation<InfoFor kind="decision" label="02 · M-1181 relocation" /></span>
           <strong className="decision-value">Defer</strong>
           <p>All four destinations gained. Only two pairs gained overall.</p>
           <button data-jump="move-check" onClick={() => nav.jump('move-check')}>Compare the four moves</button>
         </article>
         <article className="decision-card">
-          <span className="eyebrow">03 · Routine staffing</span>
+          <span className="eyebrow">03 · Routine staffing<InfoFor kind="decision" label="03 · Routine staffing" /></span>
           <strong className="decision-value">Flex coverage</strong>
           <p>{'Schedule extra coverage at ' + cash(m.peakThreshold) + ' in forecast wagers. Review events separately.'}</p>
           <button data-jump="staffing-check" onClick={() => nav.jump('staffing-check')}>See the staffing replay</button>
