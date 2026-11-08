@@ -18,6 +18,21 @@ function SchedulingScores() {
   );
 }
 
+/** 'YYYY-MM-DD' → 'May 17'. */
+const dayLabel = date => months[month(date)] + ' ' + Number(date.slice(8));
+
+/** Compares the two rules at the lowest cutoff and at the planning cutoff, from the same replay as the table. */
+function staffingSummary([low, plan], schedulingScore) {
+  const at = (cutoff, column) => {
+    const { hits, missed, falseFlags } = schedulingScore('Peak', column, coin => coin >= cutoff ? 'Peak' : 'Other');
+    return { caught: hits, peaks: hits + missed, coverage: hits + falseFlags };
+  };
+  const diff = (a, b, noun) => a === b ? 'the same ' + noun + 's' : n(Math.abs(a - b)) + (a > b ? ' more ' : ' fewer ') + noun + (Math.abs(a - b) === 1 ? '' : 's');
+  const [wl, ll, wp, lp] = [at(low, 10), at(low, 12), at(plan, 10), at(plan, 12)];
+  return 'Simulated May–June. At ' + compact(low) + ' the weekday rule caught ' + diff(wl.caught, ll.caught, 'peak') + ' than “last week” with ' + diff(wl.coverage, ll.coverage, 'coverage day') +
+    '. At ' + compact(plan) + ' weekday averages caught ' + n(wp.caught) + ' of ' + n(wp.peaks) + ' peaks and “last week” ' + n(lp.caught) + ' of ' + n(lp.peaks) + ', with ' + n(wp.coverage) + ' vs ' + n(lp.coverage) + ' coverage days. The cost of a missed peak wasn’t measured.';
+}
+
 function StaffingReplay() {
   const { schedulingScore, schedulingTier, peakThreshold, holdout } = useModel();
   const models = [['Weekday forecast', 10], ['Same weekday last week', 12]];
@@ -32,7 +47,7 @@ function StaffingReplay() {
     <Panel title="Staffing decision · holdout replay" id="staffing-check">
       <Takeaway>{'Schedule routine flex coverage when forecast wagers reach ' + cash(peakThreshold) + '. Review announced events separately using bookings and live traffic.'}</Takeaway>
       <Table headers={['Cutoff', 'Forecast', 'Actual peaks', 'Coverage days', 'Peaks caught', 'Peaks missed', 'Unneeded coverage']} rows={rows} />
-      <Note>Simulated May–June. At $1.45m the weekday rule caught one more peak but added seven coverage days. At $1.50m both rules caught 18 of 19 peaks, with 18 vs 19 coverage days. The cost of a missed peak wasn’t measured.</Note>
+      <Note>{staffingSummary(cutoffs, schedulingScore)}</Note>
       <Details title="Which days changed the call?">{'The weekday rule missed ' + weekdayMisses.map(r => r[0] + ' (actual ' + cash(r[3]) + ', forecast ' + cash(r[10]) + ')').join(', ') +
         '. The last-week rule scheduled unneeded coverage on ' + falseLag.map(r => r[0] + ' (actual ' + cash(r[3]) + ', forecast ' + cash(r[12]) + ')').join(', ') + '.'}</Details>
     </Panel>
@@ -47,10 +62,10 @@ function ForecastMultiples({ holdout, mae, spike, replay, eventDay, replayDay })
   const labels = holdout.map(r => months[month(r[0])] + ' ' + Number(r[0].slice(8)));
   const all = holdout.flatMap(r => [r[3], r[10], r[12], r[14]]);
   const lo = Math.min(...all), hi = Math.max(...all);
-  const edc = { index: spike, value: eventDay[3], label: 'May 17 · EDC weekend', yOffset: 13 };
+  const edc = { index: spike, value: eventDay[3], label: dayLabel(eventDay[0]) + ' · EDC weekend', yOffset: 13 };
   const panels = [
     ['Weekday forecast', 10, [edc]],
-    ['Same weekday last week', 12, [{ index: replay, value: replayDay[12], label: 'May 24 · spike repeated', yOffset: 13 }]],
+    ['Same weekday last week', 12, [{ index: replay, value: replayDay[12], label: dayLabel(replayDay[0]) + ' · spike repeated', yOffset: 13 }]],
     ['Calendar-adjusted weekday', 14, [edc]],
   ];
   return (
@@ -79,7 +94,10 @@ export default function Model() {
     return [d.date, d.day, sample[d.day], sample[d.day] + (holiday ? data.validation.effects[0] : 0) + (event ? data.validation.effects[1] : 0), [holiday, event].filter(Boolean).join(' · ')];
   });
   const monthly = [...by(holdout, r => month(r[0])).entries()];
-  const spike = holdout.findIndex(r => r[0] === '2025-05-17'), replay = spike + 7;
+  // The EDC spike: the busiest holdout day inside the listed EDC event, and the same weekday a week later.
+  const [, edcStart, edcEnd] = data.events.find(e => /EDC/.test(e[0])) ?? [];
+  const edcDays = holdout.map((r, i) => [r, i]).filter(([r]) => r[0] >= edcStart && r[0] <= edcEnd);
+  const spike = edcDays.reduce((best, cur) => !best || cur[0][3] > best[0][3] ? cur : best, null)?.[1] ?? 0, replay = spike + 7;
   const eventDay = holdout[spike], replayDay = holdout[replay];
   const juneEvents = holdout.filter(r => month(r[0]) === 5 && r[16]);
 
@@ -88,9 +106,9 @@ export default function Model() {
       <>
         <Panel title="A fair test on future days">
           <Takeaway>Use weekday averages to plan routine staffing. Calendar flags made little difference overall and were less accurate on June event days.</Takeaway>
-          <Note>Models learn from Jan–Apr and are scored on the same 61 days (May 1–Jun 30). “Last week” simply repeats the total from seven days earlier.</Note>
+          <Note>{'Models learn from Jan–Apr and are scored on the same ' + n(holdout.length) + ' days (' + dayLabel(holdout[0][0]) + '–' + dayLabel(holdout.at(-1)[0]) + '). “Last week” simply repeats the total from seven days earlier.'}</Note>
           <ForecastMultiples holdout={holdout} mae={mae} spike={spike} replay={replay} eventDay={eventDay} replayDay={replayDay} />
-          <Note>{'EDC weekend (May 17): actual ' + cash(eventDay[3]) + ', weekday forecast ' + cash(eventDay[10]) + ', calendar-adjusted ' + cash(eventDay[14]) + '. A week later, “last week” repeated the spike (' + cash(replayDay[12]) + ' vs ' + cash(replayDay[3]) + ' actual); the weekday forecast didn’t.'}</Note>
+          <Note>{'EDC weekend (' + dayLabel(eventDay[0]) + '): actual ' + cash(eventDay[3]) + ', weekday forecast ' + cash(eventDay[10]) + ', calendar-adjusted ' + cash(eventDay[14]) + '. A week later, “last week” repeated the spike (' + cash(replayDay[12]) + ' vs ' + cash(replayDay[3]) + ' actual); the weekday forecast didn’t.'}</Note>
           <Table headers={['Holdout', 'Days', 'Frozen weekday MAE', 'Same weekday last week MAE', 'Calendar-adjusted MAE', 'Constant mean MAE']}
             rows={[...monthly.map(([mo, r]) => [months[mo], r.length, cash(mae(r, 10)), cash(mae(r, 12)), cash(mae(r, 14)), cash(mae(r, 11))]), ['May–Jun', holdout.length, cash(m1), cash(m7), cash(mCalendar), cash(mae(holdout, 11))]]} />
           <Note>{'Frozen weekday vs. last week: ' + pairedSummary(data.validation.frozen) + ' The interval crosses zero.'}</Note>
@@ -99,7 +117,7 @@ export default function Model() {
         </Panel>
         <Panel title="Does it hold over an earlier window?">
           <Takeaway>{'Expanding weekday vs. last week: ' + pairedSummary(data.validation.expanding) + ' This interval stays above zero.'}</Takeaway>
-          <Note>Refits weekday averages using only earlier days, from March onward (122 days). May–June overlaps the main holdout.</Note>
+          <Note>{'Refits weekday averages using only earlier days, from March onward (' + n(data.property.filter(r => r[0] >= '2025-03-01').length) + ' days). May–June overlaps the main holdout.'}</Note>
           <Table headers={['Period', 'Days', 'Expanding weekday MAE', 'Same weekday last week MAE']}
             rows={[['Mar–Apr', data.property.filter(r => r[0] >= '2025-03-01' && r[0] < '2025-05-01')], ['May–Jun', holdout], ['Mar–Jun', data.property.filter(r => r[0] >= '2025-03-01')]].map(([label, r]) => [label, r.length, cash(mae(r, 13)), cash(mae(r, 12))])} />
         </Panel>

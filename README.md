@@ -37,6 +37,7 @@ python -m pip install 'pandas==2.2.3' 'numpy==2.3.5'
 python build_data.py official-data   # writes data/dashboard.json
 npm ci
 npm run build                        # writes dist/index.html with the data inlined
+npm run check                        # recomputes every figure quoted in README.md and CLAIMS-AND-EVIDENCE.md
 ```
 
 Or run `bash scripts/vercel-build.sh`, which does the same steps in a throwaway virtual environment. Vercel runs this script on every deploy (see [`vercel.json`](vercel.json)), so pushing to `main` publishes a freshly built dashboard.

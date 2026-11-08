@@ -23,7 +23,7 @@ function Metric({ label, value, format }) {
 }
 
 function Moves() {
-  const { data } = useModel();
+  const { data, closestCase, bankZone, zones } = useModel();
   const cases = data.moves.filter(m => m.main);
   const positive = cases.filter(m => m.main.bankPct > 0).length;
   const cabinetGains = cases.filter(m => m.main.cabinet > 0).length;
@@ -35,7 +35,8 @@ function Moves() {
   return (
     <Panel title="What happened after past moves?" id="move-check">
       <Takeaway>{destinationGains + ' of ' + cases.length + ' destination banks gained. ' + cabinetGains + ' moved cabinets improved, and only ' + positive + ' bank pairs gained overall.'}</Takeaway>
-      <Note>{'14 days before vs after, relative to comparison cabinets and banks. The closest route (Back Forty → Main Entrance) gained ' + pct(cases[0].main.bankPct) + ' across both banks, but that cabinet was already improving.'}</Note>
+      <Note>{'14 days before vs after, relative to comparison cabinets and banks. The closest route to the proposed move (' + zones[bankZone[closestCase.main.origin]] + ' → ' + zones[bankZone[closestCase.main.target]] + ') ' +
+        (closestCase.main.bankPct >= 0 ? 'gained ' : 'changed ') + pct(closestCase.main.bankPct) + ' across both banks' + (closestCase.main.pretrend > 0 ? ', but that cabinet was already improving before the move.' : '.')}</Note>
       <div className="move-cases" aria-label="Four historical relocations">
         {cases.map(({ id, main: m }) => (
           <article key={id} className="move-result-card">
@@ -87,10 +88,10 @@ function InspectionWindowSummary() {
 }
 
 function InspectionEvidence() {
-  const { inspect, inspectionGapPerDay, inspectionCeiling, inspectionBreakEven, inspectionCost } = useModel();
+  const { inspect, inspectionGapPerDay, inspectionCeiling, inspectionBreakEven, inspectionCost, weeksBelow, focalWeeks } = useModel();
   return (
     <>
-      <Note>{'Below configured hold in 23 of 27 weeks (95% interval ' + pp(inspect.lo) + ' to ' + pp(inspect.hi) + ', adjusted q < 0.001). That’s strong evidence it isn’t luck, but not the odds of a fault or a fix.'}</Note>
+      <Note>{'Below configured hold in ' + n(weeksBelow) + ' of ' + n(focalWeeks.length) + ' weeks (95% interval ' + pp(inspect.lo) + ' to ' + pp(inspect.hi) + ', adjusted q ' + (inspect.q < .001 ? '< 0.001' : '= ' + n(inspect.q, 3)) + '). That’s strong evidence it isn’t luck, but not the odds of a fault or a fix.'}</Note>
       <Line label="Historical payout shortfall per day" value={cash(inspectionGapPerDay)} />
       <Line label="30 days at the historical gap" value={cash(30 * inspectionGapPerDay)} />
       <Line label="Conditional July recovery after lead time" value={cash(inspectionCeiling)} />
@@ -204,7 +205,7 @@ export default function Plan() {
   const m = useModel();
   const nav = useNav();
   const { data, fullSummary, catalogue, inspect, move, inspection, destination, destinationPeers, recentRate, destinationRate,
-    inspectionCost, inspectionCeiling, inspectionBreakEven, promoCost, promoHurdle, retainedTheo, moveCost, netMove, moveBreakEven, reserve, actionCost } = m;
+    inspectionCost, inspectionCeiling, inspectionBreakEven, promoCost, promoHurdle, retainedTheo, moveCost, netMove, moveBreakEven, reserve, actionCost, relocation, last, zones, moveControls } = m;
   const suspects = fullSummary.slice(0, 10);
 
   const views = {
@@ -235,7 +236,7 @@ export default function Plan() {
             <Line label="Observed / configured hold" value={pct(inspect.hold, 2) + ' / ' + pct(ratio(inspect.theo, inspect.coin), 2)} />
             <Line label="House win below configured expectation" value={cash(inspect.theo - inspect.win)} />
             <Line label="Coin-in per hour vs local peers" value={pct(inspect.local, 0)} />
-            <p>{'Book ' + inspection[5] + ' minutes of downtime in a quiet window after the one-day lead. Check the paytable, configuration, meters and logs, and record any fix.'}</p>
+            <p>{'Book ' + inspection[5] + ' minutes of downtime in a quiet window after the ' + n(inspection[4]) + '-day lead. Check the paytable, configuration, meters and logs, and record any fix.'}</p>
             <InspectionWindowSummary />
             <InspectionEvidence />
             <RepairApproval />
@@ -244,10 +245,10 @@ export default function Plan() {
           </div>
           <div>
             <h3>{'2 · Defer the ' + move.id + ' relocation'}</h3>
-            <Line label="Target slot" value={'B-07 / ' + destination[0] + ' · vacant June 30'} />
+            <Line label="Target slot" value={destination[1] + ' / ' + destination[0] + ' · vacant June 30'} />
             <Line label="June theo per available hour" value={cash(recentRate) + ' source / ' + cash(destinationRate) + ' destination peers'} />
             <Line label="Same-config destination cabinets" value={n(new Set(destinationPeers.map(r => r.id)).size)} />
-            <p>If approved later: confirm the slot, allow two days’ lead and a three-hour move, keep the configuration, track it as M-1179, and pick comparison banks beforehand.</p>
+            <p>{'If approved later: confirm the slot, allow ' + n(relocation[4]) + ' days’ lead and a ' + n(relocation[5] / 60, relocation[5] % 60 ? 1 : 0) + '-hour move, keep the configuration, compare it with same-configuration ' + zones[last.zone] + ' cabinets that stay put (' + moveControls.join(', ') + '), and pick comparison banks beforehand.'}</p>
             <Note>{'Waiting could forgo about ' + cash(netMove(.5, 0)) + ' (50% capture, no displacement), but at 10% displacement that becomes ' + cash(netMove(.5, .10)) + '. Past moves make displacement a real risk.'}</Note>
             <button data-evidence={move.id} onClick={() => nav.openEvidence(move.id)}>{'Open ' + move.id + ' audit'}</button>
           </div>
