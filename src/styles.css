@@ -286,7 +286,6 @@ footer{padding-bottom:90px}
 .side-nav .icon{flex:none;opacity:.9}
 .side-label{overflow:hidden;text-overflow:ellipsis}
 .side-badge{margin-left:auto;padding:2px 8px;border-radius:99px;font:700 10.5px/1.5 var(--font-sans);background:rgba(217,99,127,.2);color:#f6b3c0}
-.side-badge.new{background:rgba(79,143,224,.2);color:#b3cff5;letter-spacing:.06em}
 .side-foot{margin-top:auto;display:flex;flex-direction:column;gap:10px;padding-top:14px;border-top:1px solid rgba(201,154,62,.2)}
 .side-team{display:flex;align-items:center;gap:10px;padding:10px;border-radius:12px;background:rgba(0,0,0,.22);border:1px solid rgba(201,154,62,.25)}
 .side-team .mark{margin:0;flex:none}.side-team small{display:block;font-size:11px;color:#b89a7c}.side-team strong{display:block;font-size:14px}
@@ -397,3 +396,57 @@ select{color-scheme:dark}
 select option,select optgroup{background-color:#2c0a0f;color:#fbf2e3}
 select option:checked{background-color:#c99a3e;color:#2a0a06}
 select option:disabled{color:#a88a75}
+
+/* Period control on every page, presets, and the reason shown on full-period pages */
+.page-head .dashboard-tools{display:grid;gap:6px;justify-items:end}
+.page-head .filters select:disabled{color:var(--muted);opacity:1;cursor:not-allowed}
+.page-head .filters label:has(select:disabled){border-style:dashed}
+.presets{display:inline-flex;gap:4px;flex-wrap:wrap}
+.presets button{height:38px;padding:0 10px;border-radius:10px;font-size:12.5px}
+.presets button:not([aria-pressed=true]){background:#2c0a0f;border-color:#6e2a26}
+.period-reason{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:4px 10px;margin:0;font-size:12.5px;color:var(--muted)}
+.link-button{padding:0;border:0;background:none;color:var(--gold);text-decoration:underline;text-underline-offset:3px;font-size:12.5px}
+.link-button:hover{background:none;color:#fff1c4}
+@media(max-width:900px){.page-head .dashboard-tools{justify-items:start}.period-reason{justify-content:flex-start}}
+/* Bank profile */
+.bank-targets .hot-mark{margin-right:2px;font-size:10px}
+.bank-machines{display:flex;flex-wrap:wrap;gap:5px;margin:4px 0 12px}
+.bank-machines button{font-size:12px;padding:.25rem .5rem}
+.slot-strip{display:flex;flex-wrap:wrap;gap:4px;list-style:none;padding:0;margin:4px 0 8px}
+.slot-strip li{display:grid;min-width:64px;padding:4px 7px;border:1px solid var(--gold-line);border-radius:6px;background:#2c0a0f;font-size:12px;font-variant-numeric:tabular-nums}
+.slot-strip li small{font-size:11px}
+.slot-strip li.vacant{border-style:dashed;color:var(--muted)}
+/* Claims & evidence */
+.claim-toc{display:flex;flex-wrap:wrap;gap:6px 14px;margin:4px 0 8px;font-size:13px}
+.claim-group-title{margin:18px 0 4px;padding-top:10px;border-top:1px solid var(--gold-line);font-size:19px;color:#f0cf7a}
+.claim{padding:12px 0;border-bottom:1px solid rgba(110,42,38,.8);outline:none}
+.claim:focus-visible,.claim:target{box-shadow:inset 3px 0 0 var(--gold);padding-left:10px}
+.claim h3{font-size:16px;margin-bottom:8px}
+.claim-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr) minmax(0,1fr);gap:8px 18px;margin:0 0 8px}
+.claim-grid dt{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#e2c48a;margin-bottom:3px}
+.claim-grid dd{margin:0;font-size:13.5px}
+.claim-grid ul{margin:0;padding-left:16px}.claim-grid li{margin-bottom:3px;font-variant-numeric:tabular-nums}
+.claim-links{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.claim-links-label{font-size:12px;color:var(--muted);margin-right:2px}
+.claim-link,.trace-claim{font-size:12px;padding:.25rem .55rem}
+.action-summary td:last-child{min-width:120px}
+@media(max-width:850px){.claim-grid{grid-template-columns:minmax(0,1fr)}}
+
+/* Print: light page, no navigation chrome, every collapsed section open, no breaks inside panels */
+@media print{
+  :root{color-scheme:light;--text:#1a1a1a;--muted:#444;--gold:#6b4a00;--edge:#bbb;--gold-line:#bbb;--grid:#ddd}
+  html,body{background:#fff!important;color:#1a1a1a}
+  .sidebar,.topbar,.assistant,.scrim,.skip,.subnav,.presets,#reset,.period-reason .link-button,button,.info,.chart-tip{display:none!important}
+  .app,.app.collapsed{display:block}
+  .content{max-width:none;padding:0}
+  .card,.panel,.decision-card,.move-proof,.multiple,.move-result-card,.bank-zone,.slot-strip li{background:#fff!important;border-color:#bbb!important;box-shadow:none!important;color:#1a1a1a}
+  .panel,.card,.decision-card,.claim,figure,tr{break-inside:avoid;page-break-inside:avoid}
+  h1,h2,h3,.page-title,.rec-card h2,.hero h1,.metric,.decision-card .decision-value,.eyebrow,summary,th,.claim-group-title,.multiple-stat strong,.zone-focus{color:#1a1a1a!important;-webkit-text-fill-color:#1a1a1a!important;background:none!important}
+  .muted,small,.page-sub,.rec-card>p,.chart text,.chart .tick{color:#444!important;fill:#444!important}
+  .page-head .filters label,.page-head .filters .scope,.page-head .filters select{background:#fff;color:#1a1a1a;border-color:#bbb}
+  details::details-content{height:auto!important;opacity:1!important;content-visibility:visible!important}
+  details>*{display:block}
+  details summary::after{display:none}
+  a{color:#1a1a1a}
+  *{animation:none!important;transition:none!important}
+}

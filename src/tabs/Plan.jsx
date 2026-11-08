@@ -18,8 +18,16 @@ function MoveSensitivity() {
   );
 }
 
+/** Deep link from a July recommendation to its row on the Claims & evidence page. */
+function TraceClaim({ id }) {
+  const nav = useNav();
+  return <button className="trace-claim" data-claim={id} onClick={() => nav.jump(id)}>Trace the claim →</button>;
+}
+
+/** A signed result: color plus an arrow and an explicit sign, so the direction never relies on color alone. */
 function Metric({ label, value, format }) {
-  return <div><dt>{label}</dt><dd className={value < 0 ? 'red' : value > 0 ? 'green' : ''}>{format(value)}</dd></div>;
+  const text = format(value), signedText = value > 0 && !/^\+/.test(text) ? '+' + text : text;
+  return <div><dt>{label}</dt><dd className={value < 0 ? 'red' : value > 0 ? 'green' : ''}>{value < 0 || value > 0 ? <span aria-hidden="true">{value > 0 ? '▲ ' : '▼ '}</span> : null}{signedText}</dd></div>;
 }
 
 function Moves() {
@@ -223,10 +231,10 @@ export default function Plan() {
       <>
         <Panel title="July action summary" id="action-summary">
           <div className="action-summary">
-            <Table headers={['Action', 'Cost', 'Expected effect', 'Uncertainty', 'Measurement']} rows={[
-              ['Inspect M-1158', cash(inspectionCost), cash(inspectionCeiling) + ' conditional July recovery', pct(inspectionBreakEven, 1) + ' break-even chance of full correction before remediation and interruption', 'Verify meter and paytable; compare four weeks before and after against matched peers.'],
-              ['Promotion weekend · conditional', cash(promoCost) + ' if authorized', cash(.25 * retainedTheo(data.promotions.at(-1)) - promoCost) + ' at 25% of the Locals historical lift', 'Needs ' + pct(promoHurdle, 1) + ' of the weaker historical lift at catalog cost', 'Compare whole-floor incremental expected win during the event and for seven days after, then subtract all incremental costs.'],
-              ['Defer M-1181 move', cash(moveCost) + ' if authorized', cash(netMove(.5, 0)) + ' at 50% capture with zero displacement; ' + cash(netMove(.5, .10)) + ' at 10% displacement', 'Waiting could miss a positive result; four moves offer mixed evidence', 'If approved later, measure net expected win across affected banks against comparable banks.'],
+            <Table headers={['Action', 'Cost', 'Expected effect', 'Uncertainty', 'Measurement', 'Claim and evidence']} rows={[
+              ['Inspect M-1158', cash(inspectionCost), cash(inspectionCeiling) + ' conditional July recovery', pct(inspectionBreakEven, 1) + ' break-even chance of full correction before remediation and interruption', 'Verify meter and paytable; compare four weeks before and after against matched peers.', <TraceClaim id="claim-m1158" />],
+              ['Promotion weekend · conditional', cash(promoCost) + ' if authorized', cash(.25 * retainedTheo(data.promotions.at(-1)) - promoCost) + ' at 25% of the Locals historical lift', 'Needs ' + pct(promoHurdle, 1) + ' of the weaker historical lift at catalog cost', 'Compare whole-floor incremental expected win during the event and for seven days after, then subtract all incremental costs.', <TraceClaim id="claim-promotion" />],
+              ['Defer M-1181 move', cash(moveCost) + ' if authorized', cash(netMove(.5, 0)) + ' at 50% capture with zero displacement; ' + cash(netMove(.5, .10)) + ' at 10% displacement', 'Waiting could miss a positive result; four moves offer mixed evidence', 'If approved later, measure net expected win across affected banks against comparable banks.', <TraceClaim id="claim-decision" />],
             ]} />
           </div>
         </Panel>

@@ -39,7 +39,7 @@ export default function DemandResponse({ scope: s }) {
         <Line label="Work started at once" value={pct(all.immediate, 0)} />
         <Line label="Repair · mean / median" value={minutes(all.repair) + ' / ' + minutes(all.repairMedian)} />
         <Table headers={['Vegas shift', 'Techs on duty', 'Shift-days', 'Tickets', 'Tickets per shift-day', 'Mean response', 'Median response', 'Started at once', 'Mean repair']} rows={shiftRows} />
-        <Note>Techs on duty come from the slot-technician roster (actual headcount for the shift the ticket opened in). Selected months and bank.</Note>
+        <Note>Techs on duty come from the slot-technician roster (actual headcount for the shift the ticket opened in). Selected months, zone and bank.</Note>
         <h3>Like-for-like test · same shift, one technician vs two</h3>
         <Table headers={['Comparison', 'One tech · tickets (shift-days)', 'Two techs · tickets (shift-days)', 'Mean response, one vs two', 'Gap and 95% interval (min)', 'Permutation test', 'Tickets per shift-day, one vs two']}
           rows={[...f.tests, ...f.robust].map(t => [t.label, n(t.n1) + ' (' + n(t.days1) + ')', n(t.n2) + ' (' + n(t.days2) + ')', minutes(t.mean1) + ' vs ' + minutes(t.mean2), gap(t), pValue(t.p), n(t.load1, 2) + ' vs ' + n(t.load2, 2)])} />
@@ -72,7 +72,7 @@ export default function DemandResponse({ scope: s }) {
         <Line label="Either action, overlap counted once" value={hours(av.either) + ' (overlap ' + hours(av.overlap) + ')'} />
         <Note>{'Fault tickets never overlap on the same machine, so ticket hours add up without double counting. Floor-wide they do overlap in time: up to ' + n(f.overlap.maxOpen) + ' faults were open at once, which is what queues work behind a lone technician. Over January–June, fault tickets explain ' +
           hours(f.overlap.faultHours) + ' of ' + hours(f.overlap.meterHours) + ' meter downtime; moves, installs and scheduled maintenance explain the other ' + hours(f.overlap.otherHours) + '.'}</Note>
-        <How>{'Technician: the waiting on tickets opened while one technician (or none) was on duty, times the ' + pct(f.share.share, 0) + ' of waiting a second technician removed in the like-for-like test; shifts already staffed with two are assumed to gain nothing. Preventive maintenance: for each manufacturer whose fault rate per machine-day exceeds the other makes combined, all hours of its tickets above that rate, as if a sweep brought it level; that is a best case, since no sweep outcome is recorded. Overlap = the lone-technician waiting on those excess tickets, removed once. Repair time after work starts is out of reach of both. Selected months and bank.'}</How>
+        <How>{'Technician: the waiting on tickets opened while one technician (or none) was on duty, times the ' + pct(f.share.share, 0) + ' of waiting a second technician removed in the like-for-like test; shifts already staffed with two are assumed to gain nothing. Preventive maintenance: for each manufacturer whose fault rate per machine-day exceeds the other makes combined, all hours of its tickets above that rate, as if a sweep brought it level; that is a best case, since no sweep outcome is recorded. Overlap = the lone-technician waiting on those excess tickets, removed once. Repair time after work starts is out of reach of both. Selected months, zone and bank.'}</How>
       </Panel>
     </>
   );

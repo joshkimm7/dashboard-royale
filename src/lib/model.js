@@ -317,22 +317,27 @@ export function createModel(data) {
   const zoneBanks = data.locations.filter(r => r[1] === 'bank');
   const fullSummary = summarize(auditRows, fullDays).sort((a, b) => a.win - b.win);
 
-  /** Rows and property days for the selected months and bank. */
-  function scope({ from, to, bank }) {
+  const zoneOfBank = Object.fromEntries(zoneBanks.map(r => [r[0], r[2]]));
+  /** True when a bank passes the bank and zone filters (a bank id, or '' for all; a zone id, or '' for all). */
+  const bankInScope = (id, { bank = '', zone = '' } = {}) => (!bank || id === bank) && (!zone || zoneOfBank[id] === zone);
+
+  /** Rows and property days for the selected months, bank and zone. */
+  function scope({ from, to, bank, zone = '' }) {
     const dates = data.dates.filter(d => month(d) >= from && month(d) <= to);
     const start = data.dates.indexOf(dates[0]), end = data.dates.indexOf(dates.at(-1));
-    const rows = auditRows.filter(r => r.d >= start && r.d <= end && (!bank || r.bank === bank));
-    return { dates, start, end, rows, props: data.property.slice(start, end + 1), from, to, bank };
+    const rows = auditRows.filter(r => r.d >= start && r.d <= end && (!bank || r.bank === bank) && (!zone || r.zone === zone));
+    const banks = zone ? zoneBanks.filter(r => r[2] === zone).map(r => r[0]) : null;
+    return { dates, start, end, rows, props: data.property.slice(start, end + 1), from, to, bank, zone, banks };
   }
 
   // Q1 adjusted ranking: payout hold per configuration, a credibility constant fitted once on the full period,
   // and spin-level luck variance summed over the selected months and bank.
   const configHold = Object.fromEntries(data.configs.map(c => [c[0], 1 - c[1]]));
   const credibility = credibilityK(auditRows, configHold);
-  function luckFor({ from, to, bank }) {
+  function luckFor({ from, to, bank, zone = '' }) {
     const totals = new Map();
     for (const [machine, mo, b, variance] of data.luck) {
-      if (mo < from || mo > to || (bank && dict.bank_id[b] !== bank)) continue;
+      if (mo < from || mo > to || !bankInScope(dict.bank_id[b], { bank, zone })) continue;
       const id = dict.machine_id[machine];
       totals.set(id, (totals.get(id) ?? 0) + variance);
     }
@@ -362,10 +367,10 @@ export function createModel(data) {
   // P10 hit-frequency check: share of all-play spins that paid anything, against the published hit probability of
   // each cabinet's configuration, for the selected months and bank. A binomial z per cabinet, Benjamini–Hochberg across cabinets.
   const hitData = data.hitCheck;
-  function hitCheck({ from = 0, to = 5, bank = '' } = {}) {
+  function hitCheck({ from = 0, to = 5, bank = '', zone = '' } = {}) {
     const totals = new Map();
     for (const [machine, mo, b, config, spins, hits] of hitData.rows) {
-      if (mo < from || mo > to || (bank && dict.bank_id[b] !== bank)) continue;
+      if (mo < from || mo > to || !bankInScope(dict.bank_id[b], { bank, zone })) continue;
       const t = totals.get(machine) ?? { id: dict.machine_id[machine], code: machine, config: dict.config_id[config], expected: 0, spins: 0, hits: 0 };
       t.spins += spins; t.hits += hits; t.expected += spins * hitData.hitProbability[config];
       totals.set(machine, t);
@@ -587,7 +592,7 @@ export function createModel(data) {
 
   return {
     zoneFinding, downtime,
-    data, dict, zones, fullDays, auditRows, zoneBanks, fullSummary, scope, regions, tiers, ageBands, ageOf, playerRows, fullOutcomes, months,
+    data, dict, zones, fullDays, auditRows, zoneBanks, bankInScope, fullSummary, scope, regions, tiers, ageBands, ageOf, playerRows, fullOutcomes, months,
     holdout, mae, pairedSummary, m1, m7, mCalendar, peakThreshold, quietThreshold, schedulingTier, schedulingScore,
     inspect, focalWeeks, holdGap, worstWeek, leaveOneOut, withoutWorst, maxLeaveOneOutQ, inspectPeers, peerWeeks, weekLabel, matchedPayoutPeers,
     move, last, destination, june, destinationPeers, recentRate, destinationRate, catalogue, inspection, relocation, actionCost,

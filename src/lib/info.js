@@ -149,6 +149,11 @@ export const LINE_INFO = {
   'Heat effect per +10 °C': "Estimated change in daily wagers when the airport's daily high is 10 °C warmer, holding the weekday fixed. If the interval spans zero, heat shows no measurable effect.",
   'Rain day effect': "Estimated difference in daily wagers on days with at least 1 mm of rain, compared with the same weekday otherwise. Very few rain days make this fragile.",
   'Random same-size day sets as low as the rain days': "How often a random set of ordinary days, as many as the rain days, averaged as far below weekday expectation. Rarely means the rain-day dip is unusual.",
+  // Bank profile (Machine audit and Demand & uptime, when a bank is selected)
+  'Machines in the bank': "Cabinets that played in this bank during the selected months, and the slot positions they used. Machines move, so a busy period can show more cabinets than slots.",
+  'Coin-in per available hour vs floor': "Wagers per working machine-hour in this bank against the whole floor over the same months. Under 100% means the bank's cabinets draw less play per hour than the floor's average cabinet.",
+  'Bank downtime': "Machine-hours this bank's cabinets were down during scheduled time, the share of scheduled time they were available, and the wagers those down hours likely cost.",
+  'Zone change · April to June': "How the bank's whole zone moved from April to June: wagers per day, wagers per working machine-hour and counter entries per day. Context for the bank, not its own result.",
 };
 
 export const PANEL_INFO = {
@@ -213,6 +218,8 @@ export const PANEL_INFO = {
   'When the floor plays': "Average wagers in each clock hour of each gaming-day weekday, from the hourly machine meters. Use it to see when demand peaks and when work disrupts the least play.",
   'Weather as a competing explanation': "Tests whether hot or rainy days changed daily wagers once the weekday is accounted for. Real NOAA weather, used as context only and never as a forecast input.",
   'Missouri market comparison': "Compares this property's daily wagers with real Missouri statewide slot handle, both indexed to the first selected month, to see whether the outside market moved the same way.",
+  'Bank profile': "A one-panel summary of the selected bank: its machines, demand per available hour against the floor, downtime, monthly trend, slot positions and its zone's recent change.",
+  'Claim-by-claim evidence trail': "Every claim the submission makes, with the calculation behind it, the computed result and the competing explanation or limitation tested. Each claim links to the view holding its evidence.",
 };
 
 export const CHART_INFO = {
@@ -234,6 +241,7 @@ export const CHART_INFO = {
   'Zone demand per available hour': "Each line is a zone's wagers per available machine-hour by month. The gold line is the zone in focus; muted lines are the other zones for context.",
   'When the floor plays': "Each cell is one weekday and clock hour; lighter gold means more wagers in that hour. Rows are gaming days, so hours after midnight belong to the previous day.",
   'Missouri market comparison': "Both lines start at 100 in the first selected month. If they move together, the change looks market-wide; if only the gold line moves, look at the property.",
+  'Bank demand trend': "The selected bank's wagers per working machine-hour each month, against the whole floor as a dashed line. A gap that widens means the bank is losing ground to the floor.",
 };
 
 export const DECISION_INFO = {

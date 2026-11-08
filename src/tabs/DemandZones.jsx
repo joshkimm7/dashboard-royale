@@ -19,10 +19,10 @@ export default function DemandZones() {
   const { state } = useNav();
   const floor = scope({ from: state.from, to: state.to, bank: '' });
   const bank = state.bank ? scope(state) : null;
-  const ownZone = state.bank ? bankZone[state.bank] : null;
+  const ownZone = state.bank ? bankZone[state.bank] : state.zone || null;
   const [a, b] = comparisonMonths(state.from, state.to);
   const name = z => zoneNames[z] ?? z;
-  const mark = z => z === ownZone ? <span className="zone-focus">{name(z) + ' · selected bank’s zone'}</span> : name(z);
+  const mark = z => z === ownZone ? <span className="zone-focus">{name(z) + (state.bank ? ' · selected bank’s zone' : ' · selected zone')}</span> : name(z);
 
   const zm = zoneMonthly(floor.rows, data.dates);
   const contribution = a !== b ? zoneContribution(floor.rows, data.dates, weekdayAdjusted, a, b) : null;
@@ -63,10 +63,11 @@ export default function DemandZones() {
 
   return (
     <>
+      {!state.bank && state.zone && <Note>{name(state.zone) + ' is highlighted below. Zone-level panels always show every zone for comparison; the zone filter narrows the machine rows in the other Demand views.'}</Note>}
       {state.bank && <Note>{'Bank ' + state.bank + ' sits in ' + name(ownZone) + '. Traffic counters and the hourly heat map are zone-level, so that zone is highlighted; the bank’s own coin-in appears in the first chart and the contribution panel.'}</Note>}
       <Panel title="Zone demand per available hour">
         <Note>{'Coin-in per available machine-hour by zone, so zones with more cabinets or more downtime compare fairly. Gold: ' + name(focus) +
-          (ownZone ? ' (the selected bank’s zone)' : ' (the zone that moved property coin-in most between the comparison months)') + '. Other zones are muted.'}</Note>
+          (ownZone ? (state.bank ? ' (the selected bank’s zone)' : ' (the selected zone)') : ' (the zone that moved property coin-in most between the comparison months)') + '. Other zones are muted.'}</Note>
         <Chart title="Zone demand per available hour" labels={labels} format={v => cash(v)} height={260} markers series={series} />
         <Table headers={['Zone', ...labels, 'Change ' + span]}
           rows={zoneIds.map(z => [mark(z), ...zm.months.map(mo2 => cash(zm.get(z, mo2)?.rate)),

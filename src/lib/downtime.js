@@ -14,8 +14,8 @@ export function ticketRows(data) {
   }));
 }
 
-/** Tickets opened inside the selected gaming days and bank. */
-export const scopeTickets = (tickets, { start, end, bank }) => tickets.filter(t => t.d >= start && t.d <= end && (!bank || t.bank === bank));
+/** Tickets opened inside the selected gaming days and bank; `banks` (optional) limits them to a zone's banks. */
+export const scopeTickets = (tickets, { start, end, bank, banks = null }) => tickets.filter(t => t.d >= start && t.d <= end && (!bank || t.bank === bank) && (!banks || banks.includes(t.bank)));
 
 export const median = values => {
   if (!values.length) return null;
@@ -40,9 +40,10 @@ export const rosterRows = data => data.downtime.roster.map(([d, shift, planned, 
 
 /** Average down machine-hours per gaming day for each weekday × clock-hour cell (rows Mon–Sun gaming days, 06:00–05:00). */
 export function downHeat(data, bank, from, to) {
-  const dt = data.downtime, b = bank ? dt.banks.indexOf(bank) : null;
+  // bank: one bank id, a list of bank ids (a zone), or '' for the whole floor.
+  const dt = data.downtime, keep = bank ? new Set([bank].flat().map(id => dt.banks.indexOf(id))) : null;
   const tenths = new Float64Array(168);
-  for (const [bi, m, cell, v] of dt.heat) if (m >= from && m <= to && (b == null || bi === b)) tenths[cell] += v;
+  for (const [bi, m, cell, v] of dt.heat) if (m >= from && m <= to && (!keep || keep.has(bi))) tenths[cell] += v;
   return Array.from({ length: 168 }, (_, cell) => {
     let count = 0;
     for (let m = from; m <= to; m++) count += data.heat.n[m][cell];

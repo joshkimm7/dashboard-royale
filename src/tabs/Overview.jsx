@@ -53,6 +53,8 @@ export default function Overview({ heroRef, hidden }) {
           <div className="hero-links">
             <button className="hero-audit-link" data-evidence="M-5076" data-section="verdict-check" onClick={() => nav.openEvidence('M-5076', 'verdict-check')}>See the bottom-ten verdicts</button>
             <button className="hero-audit-link" data-goto="map" onClick={() => nav.goto('map')}>See how the evidence connects →</button>
+            <button className="hero-audit-link" data-goto="model/holdout" onClick={() => nav.jump('holdout-check')}>How the forecast was validated →</button>
+            <button className="hero-audit-link" data-goto="claims" onClick={() => nav.goto('claims')}>Trace every claim to its evidence →</button>
           </div>
         </article>
         <MoveProof moveCases={moveCases} />

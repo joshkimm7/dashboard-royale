@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs';
 import { createModel, playerBreakdown, playerOutcomes } from '../src/lib/model.js';
 import { by, cash, month, n, pct, ratio, sum } from '../src/lib/format.js';
 import { downHeat, responseStats } from '../src/lib/downtime.js';
+import { CLAIM_IDS, buildClaims } from '../src/lib/claims.js';
 
 const data = JSON.parse(readFileSync('data/dashboard.json', 'utf8'));
 const m = createModel(data);
@@ -279,6 +280,12 @@ const CHECKS = [
   ['comp visits placebos', 'Placebo splits ' + m.compVisits.placebos.map(x => dayName(x.split) + ' ' + signedPct1(x.did)).join(', '), ['claims']],
   ['comp pilot', cash(m.actionCost(comp)) + ' comp pilot needs about ' + pct(m.actionCost(comp) / compSpend, 0) + ' savings on ' + cash(compSpend), ['claims']],
 ];
+
+// The in-dashboard Claims & evidence page (src/lib/claims.js) must quote the appendix: every claim title and every
+// computed result fragment it shows has to appear verbatim in CLAIMS-AND-EVIDENCE.md.
+const pageClaims = buildClaims(m);
+if (pageClaims.map(c => c.id).join() !== CLAIM_IDS.join()) refFailures.push('claims page ids do not match CLAIM_IDS');
+for (const c of pageClaims) CHECKS.push(['claims page · ' + c.claim, '| ' + c.claim + ' |', ['claims']], ...c.result.map((r, i) => ['claims page · ' + c.id + ' result ' + (i + 1), [r].flat().at(-1), ['claims']]));
 
 let failed = refFailures.length;
 for (const f of refFailures) console.log('✗ concentration reference mismatch: ' + f);

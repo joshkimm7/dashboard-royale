@@ -11,6 +11,7 @@ export const ICONS = {
   guests: <Svg><circle cx="9" cy="8" r="3.2" /><path d="M3.5 20c.6-3.4 2.8-5.2 5.5-5.2s4.9 1.8 5.5 5.2" /><circle cx="17" cy="9" r="2.4" /><path d="M16 14.3c2.3.1 4 1.7 4.5 4.7" /></Svg>,
   model: <Svg><circle cx="12" cy="12" r="8.5" /><circle cx="12" cy="12" r="4.5" /><circle cx="12" cy="12" r="1" /></Svg>,
   plan: <Svg><rect x="5" y="4" width="14" height="17" rx="2" /><path d="M9 4V3h6v1" /><path d="m9 13 2 2 4-4" /></Svg>,
+  claims: <Svg><path d="M7 4h8l4 4v12H7z" /><path d="M15 4v4h4" /><path d="M10 12h6M10 15.5h6" /><path d="M4 8v12" /></Svg>,
   search: <Svg><circle cx="11" cy="11" r="6.5" /><path d="m20 20-4.2-4.2" /></Svg>,
   spark: <Svg><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" /><path d="M19 16l.7 1.8 1.8.7-1.8.7L19 21l-.7-1.8-1.8-.7 1.8-.7z" /></Svg>,
   collapse: <Svg><rect x="3" y="4" width="18" height="16" rx="2.5" /><path d="M9 4v16M15.5 10l-2 2 2 2" /></Svg>,

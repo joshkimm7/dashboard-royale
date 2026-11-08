@@ -5,6 +5,7 @@ import { useModel } from '../modelContext.js';
 import { useNav } from '../nav.jsx';
 import { SERIES, by, cash, compact, month, months, n, pct, pp, qText, ratio, sum } from '../lib/format.js';
 import { adjustRanking, hasPeerBenchmark, peerDemandCutoff, summarize, underPeerCutoff } from '../lib/model.js';
+import BankProfile from '../components/BankProfile.jsx';
 import { Card, Chart, Details, Line, Metrics, Note, Panel, Table, Tabbed, Takeaway } from '../components/ui.jsx';
 import { niceTicks } from '../components/Chart.jsx';
 import { Info, infoFor } from '../components/Info.jsx';
@@ -450,7 +451,7 @@ function BankMap({ mapHot }) {
               const hot = mapHot.has(r[0]);
               return (
                 <button key={r[0]} className={hot ? 'hot' : ''} data-bank={r[0]} aria-pressed={nav.state.bank === r[0]}
-                  aria-label={r[0] + ', ' + m.zones[zone] + (hot ? ', shortlist bank' : '')} onClick={() => nav.toggleBank(r[0])}>{r[0].slice(2)}</button>
+                  aria-label={r[0] + ', ' + m.zones[zone] + (hot ? ', shortlist bank' : '')} onClick={() => nav.toggleBank(r[0])}>{hot ? <span className="hot-mark" aria-hidden="true">◆</span> : null}{r[0].slice(2)}</button>
               );
             })}
           </div>
@@ -491,6 +492,7 @@ export default function Audit({ scope: s }) {
 
   return (
     <>
+      {s.bank ? <BankProfile scope={s} /> : null}
       <Metrics>
         <Card label="Bottom cohort" value={n(bottom.length) + ' / ' + n(all.length)} sub="Machines by raw house win" />
         <Card label="Cabinets to inspect" value={n(bottom.filter(x => x.flags.includes('Inspect hold')).length) + ' of ' + n(bottom.length)} sub="Persistent payout shortfall" />
@@ -543,7 +545,7 @@ export default function Audit({ scope: s }) {
                 {isInspect ? <button data-evidence="M-1158" data-section="hold-check" onClick={() => nav.openEvidence('M-1158', 'hold-check')}>Open weekly payout check</button> : null}
               </Panel>
               <Panel title="Floor banks by zone">
-                <Note>Gold banks hold a bottom-ten cabinet. Click a bank to filter; click again to clear.</Note>
+                <Note>Gold banks marked ◆ hold a bottom-ten cabinet. Click a bank to filter and open its profile; click again to clear.</Note>
                 <BankMap mapHot={mapHot} />
               </Panel>
             </div>
