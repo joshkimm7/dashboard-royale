@@ -2,11 +2,9 @@
 
 Build the dashboard using the instructions under [Reproduce](#reproduce), then open `dist/index.html` in a modern desktop browser with JavaScript enabled. The generated file embeds the data and runs offline. Use the opening shortcuts to see the payout stress test and historical moves. The July decision tab shows the budget. The month selectors apply to the descriptive views. Forecast validation and July decision use fixed evidence windows.
 
-## Submission
+## Evidence
 
-- [Devpost write-up](DEVPOST-WRITEUP.md)
-- [Claims and evidence with AI-use disclosure](CLAIMS-AND-EVIDENCE.md)
-- [Opening and submission instructions](OPEN-AND-SUBMIT.md)
+[Claims and evidence with AI-use disclosure](CLAIMS-AND-EVIDENCE.md)
 
 ## Reproduce
 
