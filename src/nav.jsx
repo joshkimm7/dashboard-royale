@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useLayoutEffect, use
 export const SUBTABS = {
   overview: [],
   map: [],
-  audit: [['verdicts', 'Bottom-ten verdicts'], ['machine', 'Machine file & floor map'], ['method', 'How to read the audit']],
+  audit: [['verdicts', 'Bottom-ten verdicts'], ['adjusted', 'Adjusted ranking'], ['machine', 'Machine file & floor map'], ['method', 'How to read the audit']],
   demand: [['trend', 'Demand trend'], ['downtime', 'Downtime impact'], ['repairs', 'Repairs & tickets'], ['events', 'Event days']],
   guests: [['players', 'Player concentration'], ['comps', 'Comps & loyalty']],
   model: [['holdout', 'Holdout test'], ['staffing', 'Staffing calls'], ['july', 'July forecast']],
@@ -14,7 +14,8 @@ export const TABS = [['overview', 'Overview'], ['map', 'Evidence map'], ['audit'
   ['guests', 'Q4/Q5 · Guests & comps'], ['model', 'Model validation'], ['plan', 'Q6 · July decision']];
 /** Evidence sections reachable by deep link, and the tab/sub-tab that renders each. */
 export const SECTION_SUB = {
-  'verdict-check': ['audit', 'verdicts'], 'machine-check': ['audit', 'machine'], 'hold-check': ['audit', 'machine'],
+  'verdict-check': ['audit', 'verdicts'], 'adjusted-check': ['audit', 'adjusted'], 'funnel-check': ['audit', 'adjusted'], 'config-check': ['audit', 'adjusted'],
+  'machine-check': ['audit', 'machine'], 'hold-check': ['audit', 'machine'],
   'staffing-check': ['model', 'staffing'], 'action-summary': ['plan', 'summary'], 'inspection-plan': ['plan', 'inspection'],
   'move-check': ['plan', 'moves'], 'promotion-check': ['plan', 'promotion'], 'catalog-check': ['plan', 'catalog'],
 };

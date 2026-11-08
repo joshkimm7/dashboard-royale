@@ -54,6 +54,51 @@ export function summarize(rs, totalDays) {
   return result;
 }
 
+/**
+ * Credibility constant k (in available hours) for the adjusted ranking, by Bühlmann–Straub method of moments:
+ * k = within-cabinet day-to-day variance of the theo index ÷ between-cabinet variance of true indexes, with each
+ * day weighted by its available hours. A cabinet with k benchmark hours gets half weight on its own record.
+ */
+export function credibilityK(rows, hold) {
+  const groups = [...by(rows.filter(r => r.h > 0 && r.local > 0), r => r.id).values()];
+  let within = 0, dof = 0;
+  const cabinets = groups.map(g => {
+    const days = g.map(r => ({ h: r.h, x: r.theo / (r.h * r.local * hold[r.config]) }));
+    const weight = sum(days, d => d.h), mean = sum(days, d => d.h * d.x) / weight;
+    within += sum(days, d => d.h * (d.x - mean) ** 2);
+    dof += g.length - 1;
+    return { weight, mean };
+  });
+  const s2 = within / dof, total = sum(cabinets, c => c.weight), grand = sum(cabinets, c => c.weight * c.mean) / total;
+  const between = (sum(cabinets, c => c.weight * (c.mean - grand) ** 2) - (cabinets.length - 1) * s2) / (total - sum(cabinets, c => c.weight ** 2) / total);
+  return { k: s2 / between, within: s2, between, cabinets: cabinets.length };
+}
+
+/**
+ * Q1 adjusted ranking. For each cabinet in a summarize() result: theo (configured expected win) per available hour,
+ * divided by the theo its matched same-configuration peers in the same zone earned over the same hours (ratio of sums),
+ * shrunk toward 1.0 with credibility weight w = hours / (hours + k). Luck SE comes from game math: payout variance per
+ * spin = multiplier variance × bet², summed and divided by coin-in.
+ */
+export function adjustRanking(summary, { k, hold, luck }) {
+  const raw = summary.slice().sort((a, b) => a.win - b.win);
+  const result = raw.map((x, i) => {
+    const rows = x.g.filter(r => r.h > 0 && r.local != null);
+    const expected = sum(rows, r => r.h * r.local * hold[r.config]);
+    const index = ratio(sum(rows, r => r.theo), expected);
+    const hours = sum(rows, r => r.h), w = hours / (hours + k);
+    const variance = luck.get(x.id);
+    const luckSE = variance != null && x.coin > 0 ? Math.sqrt(variance) / x.coin : null;
+    return {
+      x, id: x.id, rawRank: i + 1, index, hours, w, score: index == null ? null : w * index + (1 - w), expected,
+      luckVar: variance ?? null, luckSE, z: luckSE ? x.res / luckSE : null, volatility: x.g[0].volatility,
+    };
+  });
+  const ordered = result.slice().sort((a, b) => (a.score ?? Infinity) - (b.score ?? Infinity) || a.rawRank - b.rawRank);
+  ordered.forEach((r, i) => { r.adjRank = r.score == null ? null : i + 1; r.change = r.adjRank == null ? null : r.adjRank - r.rawRank; });
+  return { rows: result, ordered: ordered.filter(r => r.score != null) };
+}
+
 export function createModel(data) {
   const dict = data.dicts;
   const zones = Object.fromEntries(data.locations.filter(x => x[1] === 'zone').map(x => [x[0], x[3]]));
@@ -72,8 +117,42 @@ export function createModel(data) {
     const dates = data.dates.filter(d => month(d) >= from && month(d) <= to);
     const start = data.dates.indexOf(dates[0]), end = data.dates.indexOf(dates.at(-1));
     const rows = auditRows.filter(r => r.d >= start && r.d <= end && (!bank || r.bank === bank));
-    return { dates, start, end, rows, props: data.property.slice(start, end + 1) };
+    return { dates, start, end, rows, props: data.property.slice(start, end + 1), from, to, bank };
   }
+
+  // Q1 adjusted ranking: payout hold per configuration, a credibility constant fitted once on the full period,
+  // and spin-level luck variance summed over the selected months and bank.
+  const configHold = Object.fromEntries(data.configs.map(c => [c[0], 1 - c[1]]));
+  const credibility = credibilityK(auditRows, configHold);
+  function luckFor({ from, to, bank }) {
+    const totals = new Map();
+    for (const [machine, mo, b, variance] of data.luck) {
+      if (mo < from || mo > to || (bank && dict.bank_id[b] !== bank)) continue;
+      const id = dict.machine_id[machine];
+      totals.set(id, (totals.get(id) ?? 0) + variance);
+    }
+    return totals;
+  }
+  const ranking = s => adjustRanking(summarize(s.rows, s.dates.length), { k: credibility.k, hold: configHold, luck: luckFor(s) });
+  /** Manager's raw bottom ten against the adjusted bottom ten for one ranking. */
+  function rankingOverlap(r, size = 10) {
+    const rawTen = r.rows.slice(0, size), adjustedTen = r.ordered.slice(0, size);
+    const both = rawTen.filter(x => adjustedTen.includes(x));
+    const rawOnly = rawTen.filter(x => !adjustedTen.includes(x));
+    return { rawTen, adjustedTen, both, rawOnly, atOrAbovePeers: rawOnly.filter(x => x.index >= 1),
+      outsideLuck: r.rows.filter(x => x.z != null && Math.abs(x.z) > 1.96) };
+  }
+  /** Re-ranks at half k, double k and no shrinkage: how many of the base adjusted bottom ten survive, and the raw overlap. */
+  function kSensitivity(summary, luck, base, size = 10) {
+    const ids = new Set(base.ordered.slice(0, size).map(r => r.id));
+    return [.5, 2, 0].map(factor => {
+      const r = adjustRanking(summary, { k: credibility.k * factor, hold: configHold, luck });
+      return { factor, kept: r.ordered.slice(0, size).filter(x => ids.has(x.id)).length, overlap: rankingOverlap(r, size).both.length };
+    });
+  }
+  const fullRanking = ranking(scope({ from: 0, to: 5, bank: '' }));
+  const fullSensitivity = kSensitivity(summarize(scope({ from: 0, to: 5, bank: '' }).rows, fullDays), luckFor({ from: 0, to: 5, bank: '' }), fullRanking);
+  const fullOverlap = rankingOverlap(fullRanking);
 
   // Guests
   const regions = [...new Set(data.players.map(r => r[2]))].sort();
@@ -205,5 +284,6 @@ export function createModel(data) {
     inspectionGapPerDay, inspectionCeiling, inspectionBreakEven, inspectionSlot, repairPaybackDays, repairRecoveryShare, windowHold, repairScenarios,
     promotion, promoCost, retainedTheo, promoHurdle,
     moveCases, closestCase, moveControls, bankZone, weeksBelow, cohort, quietCohort, payoutCohort, shortCohort, payoutOverlap, reviewAction, weekdayAdjusted,
+    configHold, credibility, luckFor, ranking, rankingOverlap, kSensitivity, fullRanking, fullOverlap, fullSensitivity, payoutConfig: data.payoutConfig,
   };
 }

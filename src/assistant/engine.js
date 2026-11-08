@@ -20,6 +20,8 @@ function questionFacts(qid, m) {
     return [
       'Of the ten lowest earners, ' + m.quietCohort.length + ' sit in quiet zones, ' + m.payoutCohort.length + (m.payoutCohort.length === 1 ? ' has' : ' have') + ' a payout flag (' + (m.payoutCohort.map(x => x.id).join(', ') || 'none') + '), and ' + m.shortCohort.length + ' had under 60 days on the floor.',
       m.inspect.id + ' kept ' + cash(m.inspect.theo - m.inspect.win) + ' less than its settings imply (payout gap ' + pp(m.inspect.res) + '), which is why it is the one cabinet to inspect.',
+      (o => 'Once exposure, luck and placement are removed, ' + (o.both.length ? o.both.length + ' of the ten (' + o.both.map(r => r.id).join(', ') + ')' : 'none of the ten') +
+        ' stay in the adjusted bottom ten; the weakest cabinets by that measure are ' + o.adjustedTen.slice(0, 3).map(r => r.id).join(', ') + '.')(m.fullOverlap),
     ];
   }
   if (qid === 'q2') {
@@ -68,7 +70,7 @@ function machineAnswer(id, m) {
   if (rank < 0) return { text: ['I can’t find ' + id + ' in the January–June audit. Machine ids look like M-1158.'], items: [], focus: null };
   const x = m.fullSummary[rank];
   const flags = x.flags.map(f => FLAG_LABELS[f] ?? f);
-  const ids = ['ev-verdicts'];
+  const ids = ['ev-verdicts', 'ev-adjusted'];
   if (id === m.inspect.id) ids.push('ev-hold', 'act-inspect');
   if (id === m.move.id) ids.push('ev-moves', 'ev-move-econ', 'act-move');
   return {
@@ -76,6 +78,7 @@ function machineAnswer(id, m) {
       id + ' ranks #' + (rank + 1) + ' of ' + m.fullSummary.length + ' by house win (' + cash(x.win) + ' over ' + n(x.days) + ' days on the floor).',
       flags.length ? 'Review flags: ' + flags.join(', ') + '. Suggested action: ' + m.reviewAction(x) + '.' : 'It crosses no review threshold. Suggested action: ' + m.reviewAction(x) + '.',
       'Payout gap ' + pp(x.res) + ', availability ' + pct(x.availability, 1) + ', play vs local peers ' + pct(x.local, 0) + '.',
+      (a => a?.adjRank ? 'Adjusted for exposure, luck and placement it ranks #' + a.adjRank + ' of ' + m.fullRanking.ordered.length + ', earning ' + pct(a.index, 0) + ' of matched peers’ expected win per hour.' : 'It has no matched-peer benchmark for the adjusted ranking.')(m.fullRanking.rows.find(r => r.id === id)),
       ...(id === m.inspect.id ? ['It kept ' + cash(x.theo - x.win) + ' less than its settings imply, a shortfall too persistent to be luck, so the July plan funds a ' + cash(m.inspectionCost) + ' meter and paytable inspection.'] : []),
       ...(id === m.move.id ? ['Its move to a busier bank is deferred: only ' + m.moveCases.filter(r => r.main.bankPct > 0).length + ' of ' + m.moveCases.length + ' past moves gained across both affected banks, so displaced play is a real risk.'] : []),
     ],

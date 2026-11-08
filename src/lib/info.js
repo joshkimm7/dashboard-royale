@@ -57,6 +57,15 @@ export const LINE_INFO = {
   'Peer range': "Lowest to highest payout gap among comparable same-game cabinets. If M-1158 falls well outside this range, the game's normal variation doesn't explain it.",
   'Sensitivity interval and adjusted q': "The 95% range and false-alarm-adjusted q-value recalculated after removing the worst week. A range still below zero with a small q means the finding holds up.",
   'Largest adjusted q after dropping any one week': "Each week is removed in turn and the q-value recalculated; this is the weakest result. If it stays small, no single week is responsible for the flag.",
+  // Adjusted ranking
+  'Overlap with the raw bottom ten': "How many of the ten lowest raw earners also land in the ten weakest cabinets once time on the floor, luck and placement are removed. A low count means the raw list mostly names unlucky or badly placed cabinets.",
+  'Credibility constant k': "Benchmark hours at which a cabinet's own record gets half weight in its adjusted score. It comes from how noisy daily results are compared with real differences between cabinets.",
+  'Adjusted bottom ten kept at half / double k': "How many of the ten weakest adjusted cabinets stay in the bottom ten if the credibility constant is halved or doubled. High counts mean the list doesn't hinge on that choice.",
+  'Raw overlap with no shrinkage': "Overlap with the ten lowest raw earners if every cabinet's own record is taken at face value, with no pull toward average. It shows what shrinkage changes.",
+  'Cabinets outside their own luck bounds': "Cabinets whose payout gap is more than 1.96 standard errors from zero, using the game's published payout variance. About one in twenty would land there by chance alone.",
+  'Configured RTP vs published game math': "Machine-days whose recorded payout rate differs from the published rate for that game configuration. Any mismatch is a record to inspect, not proof of tampering.",
+  'Raw meter theo vs published RTP': "Cabinets whose raw meter expected win implies a payout rate different from their published game math on any day. Zero means the meters apply the published settings.",
+  'Mid-period configuration changes': "Cabinets whose game configuration changed during January to June, in the daily records and in the placement history. A change would split a cabinet's record into two games.",
   // Demand across the period
   'Observed entrances per day · April to June': "Change in average daily door counts from April to June. Counts are crossings, not unique guests, so treat this as a rough traffic gauge.",
   'Adjusted wagers per observed entrance · April to June': "Change in adjusted daily wagers per door crossing from April to June. Negative means each visit produced less play, on top of any drop in traffic.",
@@ -104,6 +113,9 @@ export const PANEL_INFO = {
   'Floor banks by zone': "A floor map grouped by zone. Use it to see whether low earners cluster in one area, and click a bank to narrow the audit and demand views to it.",
   'M-1158 · Weekly payout check': "Tests whether M-1158's shortfall is steady or driven by a few weeks. It compares each week with its settings and with cabinets running the same game.",
   'How to read the audit': "Method notes for the audit: how peer benchmarks are built, how the payout gap and its significance are tested, and which cutoffs trigger each flag.",
+  'Adjusted ranking': "Ranks every cabinet by expected win per working hour against same-game cabinets in its zone, with thin records pulled toward average. It shows which cabinets are weak, not just unlucky or badly placed.",
+  'Payout gap vs luck bounds': "Each cabinet's payout gap against its wagers. Gaps inside the funnel are ordinary luck; gaps outside it are worth a meter or paytable check before anyone draws conclusions.",
+  'Payout-configuration check': "Compares every cabinet's recorded payout rate with the published game math and looks for configuration changes mid-period. A mismatch would be a lead to inspect.",
   // Demand & uptime
   'Demand across the period': "Monthly wagers for the property, with a version that removes event days and evens out the weekday mix so months compare fairly, plus city visitor context.",
   'What drove the raw change in wagers?': "Splits the change in daily wagers into two parts: more or fewer hours of play on the machines, and more or less wagered per hour played. It shows where the change came from, not why.",
@@ -134,6 +146,7 @@ export const PANEL_INFO = {
 };
 
 export const CHART_INFO = {
+  'Payout gap vs luck bounds': "Payout gap per dollar wagered against total wagers on a log scale. Dashed lines show the 95% luck range for the chosen volatility class; marks colored rose or blue sit outside their own range.",
   'Machine file': "Actual house win each month against what the cabinet's payout settings say it should have kept. A win line that keeps sitting below expected win suggests a payout problem rather than bad luck.",
   'M-1158 · Weekly payout check': "Weekly hold gap for M-1158 against the wager-weighted gap of every cabinet running the same game. Zero means paying exactly as configured; points below it mean the house kept less.",
   'Demand across the period': "Average daily wagers by month as recorded, and with event days removed and each weekday weighted equally. The second line shows the underlying trend without calendar quirks.",

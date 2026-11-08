@@ -8,7 +8,7 @@ import { Info, infoFor } from './Info.jsx';
 const W = 720, LEFT = 66, RIGHT = 90, TOP = 20, BOTTOM = 32;
 
 /** Rounded tick step (1, 2, 2.5, 5 × 10^k) giving about `count` intervals. */
-function niceTicks(lo, hi, count = 4) {
+export function niceTicks(lo, hi, count = 4) {
   if (lo === hi) { lo -= 1; hi += 1; }
   const raw = (hi - lo) / count, mag = 10 ** Math.floor(Math.log10(raw));
   const step = [1, 2, 2.5, 5, 10].map(f => f * mag).find(s => s >= raw);

@@ -64,6 +64,11 @@ const ridgeRisk = sum(ridge, r => r.lostTheo) / m.fullDays * daysAfterLead(maint
 const techRisk = sum(m.auditRows, r => r.lostTheo) / m.fullDays * daysAfterLead(tech);
 const compSpend = sum(data.property, r => r[9]) / m.fullDays * daysAfterLead(comp);
 
+// ---- Q1 adjusted ranking (same model functions as src/tabs/Audit.jsx → Adjusted ranking, full period, all banks) ----
+const adj = m.fullOverlap, cfg = m.payoutConfig;
+const focalRank = m.fullRanking.rows.find(r => r.id === m.inspect.id);
+const seRatios = m.fullRanking.rows.filter(r => r.x.se && r.luckSE).map(r => r.x.se / r.luckSE).sort((a, b) => a - b);
+
 const CHECKS = [
   // Headline decision (README + appendix)
   ['reserve', cash(m.reserve), ['readme', 'claims']],
@@ -82,6 +87,18 @@ const CHECKS = [
   ['interval without worst week', pp2(m.withoutWorst.lo) + ' to ' + pp2(m.withoutWorst.hi), ['claims']],
   ['weeks below configured hold', n(m.weeksBelow) + ' of ' + n(m.focalWeeks.length), ['claims']],
   ['M-1158 local demand', pct(m.inspect.local, 0), ['claims']],
+  // Q1 adjusted ranking and payout-config check
+  ['credibility k', 'k = ' + n(m.credibility.k) + ' hours', ['claims']],
+  ['adjusted overlap', n(adj.both.length) + ' of the raw bottom ten (' + adj.both.map(r => r.id).join(', ') + ') is in the adjusted bottom ten', ['readme', 'claims']],
+  ['raw-only at or above peers', n(adj.atOrAbovePeers.length) + ' of the other ' + n(adj.rawOnly.length), ['claims']],
+  ['outside luck bounds', n(adj.outsideLuck.length) + ' of ' + n(m.fullRanking.rows.filter(r => r.z != null).length) + ' cabinets', ['claims']],
+  ['M-1158 luck z', (focalRank.z < 0 ? '−' : '') + Math.abs(focalRank.z).toFixed(2) + ' standard errors', ['claims']],
+  ['k sensitivity', '(' + m.fullSensitivity.filter(x => x.factor).map(x => n(x.kept) + ' of 10').join(' / ') + ')', ['claims']],
+  ['no-shrinkage overlap', 'raw overlap is ' + n(m.fullSensitivity.find(x => !x.factor).overlap) + ' of 10', ['claims']],
+  ['SE agreement', 'median ratio ' + n(seRatios[seRatios.length >> 1], 2), ['claims']],
+  ['payout-config check', (cfg.rtpMismatches.length ? n(cfg.rtpMismatches.length) + ' RTP mismatches' : 'no RTP mismatches') + ' in ' + n(cfg.machineDays) + ' machine-days, ' +
+    (cfg.meterMismatches.length ? n(cfg.meterMismatches.length) + ' meter theo mismatches' : 'no meter theo mismatches') + ' and ' +
+    (cfg.dailyChanges.length + cfg.placementChanges.length ? n(cfg.dailyChanges.length + cfg.placementChanges.length) + ' mid-period configuration changes' : 'no mid-period configuration changes') + ' across ' + n(cfg.placements) + ' placements', ['claims']],
   // Q2
   ['February with Super Bowl', millions(sum(febDays, r => r.coin) / febDays.length, 3), ['claims']],
   ['February without Super Bowl', millions(sum(febNoSB, r => r.coin) / febNoSB.length, 3), ['claims']],

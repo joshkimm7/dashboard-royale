@@ -35,6 +35,39 @@ assert (daily.available_hours <= daily.scheduled + 0.001).all()
 assert np.allclose(daily.coin_in_usd - daily.payout_usd, daily.house_win_usd)
 assert np.allclose(daily.coin_in_usd * (1-daily.configured_rtp), daily.theo_usd)
 
+# Payout-configuration check: compare every placed day's configured RTP with the published game math, and look for
+# machines whose configuration changed mid-period in the daily view, the raw meters or the placement history.
+game_math = load('game_math')
+placements = load('placements')
+meters = load('machine_day')[['machine_id','gaming_date','config_id','coin_in_cents','theo_cents','sum_bet_squared']]
+published = game_math.set_index('config_id')
+daily_rtp = daily.config_id.map(published.configured_rtp)
+rtp_mismatch = daily[daily_rtp.isna() | (daily.configured_rtp - daily_rtp).abs().gt(1e-9)]
+placed_meters = meters.merge(daily[['machine_id','gaming_date','config_id']], on=['machine_id','gaming_date'],
+                             suffixes=('', '_daily'), validate='one_to_one')
+meter_rtp = placed_meters.config_id.map(published.configured_rtp)
+# Raw meters imply an RTP through theo = coin-in x (1 - RTP); a different implied rate is a lead to inspect.
+implied_gap = (placed_meters.theo_cents - placed_meters.coin_in_cents * (1 - meter_rtp)).abs()
+meter_mismatch = placed_meters[placed_meters.config_id.ne(placed_meters.config_id_daily) | meter_rtp.isna() | implied_gap.gt(1)]
+def changed(frame):
+    counts = frame.groupby('machine_id').config_id.nunique()
+    return [[machine, ' → '.join(frame.loc[frame.machine_id.eq(machine), 'config_id'].drop_duplicates())]
+            for machine in counts.index[counts > 1]]
+payout_config = {
+    'configs': int(len(game_math)), 'machineDays': int(len(daily)), 'machines': int(daily.machine_id.nunique()),
+    'placements': int(len(placements)),
+    'rtpMismatches': [[k[0], k[1], float(k[2]), int(len(g))] for k, g in
+                      rtp_mismatch.groupby(['machine_id','config_id','configured_rtp'])],
+    'meterMismatches': [[machine, int(len(g))] for machine, g in meter_mismatch.groupby('machine_id')],
+    'dailyChanges': changed(daily.sort_values('gaming_date')),
+    'placementChanges': changed(placements.sort_values('effective_from_utc')),
+}
+print('Payout-config check:', {k: (len(v) if isinstance(v, list) else v) for k, v in payout_config.items()})
+# Spin-level luck: payout variance per spin is the game's multiplier variance times the bet squared (cents² → dollars²).
+daily = daily.merge(placed_meters[['machine_id','gaming_date','sum_bet_squared']], on=['machine_id','gaming_date'], validate='one_to_one')
+daily['luck_var'] = daily.config_id.map(published.payout_multiplier_variance) * daily.sum_bet_squared / 1e4
+assert daily.luck_var.notna().all()
+
 def peer_rate(groups, min_peers):
     group = daily.groupby(groups)
     hours = group.available_hours.transform('sum') - daily.available_hours
@@ -317,6 +350,10 @@ for col in columns[1:8] + ['location_id']:
     indexes, values = pd.factorize(daily[col], sort=True)
     daily[col] = indexes
     dictionaries[col] = values.tolist()
+# Luck variance aggregated to machine x month x bank (dictionary codes), so the funnel honours period and bank filters.
+daily['month_index'] = daily.gaming_date.str[5:7].astype(int) - 1
+luck = daily.groupby(['machine_id','month_index','bank_id'], as_index=False).luck_var.sum()
+configs = game_math.assign(volatility=game_math.volatility_class)
 data = {
     'revision': subprocess.check_output(['git','-C',str(repo),'rev-parse','HEAD'],text=True).strip(),
     'dates': dates, 'moves': moves, 'dicts': dictionaries, 'daily': rows(daily, columns),
@@ -328,6 +365,9 @@ data = {
     'shifts': rows(shift_parts, ['day','bank','shift','hours','wait']),
     'city': rows(city, ['month','mean_visitors_per_calendar_day','source_url']),
     'events': rows(events, ['name','start_date','end_date','local_scope']),
+    'payoutConfig': payout_config,
+    'configs': rows(configs, ['config_id','configured_rtp','volatility','payout_multiplier_variance']),
+    'luck': rows(luck, ['machine_id','month_index','bank_id','luck_var'], 1),
     'actions': rows(actions, ['action_type_id','name','unit_cost_cents','recurring_cost_cents_per_day','lead_days','downtime_minutes','quantity_limit']),
 }
 payload = json.dumps(data, separators=(',',':'), ensure_ascii=False, allow_nan=False).replace('</','<\\/')
