@@ -9,6 +9,7 @@ import Demand from './tabs/Demand.jsx';
 import Guests from './tabs/Guests.jsx';
 import Model from './tabs/Model.jsx';
 import Plan from './tabs/Plan.jsx';
+import Assistant from './assistant/Assistant.jsx';
 
 const VIEWS = { overview: () => null, map: EvidenceMap, audit: Audit, demand: Demand, guests: Guests, model: Model, plan: Plan };
 
@@ -72,6 +73,7 @@ function Shell({ model }) {
         <div id="view" ref={viewRef}><View scope={scope} /></div>
         <footer>The Gilded Ace is a fictional casino · Synthetic property and player data · <a href="https://github.com/tamu-datathon-org/dashboard-royale">Official challenge data and guide</a> · <span id="revision">{'Data revision ' + model.data.revision.slice(0, 7)}</span></footer>
       </main>
+      <Assistant />
     </>
   );
 }

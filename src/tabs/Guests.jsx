@@ -1,7 +1,7 @@
 import { useModel } from '../modelContext.js';
 import { useNav } from '../nav.jsx';
 import { Card, Chart, Line, Metrics, Note, Panel, Table, Tabbed, Takeaway } from '../components/ui.jsx';
-import { by, cash, gold, month, months, n, pct, ratio, signedPct, sum } from '../lib/format.js';
+import { SERIES, by, cash, month, months, n, pct, ratio, signedPct, sum } from '../lib/format.js';
 
 export default function Guests({ scope: s }) {
   const { data, regions, tiers } = useModel();
@@ -69,8 +69,8 @@ export default function Guests({ scope: s }) {
             </Panel>
             <Panel title="Monthly loyalty economics">
               {compTakeaway}
-              <Chart series={[{ name: 'Property comp cost / expected win from all slot play', color: gold, values: blocks.map(r => r[3] ? r[2] / r[3] : null) }]}
-                labels={blocks.map(r => months[r[0]])} format={v => pct(v, 2)} height={190} />
+              <Chart type="bar" title="Monthly loyalty economics" labels={blocks.map(r => months[r[0]])} format={v => pct(v, 2)} height={200}
+                series={[{ name: 'Property comp cost / expected win from all slot play', color: SERIES.gold, values: blocks.map(r => r[3] ? r[2] / r[3] : null) }]} />
               <Table headers={['Month', 'Property face value/day', 'Property comp cost', 'Cost / face value', 'Cost / expected win from all slot play', 'Selected group cost']}
                 rows={blocks.map(r => [months[r[0]], cash(r[1] / r[5]), cash(r[2]), pct(ratio(r[2], r[1]), 2), pct(ratio(r[2], r[3]), 2), cash(r[4])])} />
               <Note>Higher cost can mean more redemptions or a different mix, not necessarily a policy change.</Note>

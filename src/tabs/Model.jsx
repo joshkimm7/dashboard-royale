@@ -1,6 +1,6 @@
 import { useModel } from '../modelContext.js';
 import { Card, Chart, Details, Metrics, Note, Panel, Table, Tabbed, Takeaway } from '../components/ui.jsx';
-import { by, cash, compact, gold, green, month, months, n, pct, ratio, red } from '../lib/format.js';
+import { SERIES, by, cash, compact, month, months, n, pct, ratio } from '../lib/format.js';
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -60,7 +60,8 @@ export default function Model() {
           <Takeaway>Use weekday averages to plan routine staffing. Calendar flags made little difference overall and were less accurate on June event days.</Takeaway>
           <Note>Models learn from Jan–Apr and are scored on the same 61 days (May 1–Jun 30). “Last week” simply repeats the total from seven days earlier.</Note>
           <Chart
-            series={[{ name: 'Actual', color: gold, values: holdout.map(r => r[3]) }, { name: 'Weekday forecast', color: green, dash: '6 5', values: holdout.map(r => r[10]) }, { name: 'Same weekday last week', color: red, dash: '2 4', values: holdout.map(r => r[12]) }, { name: 'Calendar-adjusted weekday', color: '#d5c3f0', dash: '9 4 2 4', values: holdout.map(r => r[14]) }]}
+            title="A fair test on future days" height={280}
+            series={[{ name: 'Actual', color: SERIES.gold, area: true, values: holdout.map(r => r[3]) }, { name: 'Weekday forecast', color: SERIES.blue, values: holdout.map(r => r[10]) }, { name: 'Same weekday last week', color: SERIES.rose, dash: '6 4', values: holdout.map(r => r[12]) }, { name: 'Calendar-adjusted weekday', color: SERIES.muted, dash: '2 4', muted: true, values: holdout.map(r => r[14]) }]}
             labels={holdout.map(r => r[0].slice(5))}
             format={compact}
             annotations={[

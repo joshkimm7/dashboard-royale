@@ -2,7 +2,7 @@
 import { useRef } from 'react';
 import { useModel } from '../modelContext.js';
 import { useNav } from '../nav.jsx';
-import { by, cash, compact, gold, green, month, months, n, pct, pp, qText, ratio, red, sum } from '../lib/format.js';
+import { SERIES, by, cash, compact, month, months, n, pct, pp, qText, ratio, sum } from '../lib/format.js';
 import { hasPeerBenchmark, peerDemandCutoff, summarize, underPeerCutoff } from '../lib/model.js';
 import { Card, Chart, Details, Line, Metrics, Note, Panel, Table, Tabbed, Takeaway } from '../components/ui.jsx';
 
@@ -110,8 +110,9 @@ function HoldCheck() {
       <Line label="Weeks below expectation" value={n(negative) + ' of ' + n(values.length)} />
       <Line label="Payout gap after dropping the worst week" value={pp(withoutWorst.res)} />
       <Note>January–June. Peers share M-1158’s game settings and are weighted by wagers.</Note>
-      <Chart series={[{ name: 'M-1158 hold gap', color: red, values }, { name: 'Same-configuration peers', color: green, values: peerValues },
-        { name: 'Configured expectation', color: gold, dash: '6 5', values: labels.map(() => 0) }]} labels={labels} format={pp} />
+      <Chart type="bar" title="M-1158 · Weekly payout check" baseline="As configured" labels={labels} format={pp}
+        series={[{ name: 'M-1158 hold gap', color: SERIES.rose, diverging: { below: SERIES.rose, above: SERIES.blue }, values },
+          { name: 'Same-configuration peers', kind: 'line', color: SERIES.muted, values: peerValues }]} />
       <Line label="Full-period payout gap" value={pp(inspect.res)} />
       <MatchedPayoutPeers />
       <Line label="Sensitivity interval and adjusted q" value={pp(withoutWorst.lo) + ' to ' + pp(withoutWorst.hi) + ' · q ' + qText(withoutWorst.q, true)} />
@@ -145,8 +146,8 @@ function Drill({ x }) {
       <Line label="Estimated downtime coin-in / theo" value={cash(x.lost) + ' / ' + cash(x.lostTheo)} />
       <Line label="Contribution after supplied machine costs" value={cash(x.contrib)} />
       <p className="muted">Monthly house win and configured expectation</p>
-      <Chart series={[{ name: 'House win', color: gold, values: blocks.map(([, a]) => sum(a, r => r.win)) }, { name: 'Expected win', color: green, values: blocks.map(([, a]) => sum(a, r => r.theo)) }]}
-        labels={blocks.map(([mo]) => months[month(mo + '-01')])} format={compact} height={200} />
+      <Chart type="bar" title="Machine file" labels={blocks.map(([mo]) => months[month(mo + '-01')])} format={compact} height={210}
+        series={[{ name: 'House win', color: SERIES.gold, values: blocks.map(([, a]) => sum(a, r => r.win)) }, { name: 'Expected win', color: SERIES.blue, values: blocks.map(([, a]) => sum(a, r => r.theo)) }]} />
     </>
   );
 }

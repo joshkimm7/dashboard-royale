@@ -12,12 +12,12 @@ Built for the **Dashboard Royale challenge at TAMU Datathon 2026**. The Gilded A
 
 ## Explore the dashboard
 
-The dashboard opens on an **Overview** of the recommendation. Each analysis tab is split into sub-tabs so only one topic is on screen at a time.
+The dashboard opens on an **Overview** of the recommendation. Each analysis tab is split into sub-tabs so only one topic is on screen at a time. Every statistic has an **i** icon that explains it in plain language, and the **Ask** button (bottom right) opens a floor assistant that summarizes any tab, machine or action from the dashboard's own data and points at it on the Evidence map. The assistant runs entirely in the page, with no AI service.
 
 | View | Sub-tabs | What you can do |
 | --- | --- | --- |
 | **Overview** | — | Read the July recommendation and jump to the evidence behind each action. |
-| **Evidence map** | — | Explore a graph of how data sources, evidence, machines and actions connect; click any dot to open its evidence. |
+| **Evidence map** | — | Follow the flow from data sources to evidence (grouped by question), actions and the July plan; hover any box to trace its line of evidence and open it. |
 | **Machine audit** | Bottom-ten verdicts · Machine file & floor map · How to read the audit | Expand the bottom-ten verdicts, filter by bank or month, and inspect the evidence behind each recommendation. |
 | **Demand & uptime** | Demand trend · Downtime impact · Repairs & tickets · Event days | Compare wagering trends with event timing, traffic, and estimated downtime exposure. |
 | **Guests & comps** | Player concentration · Comps & loyalty | Explore tracked wagering, player concentration, and loyalty costs by guest segment. |
@@ -52,7 +52,10 @@ src/
 ├── lib/format.js        number formatting and list helpers
 ├── lib/model.js         dataset-wide analysis (audit statistics, forecast scores, July economics), computed once
 ├── nav.jsx              view state, URL-hash links, back/forward, evidence jumps
-├── components/ui.jsx    shared Panel, Card, Table, Chart, sub-tab bar
+├── lib/evidence.js      the evidence graph (sources → evidence → actions → plan) shared by map and assistant
+├── lib/info.js          plain-language text for every "i" icon
+├── assistant/           the built-in floor assistant (answer engine, chat panel, map pointer)
+├── components/          shared Panel, Card, Table, Chart (line / column / baseline), Info icon, sub-tab bar
 ├── App.jsx              header, tabs, filters, view transitions
 └── tabs/                Overview, EvidenceMap, Audit, Demand, Guests, Model, Plan
 ```
