@@ -49,7 +49,7 @@ export function buildEvidenceGraph(m) {
 
   for (const [a, list] of Object.entries({ 'act-inspect': ['ev-hold', 'ev-verdicts'], 'act-move': ['ev-moves', 'ev-move-econ'], 'act-staff': ['ev-staffing', 'ev-holdout'],
     'act-promo': ['ev-promo', 'ev-events'], 'act-reserve': ['ev-catalog'],
-    q1: ['ev-verdicts', 'ev-hold'], q2: ['ev-demand', 'ev-downtime', 'ev-events'], q4: ['ev-players', 'ev-comps'], 'ev-comps': ['ev-catalog'], qm: ['ev-holdout', 'ev-staffing'], q6: ['ev-catalog', 'ev-move-econ', 'ev-promo'] }))
+    q1: ['ev-verdicts', 'ev-hold'], q2: ['ev-demand', 'ev-downtime', 'ev-events'], q4: ['ev-players', 'ev-comps'], 'ev-comps': ['ev-catalog'], qm: ['ev-holdout', 'ev-staffing'], q6: ['ev-catalog', 'ev-moves', 'ev-move-econ', 'ev-promo'] }))
     for (const b of list) link(a, b);
 
   const flagsSeen = new Set();
@@ -84,10 +84,15 @@ export function buildEvidenceGraph(m) {
 
 /** Which question (tab) each evidence node answers, in display order. */
 export function evidenceByQuestion(graph) {
-  return graph.nodes.filter(nd => nd.type === 'question').map(q => ({
+  const groups = graph.nodes.filter(nd => nd.type === 'question').map(q => ({
     question: q,
     evidence: [...q.nb].map(id => graph.byId.get(id)).filter(nd => nd.type === 'evidence' && firstQuestion(graph, nd) === q.id),
   })).filter(g => g.evidence.length);
+  // Never drop evidence that no question claims; show it in its own group.
+  const placed = new Set(groups.flatMap(g => g.evidence.map(ev => ev.id)));
+  const orphans = graph.nodes.filter(nd => nd.type === 'evidence' && !placed.has(nd.id));
+  if (orphans.length) groups.push({ question: { id: 'q-other', type: 'question', label: 'Other evidence', summary: 'Evidence not tied to a single question.', nb: new Set(orphans.map(o => o.id)) }, evidence: orphans });
+  return groups;
 }
 /** An evidence node can serve two questions; it is drawn under the first one listed. */
 function firstQuestion(graph, ev) {

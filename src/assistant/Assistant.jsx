@@ -5,7 +5,7 @@ import { useNav } from '../nav.jsx';
 import { buildEvidenceGraph } from '../lib/evidence.js';
 import { GoButton } from '../tabs/EvidenceMap.jsx';
 import { SUGGESTIONS, answer } from './engine.js';
-import { setMapFocus } from './focus.js';
+import { onAssistantRequest, setMapFocus } from './focus.js';
 
 const GREETING = {
   from: 'bot',
@@ -58,6 +58,10 @@ export default function Assistant() {
     setDraft('');
   };
   const showOnMap = focus => { setMapFocus(focus); nav.goto('map'); };
+  // The top-bar search and sidebar button open the assistant, asking the typed question if there is one.
+  const askRef = useRef(ask);
+  askRef.current = ask;
+  useEffect(() => onAssistantRequest(question => { setOpen(true); if (question.trim()) askRef.current(question); }), []);
   const close = () => { setOpen(false); toggleRef.current?.focus(); };
 
   return (
