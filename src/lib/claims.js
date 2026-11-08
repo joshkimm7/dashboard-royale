@@ -10,7 +10,7 @@ import { playerBreakdown, playerOutcomes } from './model.js';
 export const CLAIM_IDS = ['claim-raw-win', 'claim-adjusted', 'claim-m1158', 'claim-hit', 'claim-demand', 'claim-zones', 'claim-traffic', 'claim-heat',
   'claim-weather', 'claim-missouri', 'claim-downtime', 'claim-downtime-when', 'claim-response', 'claim-avoidable', 'claim-carded', 'claim-lorenz',
   'claim-outcomes', 'claim-age', 'claim-reconcile', 'claim-comp-cost', 'claim-comp-break', 'claim-comp-visits', 'claim-reinvest', 'claim-forecast',
-  'claim-staffing', 'claim-moves', 'claim-decision', 'claim-inspection', 'claim-window', 'claim-promotion', 'claim-alternatives', 'claim-repair'];
+  'claim-staffing', 'claim-moves', 'claim-decision', 'claim-ledger', 'claim-inspection', 'claim-window', 'claim-promotion', 'claim-alternatives', 'claim-repair'];
 
 const signed = v => (v > 0 ? '+' : '') + cash(v);
 const signedPct1 = v => (v > 0 ? '+' : v < 0 ? '−' : '') + pct(Math.abs(v));
@@ -277,6 +277,13 @@ export function buildClaims(m) {
         'At 50% capture the proposed move changes from ' + signed(m.netMove(.5, 0)) + ' to ' + cash(m.netMove(.5, .10)) + ' with 10% displacement'],
       alt: 'No past move matches the route and configuration; keep the move unfunded until comparable evidence clears its cost.',
       evidence: [{ label: 'Action summary', section: 'action-summary' }, { label: 'Inspect & defer', section: 'inspection-plan' }] },
+    { id: 'claim-ledger', group: 'Q6 · July decision', claim: 'The July budget ledger totals exactly $100,000 within the catalog rules',
+      method: 'Quantity × (unit cost + recurring cost per day × max(0, 30 − lead days)) for each funded action, plus the kept reserve; then the guide’s plan rules.',
+      result: [['Ledger: ', m.julyPlan.arithmetic],
+        ...m.julyPlan.lines.map(l => [l.action[0] + ' ', n(l.item.qty) + ' × ' + l.targets.join(', ') + ' costs ' + cash(l.cost) + ' with ' + n(l.days) + ' July days after lead']),
+        [n(m.julyPlan.checks.filter(c => c.pass).length) + ' of ' + n(m.julyPlan.checks.length) + ' rules pass: ', m.julyPlan.checks.map(c => c.label[0].toLowerCase() + c.label.slice(1)).join('; ')]],
+      alt: 'Keeping the budget is a valid choice under the guide; the reserve covers the promotion weekend only if its trigger is met.',
+      evidence: [{ label: 'Budget ledger', section: 'budget-ledger' }, { label: 'Build your own plan', section: 'plan-builder' }] },
     { id: 'claim-inspection', group: 'Q6 · July decision', claim: 'Inspection economics and verification',
       method: 'M-1158’s payout gap per gaming day × July days after the lead; inspection cost over that conditional recovery.',
       result: [cash(m.inspectionCeiling) + ' conditional July recovery and a ' + pct(m.inspectionBreakEven, 1) + ' break-even probability'],
@@ -287,12 +294,12 @@ export function buildClaims(m) {
       result: [n(slot.n) + ' comparable windows', 'About ' + cash(slot.coin * hold) + ' of expected win at risk versus ' + cash(slot.typical * hold)],
       alt: 'Depends on historical demand, configured hold and technician availability.',
       evidence: [{ label: 'Inspect & defer', section: 'inspection-plan' }] },
-    { id: 'claim-promotion', group: 'Q6 · July decision', claim: 'Promotion weekend is conditional',
+    { id: 'claim-promotion', group: 'Q6 · July decision', claim: 'Promotion weekend stays unfunded until a registration trigger',
       method: 'Event days matched to event-free days of the same month and weekday, with a seven-day follow-up.',
       result: [['Tournament and Locals Week ', 'added about ' + thousands(tournament.during.coin) + ' and ' + thousands(locals.during.coin) + ' in event wagers'],
         ['Expected-win lift through the next seven days ', 'was ' + cash(m.retainedTheo(tournament)) + ' and ' + cash(m.retainedTheo(locals))],
         ['A ' + cash(m.promoCost) + ' weekend ', 'needs ' + pct(m.promoCost / m.retainedTheo(tournament), 1) + ' or ' + pct(m.promoCost / m.retainedTheo(locals), 1) + ' of these lifts']],
-      alt: 'Two historical events cannot identify causal lift or transfer to July; require registration and cost evidence.',
+      alt: 'Two historical events cannot identify causal lift or transfer to July. Fund one weekend from the reserve only if registrations by July 4 clear the hurdle.',
       evidence: [{ label: 'Promotion', section: 'promotion-check' }] },
     { id: 'claim-alternatives', group: 'Q6 · July decision', claim: 'Alternatives considered for July',
       method: 'Catalog costs prorated after lead time against avoidable waiting, excess faults and projected comp cost.',

@@ -9,7 +9,7 @@ Built for the **Dashboard Royale challenge at TAMU Datathon 2026**. The Gilded A
 - **Cancel the blanket replacement.** Nine of the ten lowest earners were in quiet zones. M-1158 was the only cabinet flagged for an unusual payout gap. Its observed casino win was about **$36,165 below** what its configured payout rate implied, which warrants a meter and paytable check.
 - **The raw list is not the weak list.** Ranked by expected win per available hour against same-game cabinets in the same zone, with thin records shrunk toward average, only 1 of the raw bottom ten (M-1120) is in the adjusted bottom ten. No cabinet's configured payout rate differs from the published game math, and none changed configuration mid-period.
 - **Measure both banks after a move.** All four destination banks gained in the historical comparisons, and only two source–destination pairs gained overall. A busier destination alone gives an incomplete picture.
-- **Fund one inspection.** The July plan allocates **$1,200** to inspect M-1158 and holds **$98,800** in reserve. It defers a relocation and sets a break-even requirement for a promotion pilot.
+- **Fund one inspection.** The July plan allocates **$1,200** to inspect M-1158 and holds **$98,800** in reserve. It defers a relocation and leaves the $15,000 promotion weekend unfunded unless registrations by July 4 clear its break-even hurdle. A budget ledger shows $1,200 + $98,800 reserve = $100,000 with every catalog rule checked, and a plan builder lets reviewers price their own alternative.
 
 ## Explore the dashboard
 
@@ -23,7 +23,7 @@ Navigation sits in a collapsible left sidebar (a drawer on phones); the top bar'
 | **Demand & uptime** | Demand trend · Zones & context · Downtime impact · Repairs & tickets · Response times · Event days | Compare wagering trends with event timing, traffic, and estimated downtime exposure; split the April→June change by zone, see when the floor plays, and test weather and the Missouri market as competing explanations. See which days and weekday hours machines are down, how fast faults are answered with one technician on duty versus two, and which downtime a technician shift or preventive maintenance could avoid. |
 | **Guests & comps** | Player concentration · Comps & loyalty | Explore tracked wagering, player concentration, and loyalty costs by guest segment. |
 | **Model validation** | Holdout test · Staffing calls · July forecast | Compare weekday averages with a seven-day lag and a constant forecast on a 61-day holdout, then see how each forecast changes simulated staffing calls. |
-| **July decision** | Action summary · Inspect & defer · Past moves · Promotion · Full catalog | Review the budget, compare historical relocations, and test repair quotes under different recovery assumptions. |
+| **July decision** | Action summary · Inspect & defer · Past moves · Promotion · Full catalog · Build your own plan | Review the budget ledger and its rule checks, compare historical relocations, test repair quotes under different recovery assumptions, and build an alternative plan with live cost, reserve and benefit ranges. |
 
 The analysis uses synthetic casino data from January–June 2025, with separately attributed real-world Las Vegas context. See [Claims and Evidence](CLAIMS-AND-EVIDENCE.md) for sources, calculations, limitations, and AI-use disclosure.
 

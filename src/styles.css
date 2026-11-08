@@ -450,3 +450,19 @@ select option:disabled{color:#a88a75}
   a{color:#1a1a1a}
   *{animation:none!important;transition:none!important}
 }
+
+/* July budget ledger and plan builder */
+.plan-checks{list-style:none;margin:12px 0;padding:0;display:grid;gap:6px}.plan-checks li{border-left:3px solid var(--edge);padding:2px 0 2px 9px}
+.plan-checks li.pass{border-left-color:var(--green)}.plan-checks li.pass>span:first-child,.plan-checks li.pass b{color:var(--green)}
+.plan-checks li.fail{border-left-color:var(--red)}.plan-checks li.fail>span:first-child,.plan-checks li.fail b{color:var(--red)}
+.plan-warning{border:1px solid var(--red);border-radius:6px;padding:8px 10px;color:var(--red)}
+.builder-add,.builder-buttons,.builder-target{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:end;margin:10px 0}
+.builder-field{display:grid;gap:4px;min-width:0;max-width:100%;color:var(--muted);font-size:13px}
+.builder-field select,.builder-field input{font:inherit;color:var(--text);max-width:100%;padding:6px;border:1px solid #9a7338;border-radius:5px}
+.builder-field input{width:8rem;background:var(--bg)}.builder-add .builder-field{flex:0 1 34rem}.builder-add select{width:100%}
+.builder-items{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:12px;margin:12px 0}
+.builder-item{min-width:0;margin:0;border:1px solid var(--edge);border-radius:8px;padding:8px 12px 12px}.builder-item legend{color:var(--gold);font-weight:700;padding:0 4px}
+.builder-target select{width:15rem}.builder-remove{margin-top:8px}
+.field-error{color:var(--red);font-size:12px}
+.builder-sliders{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:6px 24px;margin-bottom:10px}
+.builder-slider input{width:100%;accent-color:var(--gold)}.builder-slider output{font-weight:700;color:var(--text);white-space:nowrap}

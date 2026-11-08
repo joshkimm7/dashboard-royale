@@ -1,6 +1,7 @@
 // View state, URL-hash sync and navigation actions (tab/sub-tab switches, evidence jumps, filters).
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { CLAIM_IDS } from './lib/claims.js';
+import { SENSITIVITY } from './lib/plan.js';
 
 export const SUBTABS = {
   overview: [],
@@ -9,7 +10,7 @@ export const SUBTABS = {
   demand: [['trend', 'Demand trend'], ['zones', 'Zones & context'], ['downtime', 'Downtime impact'], ['repairs', 'Repairs & tickets'], ['response', 'Response times'], ['events', 'Event days']],
   guests: [['players', 'Player concentration'], ['comps', 'Comps & loyalty']],
   model: [['holdout', 'Holdout test'], ['staffing', 'Staffing calls'], ['july', 'July forecast']],
-  plan: [['summary', 'Action summary'], ['inspection', 'Inspect & defer'], ['moves', 'Past moves'], ['promotion', 'Promotion'], ['catalog', 'Full catalog']],
+  plan: [['summary', 'Action summary'], ['inspection', 'Inspect & defer'], ['moves', 'Past moves'], ['promotion', 'Promotion'], ['catalog', 'Full catalog'], ['builder', 'Build your own plan']],
   claims: [],
 };
 export const TABS = [['overview', 'Overview'], ['map', 'Evidence map'], ['audit', 'Q1 · Machine audit'], ['demand', 'Q2/Q3 · Demand & uptime'],
@@ -19,7 +20,7 @@ export const SECTION_SUB = {
   'verdict-check': ['audit', 'verdicts'], 'adjusted-check': ['audit', 'adjusted'], 'funnel-check': ['audit', 'adjusted'], 'config-check': ['audit', 'adjusted'], 'hit-check': ['audit', 'adjusted'],
   'machine-check': ['audit', 'machine'], 'hold-check': ['audit', 'machine'],
   'staffing-check': ['model', 'staffing'], 'action-summary': ['plan', 'summary'], 'inspection-plan': ['plan', 'inspection'],
-  'move-check': ['plan', 'moves'], 'promotion-check': ['plan', 'promotion'], 'catalog-check': ['plan', 'catalog'],
+  'move-check': ['plan', 'moves'], 'promotion-check': ['plan', 'promotion'], 'catalog-check': ['plan', 'catalog'], 'plan-builder': ['plan', 'builder'], 'budget-ledger': ['plan', 'summary'],
   'players-check': ['guests', 'players'], 'zones-check': ['demand', 'zones'], 'response-check': ['demand', 'response'], 'comp-break-check': ['guests', 'comps'], 'comp-visits-check': ['guests', 'comps'],
   'holdout-check': ['model', 'holdout'],
   // One deep-link section per row of the Claims & evidence page.
@@ -27,8 +28,10 @@ export const SECTION_SUB = {
 };
 export const firstSub = tab => SUBTABS[tab]?.[0]?.[0] ?? '';
 
-export const DEFAULTS = { from: 0, to: 5, zone: '', bank: '', tab: 'overview', sub: '', machine: '', sort: 'win', reverse: false, all: false, region: '', tier: '', age: '' };
-const HASH_KEYS = ['tab', 'sub', 'from', 'to', 'zone', 'bank', 'machine', 'sort', 'reverse', 'all', 'region', 'tier', 'age'];
+export const DEFAULTS = { from: 0, to: 5, zone: '', bank: '', tab: 'overview', sub: '', machine: '', sort: 'win', reverse: false, all: false, region: '', tier: '', age: '',
+  // July plan builder: '' is the recommended plan (see src/lib/plan.js); sensitivities are whole percents.
+  plan: '', fix: SENSITIVITY.fix, cap: SENSITIVITY.cap, dis: SENSITIVITY.dis, keep: SENSITIVITY.keep };
+const HASH_KEYS = ['tab', 'sub', 'from', 'to', 'zone', 'bank', 'machine', 'sort', 'reverse', 'all', 'region', 'tier', 'age', 'plan', 'fix', 'cap', 'dis', 'keep'];
 /** Quick period presets (month indexes, January = 0). The data is month-granular, so presets are whole months. */
 export const PERIOD_PRESETS = [['Full period', 0, 5], ['Q1', 0, 2], ['Q2', 3, 5], ['Last 2 months', 4, 5]];
 const SORT_KEYS = ['id', 'win', 'days', 'availability', 'local', 'zone', 'down', 'res'];
@@ -50,6 +53,14 @@ function readHash(model) {
     if (values.includes(value)) s[key] = value;
   }
   for (const key of ['reverse', 'all']) s[key] = params.get(key) === '1';
+  // Plan builder: the whole plan must parse and pass every catalog rule, or the recommended plan stands.
+  const plan = params.get('plan');
+  const parsed = plan === null ? null : model.planner.parse(plan);
+  if (parsed) s.plan = model.planner.encode(parsed);
+  for (const key of ['fix', 'cap', 'dis', 'keep']) {
+    const value = params.get(key);
+    if (value !== null && /^(100|[1-9]?[0-9])$/.test(value)) s[key] = Number(value);
+  }
   // A bank always sits in the selected zone: a bank from another zone moves the zone to the bank's.
   if (s.bank && s.zone && model.bankZone[s.bank] !== s.zone) s.zone = model.bankZone[s.bank];
   s.sub = params.get('sub') ?? '';
@@ -90,10 +101,10 @@ export function NavProvider({ model, children }) {
   const pending = useRef({ section: initial.section, focus: null, toTop: false });
   const ignoredHashChanges = useRef([]);
 
-  const pushHash = useCallback((s, section) => {
+  const pushHash = useCallback((s, section, replace = false) => {
     const hash = hashFor(s, section);
     if (hash === location.hash) return;
-    try { history.pushState(null, '', hash || location.pathname + location.search); }
+    try { history[replace ? 'replaceState' : 'pushState'](null, '', hash || location.pathname + location.search); }
     catch (error) {
       // Some file:// contexts reject pushState; fall back to a hash change we then ignore.
       if (error.name !== 'SecurityError') throw error;
@@ -104,12 +115,13 @@ export function NavProvider({ model, children }) {
   }, []);
 
   /** Applies a state change, records it in the URL, and schedules scroll/focus work for after render. */
-  const go = useCallback((patch, { section = null, focus = null, toTop = false } = {}) => {
+  /** `replace` updates the URL without a new history entry (used while dragging a slider). */
+  const go = useCallback((patch, { section = null, focus = null, toTop = false, replace = false } = {}) => {
     const next = normalize({ ...stateRef.current, ...(typeof patch === 'function' ? patch(stateRef.current) : patch) });
     pending.current = { section, focus, toTop };
     stateRef.current = next;
     setState(next);
-    pushHash(next, section);
+    pushHash(next, section, replace);
   }, [pushHash]);
 
   useLayoutEffect(() => {

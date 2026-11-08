@@ -3,6 +3,7 @@
 import { by, cash, month, months, n, ratio, sum, week } from './format.js';
 import { heatGrid, missouriMonthly, zoneContribution, zoneTraffic } from './zones.js';
 import { downtimeFinding } from './downtime.js';
+import { createPlanner } from './plan.js';
 
 export const peerDemandCutoff = .8;
 export const hasPeerBenchmark = (machine, key) => machine.zoneCover >= .5 && machine[key] != null;
@@ -518,7 +519,6 @@ export function createModel(data) {
   const grossLift = (destinationRate - recentRate) * (hoursAfterLead - relocation[5] / 60);
   const netMove = (capture, displacement) => grossLift * capture * (1 - displacement) - disruption - moveCost;
   const moveBreakEven = (moveCost + disruption) / grossLift;
-  const reserve = 100000 - inspectionCost;
   // Comparison cabinets for a later move: same configuration, same source zone, never moved banks in the period.
   const moveControls = [...by(juneSameConfig.filter(r => r.zone === last.zone && r.id !== move.id), r => r.id).keys()]
     .filter(id => new Set(auditRows.filter(r => r.id === id).map(r => r.bank)).size === 1).sort();
@@ -590,8 +590,14 @@ export function createModel(data) {
   // Q3 downtime: response times, technician staffing and the avoidable share (full period), for the July catalog.
   const downtime = downtimeFinding({ data, auditRows, fullDays, catalogue, actionCost });
 
+  // Q6 July budget: the recommended plan, its ledger (guide §6 cost formula) and the reserve it leaves.
+  const planner = createPlanner({ data, catalogue, actionCost, auditRows, fullDays, zones, inspect, move, cohort, payoutCohort, inspectionCeiling, netMove, moveCost,
+    promoCost, retainedTheo, downtime });
+  const julyPlan = planner.ledger(planner.recommended);
+  const reserve = julyPlan.reserve;
+
   return {
-    zoneFinding, downtime,
+    zoneFinding, downtime, planner, julyPlan,
     data, dict, zones, fullDays, auditRows, zoneBanks, bankInScope, fullSummary, scope, regions, tiers, ageBands, ageOf, playerRows, fullOutcomes, months,
     holdout, mae, pairedSummary, m1, m7, mCalendar, peakThreshold, quietThreshold, schedulingTier, schedulingScore,
     inspect, focalWeeks, holdGap, worstWeek, leaveOneOut, withoutWorst, maxLeaveOneOutQ, inspectPeers, peerWeeks, weekLabel, matchedPayoutPeers,

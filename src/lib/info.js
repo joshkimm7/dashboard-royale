@@ -141,6 +141,18 @@ export const LINE_INFO = {
   'Same-config destination cabinets': "How many same-game cabinets in the destination zone played in June and set the destination benchmark. Fewer cabinets make that benchmark less reliable.",
   // Relocation economics with displaced play
   'Break-even placement capture at 0% / 25% displacement': "Share of the placement gap the move must capture to pay off in July, first assuming no play is taken from other machines, then assuming a quarter of the gain is.",
+  // July budget ledger and plan builder
+  'Ledger total': "Each funded action's July cost plus the unspent reserve. The two must add up to exactly the $100,000 budget, so no money is double-counted or left unaccounted for.",
+  'Chance the inspection finds and fully corrects a fault': "Your assumed odds that the paytable check finds a real fault and the fix restores normal payout. Expected recovery scales with it; zero recovery is credited otherwise.",
+  'Placement gap the move captures': "How much of the earnings gap between the machine's current spot and similar machines at the destination the move actually closes. Past moves ranged widely, so treat it as uncertain.",
+  'Move gain displaced from other machines': "Share of the moved machine's gain that is play taken from neighbouring machines rather than new play. Displaced play adds nothing to the floor, so it lowers the net.",
+  'Share of past promotion lift a July weekend keeps': "How much of the expected-win lift seen at past promotions a shorter July weekend would repeat, through the week after. Below the break-even share the weekend loses money.",
+  'Inspection expected net': "July recovery at your assumed chance of a full fix, minus the inspection fee. Repair costs and the two-hour interruption are not included.",
+  'Move expected net': "July expected win from the relocation at your capture and displacement settings, after the move fee and three hours of disruption.",
+  'Promotion weekend expected net': "Expected-win lift at your assumed share of the weaker past event, minus the catalog price of one weekend. Extra staffing or prizes would lower it further.",
+  'Plan cost': "Total July cost of the actions in your plan, using the catalog formula with recurring charges only for days after each lead time.",
+  'Remaining reserve': "What is left of the $100,000 after your plan. Keeping money is a valid choice; a negative value means the plan is over budget.",
+  'Expected net of estimated actions': "Expected benefit minus cost for the actions the evidence can price at your assumptions. Actions without a benefit estimate are listed separately as cost only.",
   // Promotion weekend evidence
   'Catalog terms': "Price per promotion weekend, the notice it needs before it can run, and the most weekends the catalog allows in July.",
   // Demand → Zones & context
@@ -211,6 +223,10 @@ export const PANEL_INFO = {
   'What past moves tell us about the assumptions': "Checks how much of the pre-move earnings gap past moves actually captured, which tests the capture rates assumed for moving M-1181.",
   'Relocation economics with displaced play': "July net expected win from moving M-1181 across a grid of assumptions about how much of the gap it captures and how much play it pulls from other machines.",
   'Promotion weekend evidence': "Wager and expected-win lift from two past promotions, during the event and the week after, against matched event-free days, and the share a July weekend must repeat to break even.",
+  'July budget ledger': "The recommended July spending line by line: quantity, targets, catalog cost, the days left after lead time, and the reserve, with each budget rule checked.",
+  'Build your own plan': "Choose up to three catalog actions with quantities and targets. The builder blocks combinations the catalog forbids and saves your plan in the page link.",
+  "Your plan's cost, reserve and benefit": "Your plan's July cost, the reserve it leaves and each action's benefit range from the dashboard's evidence. Actions the evidence cannot price are marked as such.",
+  'Sensitivity: change the assumptions': "Sliders for the assumptions that drive the inspection, move and promotion economics. Expected nets update as you move them, so you can see which assumption flips a decision.",
   'Decisions across the action catalog': "Every action available in the July catalog with its cost per unit and the reason it was funded, deferred or passed over.",
   'Zone demand per available hour': "Wagers per working machine-hour in each floor zone by month. Because it divides by available hours, zone size and downtime don't distort the comparison.",
   'Which zones drove the change?': "Splits the change in property wagers per day between the comparison months into each zone's share. The zone rows add up exactly to the property total.",

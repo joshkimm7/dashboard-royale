@@ -245,6 +245,12 @@ const CHECKS = [
   ['window theo at risk', cash(slot.coin * hold), ['claims']],
   ['average window theo', cash(slot.typical * hold), ['claims']],
   ['window saving', cash((slot.typical - slot.coin) * hold), ['claims']],
+  // July budget ledger (src/lib/plan.js): the total, the reserve and each funded action's cost
+  ['ledger total', m.julyPlan.arithmetic, ['readme', 'claims']],
+  ['ledger reserve', cash(m.julyPlan.reserve) + ' reserve', ['readme', 'claims']],
+  ...m.julyPlan.lines.map(l => ['ledger cost · ' + l.action[0], l.action[0] + ' ' + n(l.item.qty) + ' × ' + l.targets.join(', ') + ' costs ' + cash(l.cost) + ' with ' + n(l.days) + ' July days after lead', ['claims']]),
+  ['unfunded promotion', cash(m.promoCost) + ' promotion weekend unfunded', ['readme']],
+  ['promotion at 25% of the weaker lift', 'nets ' + cash(.25 * Math.min(...data.promotions.map(m.retainedTheo)) - m.promoCost), ['claims']],
   // Promotion
   ['promotion cost', cash(m.promoCost), ['claims']],
   ['event wager lifts', thousands(tournament.during.coin) + ' and ' + thousands(locals.during.coin), ['claims']],
@@ -287,8 +293,12 @@ const pageClaims = buildClaims(m);
 if (pageClaims.map(c => c.id).join() !== CLAIM_IDS.join()) refFailures.push('claims page ids do not match CLAIM_IDS');
 for (const c of pageClaims) CHECKS.push(['claims page · ' + c.claim, '| ' + c.claim + ' |', ['claims']], ...c.result.map((r, i) => ['claims page · ' + c.id + ' result ' + (i + 1), [r].flat().at(-1), ['claims']]));
 
+// The ledger must total exactly the budget and the recommended plan must pass every catalog rule.
+if (m.julyPlan.spent + m.julyPlan.reserve !== 100000) refFailures.push('ledger does not total $100,000');
+for (const c of m.julyPlan.checks) if (!c.pass) refFailures.push('recommended plan fails: ' + c.label);
+if (m.reserve !== m.julyPlan.reserve) refFailures.push('model reserve differs from the ledger reserve');
 let failed = refFailures.length;
-for (const f of refFailures) console.log('✗ concentration reference mismatch: ' + f);
+for (const f of refFailures) console.log('✗ reference check: ' + f);
 for (const [label, expected, where] of CHECKS) {
   for (const doc of where) {
     if (norm(docs[doc]).includes(norm(expected))) continue;

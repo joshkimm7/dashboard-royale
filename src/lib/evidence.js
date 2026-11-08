@@ -22,7 +22,7 @@ export function buildEvidenceGraph(m) {
   add('act-inspect', 'action', 'Inspect M-1158', 'Its payout ran ' + cash(inspect.theo - inspect.win) + ' below what its settings imply.', cash(inspectionCost), { jump: 'inspection-plan' });
   add('act-move', 'action', 'Defer M-1181 move', 'Only ' + pairsGained + ' of ' + moveCases.length + ' past moves gained across both banks.', 'Defer', { jump: 'move-check' });
   add('act-staff', 'action', 'Flex staffing', 'Add coverage when forecast wagers reach ' + cash(peakThreshold) + '.', cash(peakThreshold), { jump: 'staffing-check' });
-  add('act-promo', 'action', 'Promotion (conditional)', 'Pilot only with registrations above the break-even hurdle.', cash(promoCost), { jump: 'promotion-check' });
+  add('act-promo', 'action', 'Promotion (unfunded · trigger)', 'Not in the July plan. Pay ' + cash(promoCost) + ' from the reserve only if registrations by July 4 support more than the ' + pct(promoHurdle, 1) + ' break-even hurdle.', '$0 · ' + cash(promoCost) + ' if triggered', { jump: 'promotion-check' });
   add('act-reserve', 'action', 'Hold reserve', 'Keep unspent budget until other actions have stronger evidence.', cash(reserve), { jump: 'catalog-check' });
   add('act-comp', 'action', 'Hold comp changes', 'No comp pilot and no floor-wide comp change in July; the two are mutually exclusive' + (compFinding.detected ? ', and the ' + compFinding.date + ' repricing needs reading first.' : '.'), '$0', { jump: 'catalog-check' });
   const minutes = v => n(v, 0) + ' min';
@@ -80,12 +80,14 @@ export function buildEvidenceGraph(m) {
   const cv = m.compVisits.real;
   add('ev-comp-visits', 'evidence', 'Comp repricing and visits', 'After the ' + months[month(cv.split)] + ' ' + Number(cv.split.slice(8)) + ' repricing, comp users’ visits moved ' + signedPct(cv.did) + ' relative to other recent guests (95% interval ' + signedPct(cv.interval[0]) + ' to ' + signedPct(cv.interval[1]) +
     '), within the drift seen at placebo dates: cheaper comps bought no measurable extra visits.', signedPct(cv.did) + ' visits', { jump: 'comp-visits-check' });
+  const ledger = m.julyPlan;
+  add('ev-ledger', 'evidence', 'Budget ledger', 'The recommended plan priced with the catalog cost formula: ' + ledger.arithmetic + ', with every catalog rule checked.', cash(ledger.spent) + ' + ' + cash(ledger.reserve), { jump: 'budget-ledger' });
   add('ev-catalog', 'evidence', 'Action catalog', 'Every priced action and why it was funded, deferred or passed.', n(data.actions.length) + ' actions', { jump: 'catalog-check' });
 
-  for (const [a, list] of Object.entries({ 'act-inspect': ['ev-hold', 'ev-hit', 'ev-verdicts', 'ev-adjusted'], 'act-move': ['ev-moves', 'ev-move-econ'], 'act-staff': ['ev-staffing', 'ev-holdout', 'ev-zones'],
-    'act-promo': ['ev-promo', 'ev-events'], 'act-reserve': ['ev-catalog', 'ev-adjusted'],
+  for (const [a, list] of Object.entries({ 'act-inspect': ['ev-hold', 'ev-hit', 'ev-verdicts', 'ev-adjusted', 'ev-ledger'], 'act-move': ['ev-moves', 'ev-move-econ'], 'act-staff': ['ev-staffing', 'ev-holdout', 'ev-zones'],
+    'act-promo': ['ev-promo', 'ev-events'], 'act-reserve': ['ev-ledger', 'ev-catalog', 'ev-adjusted'],
     q1: ['ev-verdicts', 'ev-adjusted', 'ev-hold', 'ev-hit'], q2: ['ev-demand', 'ev-zones', 'ev-context', 'ev-downtime', 'ev-response', 'ev-events'],
-    'act-tech': ['ev-response', 'ev-downtime', 'ev-catalog'], 'act-pm': ['ev-response', 'ev-downtime', 'ev-catalog'], q4: ['ev-players', 'ev-comps', 'ev-comp-break', 'ev-comp-visits'], 'ev-comps': ['ev-catalog'], 'act-comp': ['ev-comp-break', 'ev-comp-visits', 'ev-comps', 'ev-players'], 'ev-comp-break': ['ev-catalog'], qm: ['ev-holdout', 'ev-staffing'], q6: ['ev-catalog', 'ev-moves', 'ev-move-econ', 'ev-promo'] }))
+    'act-tech': ['ev-response', 'ev-downtime', 'ev-catalog'], 'act-pm': ['ev-response', 'ev-downtime', 'ev-catalog'], q4: ['ev-players', 'ev-comps', 'ev-comp-break', 'ev-comp-visits'], 'ev-comps': ['ev-catalog'], 'act-comp': ['ev-comp-break', 'ev-comp-visits', 'ev-comps', 'ev-players'], 'ev-comp-break': ['ev-catalog'], qm: ['ev-holdout', 'ev-staffing'], q6: ['ev-ledger', 'ev-catalog', 'ev-moves', 'ev-move-econ', 'ev-promo'] }))
     for (const b of list) link(a, b);
 
   const flagsSeen = new Set();
@@ -118,7 +120,7 @@ export function buildEvidenceGraph(m) {
   add('src-weather', 'source', 'NOAA weather', 'Daily high temperature and rain at Las Vegas airport (real data, context only).', n(data.weather.days.length) + ' days');
   add('src-missouri', 'source', 'Missouri benchmark', 'Missouri Gaming Commission monthly slot handle for 13 casinos (real data, context only).', n(data.missouri.state.length) + ' months');
   for (const [a, list] of Object.entries({ 'src-roster': ['ev-response'], 'src-tickets': ['ev-response', 'ev-downtime'], 'src-hourly': ['ev-zones', 'ev-downtime'], 'src-traffic': ['ev-zones'], 'src-weather': ['ev-context'], 'src-missouri': ['ev-context'], 'src-meters': ['ev-verdicts', 'ev-adjusted', 'ev-hold', 'ev-hit', 'ev-downtime', 'ev-moves', 'ev-demand', 'ev-players', 'ev-zones'], 'src-property': ['ev-demand', 'ev-context', 'ev-holdout', 'ev-staffing', 'ev-events'],
-    'src-players': ['ev-players', 'ev-comps'], 'src-ledger': ['ev-comp-break', 'ev-comp-visits'], 'src-trips': ['ev-comp-visits'], 'src-events': ['ev-events', 'ev-holdout', 'ev-promo'], 'src-moves': ['ev-moves'], 'src-gamemath': ['ev-adjusted', 'ev-hit'], 'src-sessions': ['ev-hit'], 'src-catalog': ['ev-catalog', 'ev-move-econ'], 'src-city': ['ev-demand'] }))
+    'src-players': ['ev-players', 'ev-comps'], 'src-ledger': ['ev-comp-break', 'ev-comp-visits'], 'src-trips': ['ev-comp-visits'], 'src-events': ['ev-events', 'ev-holdout', 'ev-promo'], 'src-moves': ['ev-moves'], 'src-gamemath': ['ev-adjusted', 'ev-hit'], 'src-sessions': ['ev-hit'], 'src-catalog': ['ev-catalog', 'ev-move-econ', 'ev-ledger'], 'src-city': ['ev-demand'] }))
     for (const b of list) link(a, b);
 
   const byId = new Map(nodes.map(nd => [nd.id, nd]));

@@ -79,9 +79,10 @@ function questionFacts(qid, m) {
   }
   if (qid === 'q6') {
     return [
-      'The July plan spends ' + cash(m.inspectionCost) + ' to inspect ' + m.inspect.id + ' and keeps ' + cash(m.reserve) + ' in reserve.',
+      'The July plan spends ' + cash(m.inspectionCost) + ' to inspect ' + m.inspect.id + ' and keeps ' + cash(m.reserve) + ' in reserve: ' + m.julyPlan.arithmetic + ', within every catalog rule (' + m.julyPlan.checks.filter(c => c.pass).length + ' of ' + m.julyPlan.checks.length + ' checks pass).',
       'Moving ' + m.move.id + ' would cost ' + cash(m.moveCost) + '; at 50% capture it nets ' + cash(m.netMove(.5, 0)) + ' with no displaced play but ' + cash(m.netMove(.5, .10)) + ' at 10% displacement, so it is deferred.',
-      'A promotion weekend (' + cash(m.promoCost) + ') stays conditional: it must keep more than ' + pct(m.promoHurdle, 1) + ' of the weaker past event lift to break even.',
+      'A promotion weekend (' + cash(m.promoCost) + ') is unfunded: it is paid from the reserve only if registrations by July 4 support keeping more than ' + pct(m.promoHurdle, 1) + ' of the weaker past event lift, its break-even.',
+      'Build your own plan (July decision tab) lets you swap in other actions under the same catalog rules and change the inspection, move and promotion assumptions.',
     ];
   }
   return [];

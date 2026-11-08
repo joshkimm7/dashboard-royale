@@ -733,7 +733,7 @@ data = {
     'hitCheck': hit_check, 'compVisits': comp_visits,
     'zoneTraffic': {'zones': zone_ids, 'dayMinutes': day_minutes, 'rows': rows(zone_days, ['zone','day','entries','minutes','offline'], 0)},
     'heat': heat, 'weather': weather_context, 'missouri': missouri,
-    'actions': rows(actions, ['action_type_id','name','unit_cost_cents','recurring_cost_cents_per_day','lead_days','downtime_minutes','quantity_limit']),
+    'actions': rows(actions, ['action_type_id','name','unit_cost_cents','recurring_cost_cents_per_day','lead_days','downtime_minutes','quantity_limit','incompatibility_group']),
 }
 payload = json.dumps(data, separators=(',',':'), ensure_ascii=False, allow_nan=False).replace('</','<\\/')
 # The React app (npm run build) inlines this file into dist/index.html; `npm run dev` serves it as /data.json.
