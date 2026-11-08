@@ -43,7 +43,7 @@ Submit on the [Devpost challenge page](https://tamu-datathon-26-casino-royale.de
 | --- | --- |
 | Public interactive dashboard | https://gilded-ace-two.vercel.app/ ([opening instructions](#open-the-dashboard), including an offline single-file build) |
 | Video walkthrough, 2 minutes or less | Script ready in [VIDEO-SCRIPT.md](VIDEO-SCRIPT.md); recording pending |
-| Write-up, 400 words or less | [WRITEUP.md](WRITEUP.md) |
+| Write-up, 400 words or less | [Latest dashboard write-up](WRITEUP.md) · [333-word Devpost draft](DEVPOST-WRITEUP.md) |
 | One ML or time-series method vs a baseline on a time-based holdout | Weekday-average forecast vs seven-day lag and constant, January–April train, May–June holdout: **Model validation** tab, [`build_data.py`](build_data.py), appendix row "Weekday model supports scheduling" |
 | All code or transformation steps | This repository: [`build_data.py`](build_data.py), [`src/`](src), [`analysis/`](analysis), [`scripts/`](scripts) |
 | Up to 3 priced action types | [Priced actions](CLAIMS-AND-EVIDENCE.md#priced-actions) and **Q6 · July decision**: inspect M-1158 ($1,200), keep $98,800 in reserve, promotion weekend unfunded with a July 4 trigger; the M-1181 move is deferred |
@@ -80,7 +80,7 @@ Open `dist/index.html` in a browser. The generated page embeds its data and work
 ## Code layout
 
 ```text
-WRITEUP.md               the 400-word Devpost write-up
+WRITEUP.md               write-up for the latest dashboard\nDEVPOST-WRITEUP.md       333-word Devpost draft
 VIDEO-SCRIPT.md          the 2-minute walkthrough shot list
 CLAIMS-AND-EVIDENCE.md   claims appendix, priced actions, sources and AI-use disclosure
 analysis/                exploration scripts and findings behind the hidden-pattern checks
