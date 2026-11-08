@@ -391,3 +391,9 @@ kbd{padding:1px 7px;border-radius:6px;border:1px solid #6e2a26;font:600 11px/1.6
 .heat-legend{align-items:center}
 .heat-scale i{display:inline-block;width:120px;height:10px;border-radius:3px;vertical-align:middle}
 .zone-focus{color:var(--gold);font-weight:700}
+
+/* Native dropdown lists: the browser paints them light by default, which hid the cream option text. */
+select{color-scheme:dark}
+select option,select optgroup{background-color:#2c0a0f;color:#fbf2e3}
+select option:checked{background-color:#c99a3e;color:#2a0a06}
+select option:disabled{color:#a88a75}
