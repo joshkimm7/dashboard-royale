@@ -131,8 +131,12 @@ export function createModel(data) {
   // M-1181 relocation
   const move = fullSummary.find(x => x.id === 'M-1181');
   const last = move.g.at(-1);
-  const destination = data.vacancies.find(r => r[0] === 'L-07-3');
   const june = move.g.filter(r => month(data.dates[r.d]) === 5);
+  // Destination rule: among slots vacant on June 30, take the zone where same-configuration cabinets earned the
+  // most theo per available hour in June; break ties by slot id.
+  const juneSameConfig = auditRows.filter(r => r.config === last.config && month(data.dates[r.d]) === 5);
+  const zoneRate = zone => ratio(sum(juneSameConfig.filter(r => r.zone === zone), r => r.theo), sum(juneSameConfig.filter(r => r.zone === zone), r => r.h)) ?? -Infinity;
+  const destination = data.vacancies.slice().sort((a, b) => zoneRate(b[2]) - zoneRate(a[2]) || a[0].localeCompare(b[0]))[0];
   const destinationPeers = auditRows.filter(r => r.zone === destination[2] && r.config === last.config && month(data.dates[r.d]) === 5);
   const recentRate = ratio(sum(june, r => r.theo), sum(june, r => r.h));
   const destinationRate = ratio(sum(destinationPeers, r => r.theo), sum(destinationPeers, r => r.h));
@@ -146,6 +150,10 @@ export function createModel(data) {
   const netMove = (capture, displacement) => grossLift * capture * (1 - displacement) - disruption - moveCost;
   const moveBreakEven = (moveCost + disruption) / grossLift;
   const reserve = 100000 - inspectionCost;
+  // Comparison cabinets for a later move: same configuration, same source zone, never moved banks in the period.
+  const moveControls = [...by(juneSameConfig.filter(r => r.zone === last.zone && r.id !== move.id), r => r.id).keys()]
+    .filter(id => new Set(auditRows.filter(r => r.id === id).map(r => r.bank)).size === 1).sort();
+  const bankZone = Object.fromEntries(zoneBanks.map(r => [r[0], r[2]]));
 
   // Inspection economics
   const inspectionGapPerDay = (inspect.theo - inspect.win) / inspect.days;
@@ -164,6 +172,10 @@ export function createModel(data) {
 
   // Overview cohort
   const moveCases = data.moves.filter(r => r.main);
+  // The past move most like the proposed route: same source zone, preferring the same destination zone too.
+  const routeScore = c => (bankZone[c.main.origin] === last.zone ? 2 : 0) + (bankZone[c.main.target] === destination[2] ? 1 : 0);
+  const closestCase = moveCases.slice().sort((a, b) => routeScore(b) - routeScore(a))[0];
+  const weeksBelow = focalWeeks.filter(([, g]) => holdGap(g) < 0).length;
   const cohort = fullSummary.slice(0, 10);
   const quietCohort = cohort.filter(r => r.flags.includes('Quiet zone'));
   const payoutCohort = cohort.filter(r => r.flags.includes('Inspect hold'));
@@ -192,6 +204,6 @@ export function createModel(data) {
     moveCost, inspectionCost, hoursAfterLead, disruption, grossLift, netMove, moveBreakEven, reserve,
     inspectionGapPerDay, inspectionCeiling, inspectionBreakEven, inspectionSlot, repairPaybackDays, repairRecoveryShare, windowHold, repairScenarios,
     promotion, promoCost, retainedTheo, promoHurdle,
-    moveCases, cohort, quietCohort, payoutCohort, shortCohort, payoutOverlap, reviewAction, weekdayAdjusted,
+    moveCases, closestCase, moveControls, bankZone, weeksBelow, cohort, quietCohort, payoutCohort, shortCohort, payoutOverlap, reviewAction, weekdayAdjusted,
   };
 }

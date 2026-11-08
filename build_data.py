@@ -21,7 +21,12 @@ def rows(frame, columns, precision=5):
     return json.loads(frame[columns].round(precision).to_json(orient='values'))
 
 daily = load('prepared_daily_view')
-daily = daily[daily.location_id.notna() & daily.meter_status.eq('reported')].copy()
+# Guide §5: rows with no location are days before installation or after retirement (1,018 in release 0.9.0-draft).
+# They are excluded, never counted as zero sales; every retained row is a placed machine-day.
+off_floor = daily.location_id.isna()
+print(f'Excluded {int(off_floor.sum()):,} off-floor machine-days and {int((~off_floor & daily.meter_status.ne("reported")).sum()):,} unreported meter days')
+daily = daily[~off_floor & daily.meter_status.eq('reported')].copy()
+assert daily.location_id.notna().all() and (daily.available_hours >= 0).all()
 cal = load('calendar_day')
 daily = daily.merge(cal[['gaming_date', 'scheduled_seconds']], on='gaming_date', validate='many_to_one')
 daily['scheduled'] = daily.scheduled_seconds / 3600
@@ -163,6 +168,7 @@ starts_in_shift = hourly[hourly.weekday.lt(5) & hourly.hour.between(8, 18)]
 partners = hourly[['date','hour','coin_in_cents']].copy()
 partners['hour'] -= 1
 windows = starts_in_shift.merge(partners, on=['date','hour'], suffixes=('', '_next'), validate='one_to_one')
+# machine_hour stores cents; convert once here so everything downstream is dollars.
 windows['coin'] = (windows.coin_in_cents + windows.coin_in_cents_next)/100
 profile = windows.groupby(['weekday','hour']).coin.agg(['mean','size'])
 profile = profile[profile['size'] >= 8]

@@ -67,7 +67,10 @@ export default function Overview({ heroRef, hidden }) {
         <article className="decision-card">
           <span className="eyebrow">02 · M-1181 relocation<InfoFor kind="decision" label="02 · M-1181 relocation" /></span>
           <strong className="decision-value">Defer</strong>
-          <p>All four destinations gained. Only two pairs gained overall.</p>
+          <p>{(() => {
+            const gained = moveCases.filter(r => r.main.targetChange > 0).length, pairs = moveCases.filter(r => r.main.bankPct > 0).length;
+            return (gained === moveCases.length ? 'All ' + n(gained) : n(gained) + ' of ' + n(moveCases.length)) + ' destinations gained. Only ' + n(pairs) + ' pairs gained overall.';
+          })()}</p>
           <button data-jump="move-check" onClick={() => nav.jump('move-check')}>Compare the four moves</button>
         </article>
         <article className="decision-card">
