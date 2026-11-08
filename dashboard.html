@@ -59,6 +59,38 @@
 .verdict-table td:last-child{white-space:normal;min-width:135px}.move-result-card{min-width:0;border:1px solid var(--edge);border-radius:9px;padding:10px 13px;background:#421e19}.move-result-card dl{margin:5px 0 0}.move-result-card dl div{display:flex;justify-content:space-between;gap:12px;padding:4px 0}.move-result-card dd{margin:0;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}.move-result-card dl div:last-child{border-top:1px solid var(--edge);margin-top:3px;padding-top:6px}.move-cases{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0}.hero-audit-link{margin-top:10px}.review-tags{display:block;font-size:11px;color:var(--muted);margin-top:3px}@media(max-width:620px){.move-cases{grid-template-columns:minmax(0,1fr)}}
 .verdict-list{margin:10px 0}.verdict-list details{padding:0}.verdict-list summary{display:grid;grid-template-columns:minmax(100px,.8fr) minmax(0,1.4fr) minmax(0,1.2fr) 1.25rem;gap:12px;align-items:center;padding:10px 3px;list-style:none;color:var(--text)}.verdict-list summary::-webkit-details-marker{display:none}.verdict-list summary::after{content:'+';color:var(--gold);font-weight:700}.verdict-list details[open] summary::after{content:'−'}.verdict-list .verdict-id strong{color:var(--gold)}.verdict-list .verdict-id small{display:block}.verdict-detail{padding:0 3px 12px}.verdict-detail dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:8px;margin:4px 0 12px}.verdict-detail dl div{border-left:2px solid var(--edge);padding-left:8px}.verdict-detail dt{font-size:12px;color:var(--muted)}.verdict-detail dd{margin:0}.repair-inputs{display:flex;gap:8px 12px;flex-wrap:wrap;margin-bottom:10px}.repair-inputs label{display:grid;gap:4px;min-width:0}.repair-inputs input{font:inherit;max-width:100%;width:10rem;padding:6px;background:var(--bg);color:var(--text);border:1px solid var(--edge);border-radius:5px}.repair-grid td,.repair-grid th{white-space:normal}.repair-grid th{min-width:83px}@media(max-width:560px){.verdict-list summary{grid-template-columns:minmax(95px,.75fr) minmax(0,1.25fr) 1rem;gap:2px 9px}.verdict-list .verdict-action{grid-column:2;grid-row:2}.verdict-list summary::after{grid-column:3;grid-row:1}}
 
+
+/* Evidence map */
+.hero-links{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.hero-links .hero-audit-link{margin-top:0}
+.map-legend{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
+.map-legend button,.map-chips button{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:.28rem .62rem;border-radius:99px}
+.map-legend button[aria-pressed=true]{background:#4e241e;color:var(--text);border-color:#a66b5c;font-weight:400}
+.map-legend button[aria-pressed=false]{opacity:.45;background:none}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;flex:none}
+.map-layout{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:15px;align-items:start}
+.map-stage{position:relative;min-width:0;border:1px solid var(--edge);border-radius:12px;overflow:hidden;background:radial-gradient(circle at 50% 45%,#2c1412,#180c0b 72%)}
+.map-svg{display:block;width:100%;height:clamp(420px,66vh,680px);touch-action:none;cursor:grab;user-select:none}
+.map-svg.panning{cursor:grabbing}
+.map-svg .edge{stroke:#7a4436;stroke-width:1;opacity:.55;transition:opacity 220ms var(--ease),stroke 220ms var(--ease)}
+.map-svg .edge.on{stroke:var(--gold);opacity:.95;stroke-width:1.4}
+.map-svg .node{cursor:pointer;outline:none;transition:opacity 220ms var(--ease)}
+.map-svg .node circle{stroke:#180c0b;stroke-width:1.5;transition:stroke 170ms var(--ease),stroke-width 170ms var(--ease)}
+.map-svg .node:hover circle,.map-svg .node:focus-visible circle,.map-svg .node.sel circle{stroke:var(--text);stroke-width:2.5}
+.map-svg text{fill:var(--muted);font:12px var(--font-sans);text-anchor:middle;pointer-events:none;paint-order:stroke;stroke:#180c0b;stroke-width:3px;stroke-linejoin:round;transition:opacity 220ms var(--ease)}
+.map-svg text.major{fill:var(--text);font-weight:700}
+.map-svg text.minor{opacity:0}
+.map-svg.zoomed text.minor,.map-svg.hl .node.on text.minor{opacity:1}
+.map-svg.hl .node:not(.on){opacity:.16}
+.map-svg.hl .edge:not(.on){opacity:.06}
+.map-svg .off{display:none}
+.map-toolbar{position:absolute;top:10px;right:10px;display:flex;gap:6px}
+.map-toolbar button{width:34px;height:34px;padding:0;background:#2a1311e6;font-size:16px;line-height:1}
+.map-card{position:sticky;top:12px}
+.map-card h3{font-size:19px}.map-card p{font-size:14px}
+.map-card .map-conn{margin:14px 0 6px;font-size:12px}
+.map-chips{display:flex;flex-wrap:wrap;gap:6px}
+.map-list ul{margin:4px 0 12px}.map-list li{margin:6px 0}.map-list li button{font-size:12px;padding:.15rem .5rem;margin-left:4px}
+@media(max-width:850px){.map-layout{grid-template-columns:minmax(0,1fr)}.map-card{position:static}.map-svg{height:clamp(300px,50vh,400px)}}
 /* Motion: short, eased transitions; disabled for reduced-motion users */
 :root{--ease:cubic-bezier(.22,.8,.24,1);--fast:170ms;--med:320ms}
 html{scroll-behavior:smooth}
@@ -90,13 +122,13 @@ tbody tr:hover{background:#3f1d19}
 <body><a class="skip" href="#main">Skip to dashboard</a>
 <header><div class="wrap brand"><strong><span class="mark" aria-hidden="true">♦</span>The Gilded Ace</strong><span class="sub">Dashboard Royale / Las Vegas, NV</span></div></header>
 <main class="wrap" id="main">
-<nav class="nav" aria-label="Dashboard sections"><button data-tab="overview" aria-pressed="true">Overview</button><button data-tab="audit" aria-pressed="false">Q1 · Machine audit</button><button data-tab="demand" aria-pressed="false">Q2/Q3 · Demand & uptime</button><button data-tab="guests" aria-pressed="false">Q4/Q5 · Guests & comps</button><button data-tab="model" aria-pressed="false">Model validation</button><button data-tab="plan" aria-pressed="false">Q6 · July decision</button></nav>
+<nav class="nav" aria-label="Dashboard sections"><button data-tab="overview" aria-pressed="true">Overview</button><button data-tab="map" aria-pressed="false">Evidence map</button><button data-tab="audit" aria-pressed="false">Q1 · Machine audit</button><button data-tab="demand" aria-pressed="false">Q2/Q3 · Demand & uptime</button><button data-tab="guests" aria-pressed="false">Q4/Q5 · Guests & comps</button><button data-tab="model" aria-pressed="false">Model validation</button><button data-tab="plan" aria-pressed="false">Q6 · July decision</button></nav>
 <section class="hero" id="overview" aria-labelledby="july-heading">
   <div class="eyebrow">July 2025 recommendation</div>
   <h1 id="july-heading">Cancel the blanket replacement.</h1>
   <p>Inspect one cabinet for a payout issue and wait for stronger evidence before moving another. The July plan keeps <strong id="hero-reserve"></strong> in reserve.</p>
   <p id="cohort-verdict" class="cohort-verdict"></p>
-  <button class="hero-audit-link" data-evidence="M-5076" data-section="verdict-check">See the bottom-ten verdicts</button>
+  <div class="hero-links"><button class="hero-audit-link" data-evidence="M-5076" data-section="verdict-check">See the bottom-ten verdicts</button><button class="hero-audit-link" data-goto="map">See how the evidence connects →</button></div>
   <div id="decision-cards" class="decision-cards" aria-label="Recommended actions"></div>
   <div id="move-proof" class="move-proof"></div>
 </section>
@@ -145,6 +177,7 @@ const details = (title,body) => '<details><summary>'+title+'</summary><p>'+body+
 const how = body => details('How this works',body);
 const SUBTABS = {
   overview:[],
+  map:[],
   audit:[['verdicts','Bottom-ten verdicts'],['machine','Machine file & floor map'],['method','How to read the audit']],
   demand:[['trend','Demand trend'],['downtime','Downtime impact'],['repairs','Repairs & tickets'],['events','Event days']],
   guests:[['players','Player concentration'],['comps','Comps & loyalty']],
@@ -814,7 +847,257 @@ function renderPlan(){
     promotion:()=>panel('Promotion weekend evidence',renderPromotion(),'promotion-check'),
     catalog:()=>panel('Decisions across the action catalog',consideredActions(),'catalog-check')});
 }
-const renderers={overview:()=>'',audit:renderAudit,demand:renderDemand,guests:renderGuests,model:renderModel,plan:renderPlan};
+// ---- Evidence map: an Obsidian-style force graph of how data, evidence and decisions connect ----
+const MAP_TYPES=[['decision','Decision','#f5cc78'],['action','Action','#b9deb5'],['question','Question','#d5c3f0'],
+  ['evidence','Evidence','#f0a46b'],['machine','Bottom-ten machine','#ff8f87'],['flag','Review flag','#8fc3e8'],['source','Data source','#b5a69a']];
+const MAP_COLOR=Object.fromEntries(MAP_TYPES.map(([t,,c])=>[t,c]));
+const MAP_LABEL=Object.fromEntries(MAP_TYPES.map(([t,l])=>[t,l]));
+const MAP_R={decision:15,action:10,question:9,evidence:7.5,machine:5.5,flag:7,source:7};
+const FLAG_LABELS={'Inspect hold':'Payout flag','Quiet zone':'Quiet placement','Short exposure':'Short exposure','Low peer demand':'Weak local demand','Downtime':'Downtime flag'};
+const mapView={hidden:new Set(),selected:'plan',pos:new Map(),t:null};
+let mapRun=0, mapGraph=null;
+
+// Builds nodes and links from the same analysis objects the tabs use, so the map can't drift from them.
+function buildEvidenceGraph(){
+  const nodes=[], links=[];
+  const add=(id,type,label,summary,value,go)=>nodes.push({id,type,label,summary,value:value??'',go:go??null});
+  const link=(a,b)=>links.push({a,b});
+  const staffing=schedulingScore('Peak',10);
+  const pairsGained=moveCases.filter(r=>r.main.bankPct>0).length;
+
+  add('plan','decision','July plan','Cancel the blanket replacement, inspect one cabinet, and keep the rest in reserve.',cash(reserve)+' reserve',{jump:'action-summary'});
+
+  add('act-inspect','action','Inspect M-1158','Its payout ran '+cash(inspect.theo-inspect.win)+' below what its settings imply.',cash(inspectionCost),{jump:'inspection-plan'});
+  add('act-move','action','Defer M-1181 move','Only '+pairsGained+' of '+moveCases.length+' past moves gained across both banks.','Defer',{jump:'move-check'});
+  add('act-staff','action','Flex staffing','Add coverage when forecast wagers reach '+cash(peakThreshold)+'.',cash(peakThreshold),{jump:'staffing-check'});
+  add('act-promo','action','Promotion (conditional)','Pilot only with registrations above the break-even hurdle.',cash(promoCost),{jump:'promotion-check'});
+  add('act-reserve','action','Hold reserve','Keep unspent budget until other actions have stronger evidence.',cash(reserve),{jump:'catalog-check'});
+  for(const a of ['act-inspect','act-move','act-staff','act-promo','act-reserve'])link('plan',a);
+
+  add('q1','question','Q1 · Machine audit','Why do the lowest earners earn so little?','',{goto:'audit'});
+  add('q2','question','Q2/Q3 · Demand & uptime','How did demand and machine uptime change?','',{goto:'demand'});
+  add('q4','question','Q4/Q5 · Guests & comps','Who plays, and what do comps cost?','',{goto:'guests'});
+  add('qm','question','Model validation','Is the forecast good enough to staff from?','',{goto:'model'});
+  add('q6','question','Q6 · July decision','What should July’s budget fund?','',{goto:'plan'});
+  link('q6','plan');
+
+  add('ev-verdicts','evidence','Bottom-ten verdicts',n(quietCohort.length)+' of 10 lowest earners sit in quiet zones; '+n(payoutCohort.length)+' has a payout flag.','',{jump:'verdict-check'});
+  add('ev-hold','evidence','Weekly payout check','M-1158’s week-by-week payout gap against same-configuration peers.',pp(inspect.res),{evidence:inspect.id,section:'hold-check'});
+  add('ev-moves','evidence','Past moves','What happened to cabinets and banks after four historical moves.',pairsGained+' of '+moveCases.length+' pairs gained',{jump:'move-check'});
+  add('ev-move-econ','evidence','Relocation economics','Net July value of moving M-1181 under capture and displacement scenarios.',pct(moveBreakEven,0)+' break-even',{goto:'plan/moves'});
+  add('ev-holdout','evidence','Forecast holdout test','Weekday averages vs “same day last week” on 61 unseen days.',pct(1-m1/m7)+' lower error',{goto:'model/holdout'});
+  add('ev-staffing','evidence','Staffing replay','Simulated May–June staffing calls from each forecast.',n(staffing.hits)+' of '+n(staffing.hits+staffing.missed)+' peaks caught',{jump:'staffing-check'});
+  add('ev-demand','evidence','Demand trend','Monthly wagers alongside events, entrances and city visitors.','',{goto:'demand/trend'});
+  add('ev-downtime','evidence','Downtime impact','Whether lost play from downtime explains the demand trend.',cash(sum(auditRows,r=>r.lost)/fullDays)+'/day at risk',{goto:'demand/downtime'});
+  add('ev-events','evidence','Event days','Wagers on event days vs similar ordinary days.',n(data.events.length)+' events',{goto:'demand/events'});
+  add('ev-promo','evidence','Promotion evidence','Lift from past promotions and the hurdle a July pilot must clear.',pct(promoHurdle,1)+' hurdle',{jump:'promotion-check'});
+  add('ev-players','evidence','Player concentration','How much of carded play and losses came from the top 1%.','',{goto:'guests/players'});
+  add('ev-comps','evidence','Comps & loyalty','What comps cost relative to play, month by month.','',{goto:'guests/comps'});
+  add('ev-catalog','evidence','Action catalog','Every priced action and why it was funded, deferred or passed.',n(data.actions.length)+' actions',{jump:'catalog-check'});
+
+  for(const [a,list] of Object.entries({'act-inspect':['ev-hold','ev-verdicts'],'act-move':['ev-moves','ev-move-econ'],'act-staff':['ev-staffing','ev-holdout'],
+    'act-promo':['ev-promo','ev-events'],'act-reserve':['ev-catalog'],
+    q1:['ev-verdicts','ev-hold'],q2:['ev-demand','ev-downtime','ev-events'],q4:['ev-players','ev-comps'],'ev-comps':['ev-catalog'],qm:['ev-holdout','ev-staffing'],q6:['ev-catalog','ev-move-econ','ev-promo']}))
+    for(const b of list)link(a,b);
+
+  const flagsSeen=new Set();
+  cohort.forEach((x,i)=>{
+    add('m-'+x.id,'machine',x.id,'Rank '+(i+1)+' by house win · '+reviewAction(x)+'.',cash(x.win),{evidence:x.id});
+    link('m-'+x.id,'ev-verdicts');
+    for(const f of x.flags){flagsSeen.add(f);link('m-'+x.id,'flag-'+f);}
+  });
+  for(const f of flagsSeen){
+    const count=cohort.filter(x=>x.flags.includes(f)).length;
+    add('flag-'+f,'flag',FLAG_LABELS[f]??f,n(count)+' of '+n(cohort.length)+' bottom-ten cabinets carry this flag.',n(count)+' of '+n(cohort.length),{jump:'verdict-check'});
+  }
+  link('act-inspect','m-'+inspect.id);link('act-move','m-'+move.id);
+
+  add('src-meters','source','Machine-day meters','Daily wagers, payouts, hours and downtime for every cabinet.',n(data.daily.length)+' machine-days');
+  add('src-property','source','Property daily totals','Whole-floor wagers, traffic and forecasts by gaming day.',n(data.property.length)+' days');
+  add('src-players','source','Loyalty-card play','Carded wagers, results and comps by player and month.',n(data.players.length)+' records');
+  add('src-events','source','Event calendar','Listed events and holidays used to adjust comparisons.',n(data.events.length)+' events');
+  add('src-moves','source','Move history','Past cabinet relocations and their comparison groups.',n(data.moves.length)+' moves');
+  add('src-catalog','source','Action catalog','Costs and lead times for every July action.',n(data.actions.length)+' actions');
+  add('src-city','source','LVCVA visitation','Monthly Las Vegas visitor counts for market context.',n(data.city.length)+' months');
+  for(const [a,list] of Object.entries({'src-meters':['ev-verdicts','ev-hold','ev-downtime','ev-moves','ev-demand'],'src-property':['ev-demand','ev-holdout','ev-staffing','ev-events'],
+    'src-players':['ev-players','ev-comps'],'src-events':['ev-events','ev-holdout','ev-promo'],'src-moves':['ev-moves'],'src-catalog':['ev-catalog','ev-move-econ'],'src-city':['ev-demand']}))
+    for(const b of list)link(a,b);
+
+  const byId=new Map(nodes.map(nd=>[nd.id,nd]));
+  for(const nd of nodes)nd.nb=new Set();
+  const valid=links.filter(l=>byId.has(l.a)&&byId.has(l.b));
+  for(const l of valid){byId.get(l.a).nb.add(l.b);byId.get(l.b).nb.add(l.a);}
+  return {nodes,links:valid,byId};
+}
+
+function mapGoButton(go,label){
+  if(!go)return '';
+  if(go.jump)return '<button data-jump="'+go.jump+'">'+label+'</button>';
+  if(go.evidence)return '<button data-evidence="'+go.evidence+'"'+(go.section?' data-section="'+go.section+'"':'')+'>'+label+'</button>';
+  return '<button data-goto="'+go.goto+'">'+label+'</button>';
+}
+function mapCard(id){
+  const nd=mapGraph.byId.get(id);
+  if(!nd)return note('Select a dot to see what it is.');
+  const chips=[...nd.nb].map(o=>mapGraph.byId.get(o)).filter(o=>!mapView.hidden.has(o.type))
+    .map(o=>'<button data-mapselect="'+o.id+'"><span class="dot" style="background:'+MAP_COLOR[o.type]+'"></span>'+esc(o.label)+'</button>').join('');
+  return '<span class="eyebrow" style="color:'+MAP_COLOR[nd.type]+'">'+MAP_LABEL[nd.type]+'</span><h3>'+esc(nd.label)+'</h3>'+
+    (nd.value?'<strong class="metric">'+nd.value+'</strong>':'')+'<p>'+nd.summary+'</p>'+
+    (nd.go?mapGoButton(nd.go,nd.type==='source'?'Open':'Open evidence →'):'<p class="muted">Raw data feeding the evidence below.</p>')+
+    (chips?'<p class="muted map-conn">Connected to</p><div class="map-chips">'+chips+'</div>':'');
+}
+function renderMap(){
+  mapGraph=buildEvidenceGraph();
+  if(!mapGraph.byId.has(mapView.selected))mapView.selected='plan';
+  const legend=MAP_TYPES.map(([t,l,c])=>'<button data-maptype="'+t+'" aria-pressed="'+!mapView.hidden.has(t)+'"><span class="dot" style="background:'+c+'"></span>'+l+'</button>').join('');
+  const list=MAP_TYPES.map(([t,l])=>'<h3>'+l+'</h3><ul>'+mapGraph.nodes.filter(nd=>nd.type===t).map(nd=>
+    '<li><strong>'+esc(nd.label)+'</strong>'+(nd.value?' · '+nd.value:'')+' — '+nd.summary+' '+mapGoButton(nd.go,'Open')+'</li>').join('')+'</ul>').join('');
+  return '<div class="stack">'+panel('Evidence map',
+    note('Each dot is a decision, piece of evidence, machine or data source; lines show what supports what. Hover or tap a dot to trace its links and open its evidence. Drag to rearrange; scroll or use + / − to zoom.')+
+    '<div class="map-legend" role="group" aria-label="Show or hide dot types">'+legend+'</div>'+
+    '<div class="map-layout"><div class="map-stage"><svg id="map-svg" class="map-svg" role="img" aria-label="Network graph of the dashboard’s decisions, evidence, machines and data sources. Use the list view below for an accessible version."><g id="map-world"><g id="map-edges"></g><g id="map-nodes"></g></g></svg>'+
+    '<div class="map-toolbar"><button data-mapzoom="in" aria-label="Zoom in">+</button><button data-mapzoom="out" aria-label="Zoom out">−</button><button data-mapzoom="fit" aria-label="Fit graph to view">⤢</button></div></div>'+
+    '<aside class="map-card card" id="map-card" aria-live="polite">'+mapCard(mapView.selected)+'</aside></div>'+
+    '<details class="map-list"><summary>View as list</summary>'+list+'</details>','evidence-map')+'</div>';
+}
+
+function startMap(){
+  const run=++mapRun;
+  const svg=$('map-svg'); if(!svg)return;
+  const SVGNS='http://www.w3.org/2000/svg';
+  const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let W=svg.clientWidth, H=svg.clientHeight;
+  svg.setAttribute('viewBox','0 0 '+W+' '+H);
+  const {nodes,links,byId}=mapGraph;
+  // Deterministic ring start so the layout looks the same on every visit.
+  const ring={decision:0,action:95,question:185,evidence:150,machine:270,flag:225,source:300};
+  const fresh=nodes.some(nd=>!mapView.pos.has(nd.id));
+  const groups=by(nodes,nd=>nd.type);
+  for(const [type,list] of groups)list.forEach((nd,i)=>{
+    const saved=mapView.pos.get(nd.id);
+    const angle=2*Math.PI*i/list.length+Object.keys(ring).indexOf(type)*.7;
+    nd.x=saved?.x??Math.cos(angle)*ring[type]; nd.y=saved?.y??Math.sin(angle)*ring[type];
+    nd.vx=0;nd.vy=0;nd.fixed=false;nd.r=MAP_R[type]+Math.min(4,nd.nb.size*.35);
+  });
+  const L=links.map(l=>({s:byId.get(l.a),t:byId.get(l.b)}));
+  for(const l of L)l.d=l.s.type==='machine'&&l.t.type==='flag'?42:l.s.type==='source'?85:62;
+  let alpha=fresh?1:.06, alphaTarget=0, running=false, dragging=null;
+
+  function tick(){
+    alpha+=(alphaTarget-alpha)*.03;
+    for(let i=0;i<nodes.length;i++)for(let j=i+1;j<nodes.length;j++){
+      const a=nodes[i],b=nodes[j];let dx=b.x-a.x,dy=b.y-a.y,d2=dx*dx+dy*dy;
+      if(d2<1){dx=(i-j)*.1||.1;dy=.1;d2=dx*dx+dy*dy;}
+      const f=-260*alpha/d2; a.vx+=dx*f;a.vy+=dy*f;b.vx-=dx*f;b.vy-=dy*f;
+      const min=a.r+b.r+8,d=Math.sqrt(d2);
+      if(d<min){const p=(min-d)/d*.25;a.x-=dx*p;a.y-=dy*p;b.x+=dx*p;b.y+=dy*p;}
+    }
+    for(const l of L){
+      const dx=l.t.x-l.s.x,dy=l.t.y-l.s.y,d=Math.sqrt(dx*dx+dy*dy)||1,k=(d-l.d)/d*alpha*.35;
+      l.t.vx-=dx*k;l.t.vy-=dy*k;l.s.vx+=dx*k;l.s.vy+=dy*k;
+    }
+    for(const nd of nodes){
+      nd.vx-=nd.x*.02*alpha;nd.vy-=nd.y*.02*alpha;
+      if(nd.fixed){nd.x=nd.fx;nd.y=nd.fy;nd.vx=nd.vy=0;continue;}
+      nd.vx*=.6;nd.vy*=.6;nd.x+=nd.vx;nd.y+=nd.vy;
+    }
+  }
+  // Build SVG once; each frame only moves it.
+  const edgeEls=L.map(l=>{const e=document.createElementNS(SVGNS,'line');e.setAttribute('class','edge');$('map-edges').appendChild(e);return e;});
+  const nodeEls=new Map(nodes.map(nd=>{
+    const g=document.createElementNS(SVGNS,'g');
+    g.setAttribute('class','node'+(nd.id===mapView.selected?' sel':''));g.dataset.id=nd.id;
+    g.setAttribute('tabindex','0');g.setAttribute('role','button');g.setAttribute('aria-label',MAP_LABEL[nd.type]+': '+nd.label);
+    const c=document.createElementNS(SVGNS,'circle');c.setAttribute('r',nd.r);c.setAttribute('fill',MAP_COLOR[nd.type]);
+    const t=document.createElementNS(SVGNS,'text');t.setAttribute('y',nd.r+13);t.textContent=nd.label;
+    t.setAttribute('class',['decision','action','question'].includes(nd.type)?'major':'minor');
+    g.append(c,t);$('map-nodes').appendChild(g);return [nd.id,g];
+  }));
+  function paint(){
+    L.forEach((l,i)=>{const e=edgeEls[i];e.setAttribute('x1',l.s.x);e.setAttribute('y1',l.s.y);e.setAttribute('x2',l.t.x);e.setAttribute('y2',l.t.y);});
+    for(const nd of nodes)nodeEls.get(nd.id).setAttribute('transform','translate('+nd.x.toFixed(1)+','+nd.y.toFixed(1)+')');
+  }
+  let view=mapView.t??{k:1,x:W/2,y:H/2};
+  function applyView(){
+    $('map-world').setAttribute('transform','translate('+view.x+','+view.y+') scale('+view.k+')');
+    svg.classList.toggle('zoomed',view.k>1.3);mapView.t=view;
+  }
+  function fit(){
+    const shown=nodes.filter(nd=>!mapView.hidden.has(nd.type));if(!shown.length)return;
+    const xs=shown.map(nd=>nd.x),ys=shown.map(nd=>nd.y);
+    const x0=Math.min(...xs)-40,x1=Math.max(...xs)+40,y0=Math.min(...ys)-30,y1=Math.max(...ys)+40;
+    const k=Math.min(2,W/(x1-x0),H/(y1-y0));view={k,x:W/2-k*(x0+x1)/2,y:H/2-k*(y0+y1)/2};applyView();
+  }
+  function frame(){
+    if(run!==mapRun){running=false;return;}
+    tick();paint();
+    if(alpha>.004||dragging)requestAnimationFrame(frame);
+    else{running=false;for(const nd of nodes)mapView.pos.set(nd.id,{x:nd.x,y:nd.y});}
+  }
+  function heat(a){alpha=Math.max(alpha,a);if(!running&&!reduce){running=true;requestAnimationFrame(frame);}}
+  // Pre-settle off screen so the graph opens composed, then let it breathe into place.
+  if(fresh){for(let i=0;i<(reduce?400:300);i++)tick();}
+  if(reduce){while(alpha>.004)tick();for(const nd of nodes)mapView.pos.set(nd.id,{x:nd.x,y:nd.y});}
+  paint();
+  if(fresh||!mapView.t)fit();else applyView();
+  if(!reduce&&fresh){alpha=.12;heat(.12);}
+
+  function highlight(id){
+    const nd=id&&byId.get(id);
+    svg.classList.toggle('hl',!!nd);
+    for(const [nid,g] of nodeEls)g.classList.toggle('on',!!nd&&(nid===id||nd.nb.has(nid)));
+    L.forEach((l,i)=>edgeEls[i].classList.toggle('on',!!nd&&(l.s===nd||l.t===nd)));
+  }
+  function applyHidden(){
+    for(const [nid,g] of nodeEls)g.classList.toggle('off',mapView.hidden.has(byId.get(nid).type));
+    L.forEach((l,i)=>edgeEls[i].classList.toggle('off',mapView.hidden.has(l.s.type)||mapView.hidden.has(l.t.type)));
+  }
+  function select(id){
+    mapView.selected=id;
+    for(const [nid,g] of nodeEls)g.classList.toggle('sel',nid===id);
+    $('map-card').innerHTML=mapCard(id);highlight(id);
+  }
+  applyHidden();
+  const toWorld=(cx,cy)=>{const r=svg.getBoundingClientRect();return [(cx-r.left-view.x)/view.k,(cy-r.top-view.y)/view.k];};
+  let pan=null, start=null, moved=false;
+  svg.addEventListener('pointerdown',e=>{
+    const g=e.target.closest('.node');start=[e.clientX,e.clientY];moved=false;svg.setPointerCapture(e.pointerId);
+    if(g){dragging=byId.get(g.dataset.id);[dragging.fx,dragging.fy]=toWorld(e.clientX,e.clientY);dragging.fixed=true;alphaTarget=.2;heat(.2);}
+    else{pan={x:view.x,y:view.y};svg.classList.add('panning');}
+  });
+  svg.addEventListener('pointermove',e=>{
+    if(!start)return;
+    if(Math.hypot(e.clientX-start[0],e.clientY-start[1])>4)moved=true;
+    if(dragging){[dragging.fx,dragging.fy]=toWorld(e.clientX,e.clientY);if(reduce){tick();paint();}}
+    else if(pan){view={...view,x:pan.x+e.clientX-start[0],y:pan.y+e.clientY-start[1]};applyView();}
+  });
+  const end=()=>{
+    if(dragging){dragging.fixed=false;alphaTarget=0;if(!moved)select(dragging.id);else for(const nd of nodes)mapView.pos.set(nd.id,{x:nd.x,y:nd.y});dragging=null;}
+    pan=null;start=null;svg.classList.remove('panning');
+  };
+  svg.addEventListener('pointerup',end);svg.addEventListener('pointercancel',end);
+  const zoomAt=(factor,cx,cy)=>{const k=Math.max(.35,Math.min(4,view.k*factor));view={k,x:cx-(cx-view.x)*k/view.k,y:cy-(cy-view.y)*k/view.k};applyView();};
+  svg.addEventListener('wheel',e=>{e.preventDefault();const r=svg.getBoundingClientRect();zoomAt(Math.exp(-e.deltaY*.0015),e.clientX-r.left,e.clientY-r.top);},{passive:false});
+  svg.addEventListener('pointerover',e=>{const g=e.target.closest('.node');if(g&&!dragging)highlight(g.dataset.id);});
+  svg.addEventListener('pointerout',e=>{const g=e.target.closest('.node');if(g&&!dragging&&!g.contains(e.relatedTarget))highlight(null);});
+  svg.addEventListener('focusin',e=>{const g=e.target.closest('.node');if(g)highlight(g.dataset.id);});
+  svg.addEventListener('focusout',()=>highlight(null));
+  svg.addEventListener('keydown',e=>{const g=e.target.closest('.node');if(g&&(e.key==='Enter'||e.key===' ')){e.preventDefault();select(g.dataset.id);}});
+  $('evidence-map').addEventListener('click',e=>{
+    const b=e.target.closest('button');if(!b)return;
+    if(b.dataset.mapzoom){b.dataset.mapzoom==='fit'?fit():zoomAt(b.dataset.mapzoom==='in'?1.3:1/1.3,W/2,H/2);}
+    else if(b.dataset.maptype){const t=b.dataset.maptype;mapView.hidden.has(t)?mapView.hidden.delete(t):mapView.hidden.add(t);b.setAttribute('aria-pressed',String(!mapView.hidden.has(t)));applyHidden();$('map-card').innerHTML=mapCard(mapView.selected);}
+    else if(b.dataset.mapselect){select(b.dataset.mapselect);}
+  });
+  highlight(null);
+  const ro=new ResizeObserver(()=>{
+    if(run!==mapRun){ro.disconnect();return;}
+    const w=svg.clientWidth,h=svg.clientHeight;if(!w||(w===W&&h===H))return;
+    view={...view,x:view.x+(w-W)/2,y:view.y+(h-H)/2};W=w;H=h;svg.setAttribute('viewBox','0 0 '+W+' '+H);applyView();
+  });
+  ro.observe(svg);
+}
+const renderers={overview:()=>'',map:renderMap,audit:renderAudit,demand:renderDemand,guests:renderGuests,model:renderModel,plan:renderPlan};
 $('from').innerHTML=months.map((m,i)=>opt(i,m+' 2025')).join('');
 $('through').innerHTML=$('from').innerHTML;
 $('bank').innerHTML=opt('','All banks')+zoneBanks.map(r=>opt(r[0],r[0]+' · '+zones[r[2]])).join('');
@@ -905,7 +1188,7 @@ function draw(focus){
   $('from').value=state.from;$('through').value=state.to;$('bank').value=state.bank;
   const s=scope();
   const overview=state.tab==='overview';
-  $('overview').hidden=!overview;$('tools').hidden=overview;
+  $('overview').hidden=!overview;$('tools').hidden=overview||state.tab==='map';
   const fixed=['model','plan'].includes(state.tab);
   $('tools').classList.toggle('fixed',fixed);
   const bankAllowed=['audit','demand'].includes(state.tab);
@@ -921,6 +1204,7 @@ function draw(focus){
   animateView(viewKey!==lastViewKey?'enter':'refresh');
   lastViewKey=viewKey;
   if(state.tab==='guests'){$('region').value=state.region;$('tier').value=state.tier;}
+  if(state.tab==='map')startMap();else mapRun++;
   if(focus)document.querySelector(focus)?.focus({preventScroll:true});
 }
 document.addEventListener('input',e=>{
@@ -948,6 +1232,7 @@ document.addEventListener('click',e=>{
     if(sameView){rememberLocation(section);openEvidence(section);return;}
   }
   else if(d.tab){state.tab=d.tab;state.sub=firstSub(d.tab);toTop=true;}
+  else if(d.goto){const [tab,sub]=d.goto.split('/');state.tab=tab;state.sub=sub||firstSub(tab);toTop=true;}
   else if(d.sub){state.sub=d.sub;focus='[data-sub="'+d.sub+'"]';toTop=true;}
   else if(d.bank){state.bank=state.bank===d.bank?'':d.bank;state.machine='';focus='[data-bank="'+d.bank+'"]';}
   else if(d.machine){state.machine=d.machine;state.sub='machine';section=d.section||'machine-check';}

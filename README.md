@@ -17,6 +17,7 @@ The dashboard opens on an **Overview** of the recommendation. Each analysis tab 
 | View | Sub-tabs | What you can do |
 | --- | --- | --- |
 | **Overview** | — | Read the July recommendation and jump to the evidence behind each action. |
+| **Evidence map** | — | Explore a graph of how data sources, evidence, machines and actions connect; click any dot to open its evidence. |
 | **Machine audit** | Bottom-ten verdicts · Machine file & floor map · How to read the audit | Expand the bottom-ten verdicts, filter by bank or month, and inspect the evidence behind each recommendation. |
 | **Demand & uptime** | Demand trend · Downtime impact · Repairs & tickets · Event days | Compare wagering trends with event timing, traffic, and estimated downtime exposure. |
 | **Guests & comps** | Player concentration · Comps & loyalty | Explore tracked wagering, player concentration, and loyalty costs by guest segment. |
