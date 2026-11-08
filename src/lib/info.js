@@ -121,6 +121,12 @@ export const LINE_INFO = {
   'Break-even placement capture at 0% / 25% displacement': "Share of the placement gap the move must capture to pay off in July, first assuming no play is taken from other machines, then assuming a quarter of the gain is.",
   // Promotion weekend evidence
   'Catalog terms': "Price per promotion weekend, the notice it needs before it can run, and the most weekends the catalog allows in July.",
+  // Demand → Zones & context
+  'Selected bank coin-in per day': "The selected bank's average daily wagers in the first and second comparison month, and the change. Set it beside its zone's row to see whether the bank followed its zone.",
+  'Zones with fewer entries per day': "How many floor zones logged fewer counter entries per day in the later comparison month. Entries count crossings, not guests, so read it as a rough traffic direction.",
+  'Heat effect per +10 °C': "Estimated change in daily wagers when the airport's daily high is 10 °C warmer, holding the weekday fixed. If the interval spans zero, heat shows no measurable effect.",
+  'Rain day effect': "Estimated difference in daily wagers on days with at least 1 mm of rain, compared with the same weekday otherwise. Very few rain days make this fragile.",
+  'Random same-size day sets as low as the rain days': "How often a random set of ordinary days, as many as the rain days, averaged as far below weekday expectation. Rarely means the rain-day dip is unusual.",
 };
 
 export const PANEL_INFO = {
@@ -170,6 +176,12 @@ export const PANEL_INFO = {
   'Relocation economics with displaced play': "July net expected win from moving M-1181 across a grid of assumptions about how much of the gap it captures and how much play it pulls from other machines.",
   'Promotion weekend evidence': "Wager and expected-win lift from two past promotions, during the event and the week after, against matched event-free days, and the share a July weekend must repeat to break even.",
   'Decisions across the action catalog': "Every action available in the July catalog with its cost per unit and the reason it was funded, deferred or passed over.",
+  'Zone demand per available hour': "Wagers per working machine-hour in each floor zone by month. Because it divides by available hours, zone size and downtime don't distort the comparison.",
+  'Which zones drove the change?': "Splits the change in property wagers per day between the comparison months into each zone's share. The zone rows add up exactly to the property total.",
+  'Zone traffic': "Door and zone counter entries per day by zone, scaled from the minutes counters were working. Offline hours are left out, and entries are crossings, not unique guests.",
+  'When the floor plays': "Average wagers in each clock hour of each gaming-day weekday, from the hourly machine meters. Use it to see when demand peaks and when work disrupts the least play.",
+  'Weather as a competing explanation': "Tests whether hot or rainy days changed daily wagers once the weekday is accounted for. Real NOAA weather, used as context only and never as a forecast input.",
+  'Missouri market comparison': "Compares this property's daily wagers with real Missouri statewide slot handle, both indexed to the first selected month, to see whether the outside market moved the same way.",
 };
 
 export const CHART_INFO = {
@@ -185,6 +197,9 @@ export const CHART_INFO = {
   'Placebo dates': "The before/after price shift if the split were placed at each date. Ordinary dates sit near zero; the marked date is the detected break.",
   'Monthly loyalty economics': "Each month's comp cost as a share of the expected win from all slot play. A rising line means rewards are taking a bigger slice of what the floor should earn.",
   'A fair test on future days': "Actual daily wagers for May and June against three forecasts made without seeing those days. The closer a forecast tracks the actual line, the better it would have planned staffing.",
+  'Zone demand per available hour': "Each line is a zone's wagers per available machine-hour by month. The gold line is the zone in focus; muted lines are the other zones for context.",
+  'When the floor plays': "Each cell is one weekday and clock hour; lighter gold means more wagers in that hour. Rows are gaming days, so hours after midnight belong to the previous day.",
+  'Missouri market comparison': "Both lines start at 100 in the first selected month. If they move together, the change looks market-wide; if only the gold line moves, look at the property.",
 };
 
 export const DECISION_INFO = {

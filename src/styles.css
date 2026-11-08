@@ -379,3 +379,15 @@ kbd{padding:1px 7px;border-radius:6px;border:1px solid #6e2a26;font:600 11px/1.6
 .multiple .chart-block{margin:0}
 .chart .gap-fill{opacity:.3}
 .miss-key{display:inline-block;width:12px;height:10px;margin-right:6px;border-radius:2px;background:#d9637f;opacity:.55;vertical-align:-1px}
+/* Weekday × hour heat map (Demand → Zones) */
+.heat-grid{display:grid;gap:2px;font-variant-numeric:tabular-nums}
+.heat-row{display:grid;grid-template-columns:2.4rem repeat(24,minmax(0,1fr));gap:2px;align-items:center}
+.heat-head span{font-size:11px;color:var(--muted);text-align:left;white-space:nowrap;overflow:visible}
+.heat-head .heat-corner{font-size:0}
+.heat-row [role=rowheader]{font-size:12px;color:var(--muted)}
+.heat-cell{display:block;height:24px;border-radius:3px;cursor:default}
+.heat-cell.on,.heat-cell:focus-visible{outline:2px solid var(--text);outline-offset:1px}
+.heat-readout{min-height:1.5em;color:var(--text);font-size:13px;margin:8px 0 4px}
+.heat-legend{align-items:center}
+.heat-scale i{display:inline-block;width:120px;height:10px;border-radius:3px;vertical-align:middle}
+.zone-focus{color:var(--gold);font-weight:700}

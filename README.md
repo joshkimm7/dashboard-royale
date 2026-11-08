@@ -20,7 +20,7 @@ Navigation sits in a collapsible left sidebar (a drawer on phones); the top bar'
 | **Overview** | — | Read the July recommendation and jump to the evidence behind each action. |
 | **Evidence map** | — | Follow the flow from data sources to evidence (grouped by question), actions and the July plan; hover any box to trace its line of evidence and open it. |
 | **Machine audit** | Bottom-ten verdicts · Adjusted ranking · Machine file & floor map · How to read the audit | Expand the bottom-ten verdicts, filter by bank or month, and inspect the evidence behind each recommendation. |
-| **Demand & uptime** | Demand trend · Downtime impact · Repairs & tickets · Event days | Compare wagering trends with event timing, traffic, and estimated downtime exposure. |
+| **Demand & uptime** | Demand trend · Zones & context · Downtime impact · Repairs & tickets · Event days | Compare wagering trends with event timing, traffic, and estimated downtime exposure; split the April→June change by zone, see when the floor plays, and test weather and the Missouri market as competing explanations. |
 | **Guests & comps** | Player concentration · Comps & loyalty | Explore tracked wagering, player concentration, and loyalty costs by guest segment. |
 | **Model validation** | Holdout test · Staffing calls · July forecast | Compare weekday averages with a seven-day lag and a constant forecast on a 61-day holdout, then see how each forecast changes simulated staffing calls. |
 | **July decision** | Action summary · Inspect & defer · Past moves · Promotion · Full catalog | Review the budget, compare historical relocations, and test repair quotes under different recovery assumptions. |

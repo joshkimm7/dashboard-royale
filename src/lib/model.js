@@ -1,6 +1,7 @@
 // All dataset-wide analysis, ported unchanged from the original script's top-level code.
 // createModel runs once at startup; components read the result through useModel().
 import { by, cash, month, months, n, ratio, sum, week } from './format.js';
+import { heatGrid, missouriMonthly, zoneContribution, zoneTraffic } from './zones.js';
 
 export const peerDemandCutoff = .8;
 export const hasPeerBenchmark = (machine, key) => machine.zoneCover >= .5 && machine[key] != null;
@@ -517,7 +518,30 @@ export function createModel(data) {
     return weekdays.length === 7 ? sum(weekdays, g => sum(g, value) / g.length) / 7 : null;
   }
 
+  // Q2 "why": April → June zone decomposition, zone traffic, the busiest hour, weather and the Missouri market (full floor).
+  const zoneFinding = (() => {
+    const c = zoneContribution(auditRows, data.dates, weekdayAdjusted, 3, 5);
+    const biggest = c.zones.slice().sort((x, y) => Math.abs(y.change) - Math.abs(x.change))[0];
+    const steepest = c.zones.slice().sort((x, y) => x.b.rate / x.a.rate - y.b.rate / y.a.rate)[0];
+    const traffic = zoneTraffic(data.zoneTraffic, data.dates, 0, fullDays - 1);
+    const entryChange = data.zoneTraffic.zones.map(z => traffic.get(z, 5).perDay / traffic.get(z, 3).perDay - 1);
+    const cells = heatGrid(data.heat, null, 0, 5), peak = cells.reduce((x, y) => (y.value > x.value ? y : x));
+    const mo = missouriMonthly(data.missouri), changes = mo.propertyChange(3, 5);
+    const perDay = mm => (rows => sum(rows, r => r[3]) / rows.length)(data.property.filter(r => month(r[0]) === mm));
+    const coverage = sum(data.zoneTraffic.rows, r => r[3]) / (sum(data.zoneTraffic.dayMinutes, v => v) * data.zoneTraffic.zones.length);
+    return {
+      contribution: c, biggest, steepest, hours: sum(c.zones, r => r.hoursEffect), rate: sum(c.zones, r => r.rateEffect),
+      trafficFell: entryChange.filter(v => v < 0).length, trafficZones: entryChange.length, coverage,
+      offline: sum(data.zoneTraffic.rows, r => r[4]), peak: { day: data.heat.weekdays[peak.weekday], hour: peak.hour, value: peak.value },
+      heat: data.weather.weekday.heat.map(v => 10 * v), heatMonth: data.weather.month.heat.map(v => 10 * v), rain: data.weather.weekday.rain,
+      rainDays: data.weather.rainDays, rainGap: data.weather.rainGap, placebo: data.weather.placebo,
+      ownChange: perDay(5) / perDay(3) - 1, moChange: mo.state[5].perDay / mo.state[3].perDay - 1,
+      moFell: changes.filter(r => r.change < 0).length, moCount: changes.length,
+    };
+  })();
+
   return {
+    zoneFinding,
     data, dict, zones, fullDays, auditRows, zoneBanks, fullSummary, scope, regions, tiers, ageBands, ageOf, playerRows, fullOutcomes, months,
     holdout, mae, pairedSummary, m1, m7, mCalendar, peakThreshold, quietThreshold, schedulingTier, schedulingScore,
     inspect, focalWeeks, holdGap, worstWeek, leaveOneOut, withoutWorst, maxLeaveOneOutQ, inspectPeers, peerWeeks, weekLabel, matchedPayoutPeers,

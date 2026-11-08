@@ -5,11 +5,12 @@ import { FLAG_LABELS } from '../lib/evidence.js';
 
 const QUESTION_PATTERNS = [
   ['q1', /\bq\s*1\b|machine audit|bottom[\s-]*(ten|10)|lowest|low earn|underperform|verdict|replace/],
-  ['q2', /\bq\s*[23]\b|demand|uptime|downtime|traffic|visitor|entrance|repair|ticket|outage/],
+  ['q2', /\bq\s*[23]\b|demand|uptime|downtime|traffic|visitor|entrance|repair|ticket|outage|zone|weather|missouri|heat ?map/],
   ['q4', /\bq\s*[45]\b|guest|player|comp\b|comps|loyalty|carded|reward/],
   ['qm', /model|forecast|holdout|validation|predict|staff|mae|accuracy/],
   ['q6', /\bq\s*6\b|july|decision|plan\b|budget|reserve|catalog|spend|fund/],
 ];
+const REAL_SOURCES = ['src-city', 'src-weather', 'src-missouri'];
 const STOP = new Set('the a an and or of to in on for is are was were what who how why when about me tell show everything all it this that with do does did give summary summarize explain please can you i we our there their which any from by at be has have'.split(' '));
 const words = s => s.toLowerCase().replace(/[^a-z0-9\s-]/g, ' ').split(/\s+/).filter(w => w.length > 2 && !STOP.has(w));
 
@@ -31,6 +32,11 @@ function questionFacts(qid, m) {
       'Daily wagers averaged ' + cash(first[1]) + ' in ' + months[first[0]] + ' and ' + cash(last[1]) + ' in ' + months[last[0]] + ' (raw, before event and weekday adjustment).',
       'Machine downtime put about ' + cash(sum(auditRows, r => r.lost) / fullDays) + ' of wagers at risk per day over ' + n(sum(auditRows, r => r.down), 0) + ' out-of-service hours; even full recovery would not reverse the adjusted decline.',
       n(data.events.length) + ' listed events are compared with similar ordinary days to see how much they lifted play.',
+      (zf => 'April to June, property coin-in moved ' + cash(zf.contribution.total) + ' per day. By zone, ' + m.zones[zf.biggest.zone] + ' moved most (' + cash(zf.biggest.change) + '), and ' + m.zones[zf.steepest.zone] +
+        ' had the steepest drop in coin-in per available hour. Almost all of the change is coin-in per available hour (' + cash(zf.rate) + ') rather than machine-hours (' + cash(zf.hours) + '). Zone entries fell in ' + n(zf.trafficFell) + ' of ' + n(zf.trafficZones) + ' zones (counters covered ' + pct(zf.coverage, 1) + ' of hours; entries are not unique guests).')(m.zoneFinding),
+      (zf => 'Competing explanations from real outside data: ' + (zf.heat[1] < 0 && zf.heat[2] > 0 ? 'heat shows no detectable effect' : 'heat shows an effect') + ' (' + cash(zf.heat[0]) + ' per +10 °C, 95% interval ' + cash(zf.heat[1]) + ' to ' + cash(zf.heat[2]) +
+        '); the ' + n(zf.rainDays) + ' rain days ran ' + cash(zf.rainGap) + ' below weekday expectation' + (rain => rain ? ', and ' + n(rain) + ' of them fell in April or June.' : ', but none fell in April or June, so rain can’t explain that change.')(data.weather.days.filter(([, mm], d) => mm >= 1 && [3, 5].includes(month(data.dates[d]))).length) +
+        ' Missouri slot handle per day moved ' + pct(zf.moChange) + ' April to June versus ' + pct(zf.ownChange) + ' here' + (Math.sign(zf.moChange) === Math.sign(zf.ownChange) ? ', so part of the change looks market-wide.' : ', so the outside market moved the other way.') + ' Weather and Missouri data are context only, never forecast inputs.')(m.zoneFinding),
     ];
   }
   if (qid === 'q4') {
@@ -124,7 +130,7 @@ export function answer(text, graph, m) {
   if (/\bdata\b|source|where does|come from|dataset/.test(t)) {
     const sources = graph.nodes.filter(nd => nd.type === 'source');
     return {
-      text: ['Everything on the dashboard is computed from ' + sources.length + ' data sources: ' + (sources.length - 1) + ' from the TAMU Datathon challenge (synthetic January–June 2025 casino data) and LVCVA visitor counts for market context.'],
+      text: ['Everything on the dashboard is computed from ' + sources.length + ' data sources: ' + (sources.length - REAL_SOURCES.length) + ' from the TAMU Datathon challenge (synthetic January–June 2025 casino data) and ' + REAL_SOURCES.length + ' real public sources used only as context (LVCVA visitor counts, NOAA weather and the Missouri Gaming Commission slot benchmark).'],
       items: sources.map(item), focus: { ids: sources.map(s => s.id), label: 'Data sources' },
     };
   }

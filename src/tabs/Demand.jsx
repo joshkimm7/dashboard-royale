@@ -1,6 +1,7 @@
 import { useModel } from '../modelContext.js';
 import { useNav } from '../nav.jsx';
 import { Card, Chart, Details, How, Line, Metrics, Note, Panel, Table, Tabbed, Takeaway } from '../components/ui.jsx';
+import DemandZones from './DemandZones.jsx';
 import { SERIES, by, cash, compact, month, months, n, pct, ratio, shifts, signedPct, sum } from '../lib/format.js';
 
 /** Splits the first-to-last change in daily wagers into playing time and wagers per occupied hour. */
@@ -188,6 +189,7 @@ export default function Demand({ scope: s }) {
             </Panel>
           </>
         ),
+        zones: () => <DemandZones />,
         downtime: () => (
           <>
             <Panel title="Can downtime explain the demand trend?">

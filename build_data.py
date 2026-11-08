@@ -428,6 +428,96 @@ for ticket in operations[operations.event_type.eq('move')].itertuples():
                   'main': compare_move(ticket.machine_id, day, 14),
                   'short': compare_move(ticket.machine_id, day, 7)})
 
+# Q2 zone traffic (guide §5): aggregate sensor-hours to zone x gaming day. A null count means the counter was offline,
+# never zero entries, so offline hours add no entries and no covered minutes; partial hours add the minutes they covered.
+# Counts are entries (door/zone crossings), not unique visitors, and seated players are never counted.
+zone_ids = sorted(load('floor_locations').query('node_type == "zone"').zone_id)
+traffic = load('zone_traffic_hourly')
+assert traffic.entries_count.isna().eq(traffic.counter_status.eq('offline')).all()
+assert traffic.coverage_minutes.where(traffic.counter_status.eq('offline'), 0).eq(0).all()
+traffic['gaming_date'] = (pd.to_datetime(traffic.hour_start_local) - pd.Timedelta(hours=6)).dt.date.astype(str)
+zone_days = traffic.groupby(['zone_id','gaming_date']).agg(entries=('entries_count','sum'), minutes=('coverage_minutes','sum'),
+                                                          offline=('counter_status', lambda s: int(s.eq('offline').sum()))).reset_index()
+assert len(zone_days) == len(zone_ids) * len(dates)
+# Reconciles with the property totals (entrance zones and all zones) in property_day.
+assert np.allclose(zone_days.groupby('gaming_date').entries.sum().reindex(dates), props.total_zone_entries_observed)
+zone_days['day'] = zone_days.gaming_date.map({d: i for i, d in enumerate(dates)})
+zone_days['zone'] = zone_days.zone_id.map({z: i for i, z in enumerate(zone_ids)})
+day_minutes = (cal.set_index('gaming_date').scheduled_seconds.reindex(dates) / 60).astype(int).tolist()
+print(f'Zone traffic: {int(traffic.counter_status.eq("offline").sum())} offline and {int(traffic.counter_status.eq("partial").sum())} partial sensor-hours; '
+      f'coverage {zone_days.minutes.sum() / (sum(day_minutes) * len(zone_ids)):.4f}')
+
+# Q2 weekday x hour heat map from machine_hour: coin-in per zone x month x gaming-day weekday x local clock hour, ordered
+# 06:00..05:00 so each row is one gaming day. Off-floor and unreported days are dropped by joining to the placed daily rows.
+hour_rows = pd.read_csv(guide_path('machine_hour'), usecols=['machine_id','gaming_date','local_hour','coin_in_cents'])
+hour_rows = hour_rows.merge(daily[['machine_id','gaming_date','zone_id']], on=['machine_id','gaming_date'], validate='many_to_one')
+assert np.isclose(hour_rows.coin_in_cents.sum() / 100, daily.coin_in_usd.sum())
+weekday_order = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
+hour_rows['cell'] = hour_rows.gaming_date.map(cal.set_index('gaming_date').local_weekday).map(weekday_order.index) * 24 + (hour_rows.local_hour - 6) % 24
+hour_rows['month'] = hour_rows.gaming_date.str[5:7].astype(int) - 1
+heat_sum = hour_rows.groupby(['zone_id','month','cell']).coin_in_cents.sum() / 100
+# Occurrences: how many gaming days in the month contributed each clock hour (the DST spring-forward day lacks 02:00).
+occurrences = hour_rows.drop_duplicates(['gaming_date','local_hour']).groupby(['month','cell']).size()
+heat = {'zones': zone_ids, 'weekdays': weekday_order,
+        'coin': [[[int(round(heat_sum.get((z, mo, c), 0))) for c in range(168)] for mo in range(6)] for z in zone_ids],
+        'n': [[int(occurrences.get((mo, c), 0)) for c in range(168)] for mo in range(6)]}
+del hour_rows
+
+# Q2 real-world context (guide: real_sources are later publications, so context only, never forecast inputs).
+# Weather: NOAA calendar day matched to the gaming day that starts at 06:00 on that date (18 of its 24 hours overlap).
+# Competing-explanation test on event-free days: wagers ~ weekday effects (+ month effects) + daily high + rain day,
+# with Newey-West (7-day lag) 95% intervals because neighbouring days share shocks. Rain day = at least 1 mm.
+weather = load('weather_daily')
+assert weather.source_date.tolist() == dates and weather.tmax_c.notna().all() and weather.prcp_mm.notna().all()
+wx = props[['gaming_date','local_weekday','coin_in_usd','events_active']].merge(
+    weather[['source_date','tmax_c','prcp_mm']], left_on='gaming_date', right_on='source_date', validate='one_to_one')
+wx = wx[wx.events_active.isna()].reset_index(drop=True)
+wx['rain'] = (wx.prcp_mm >= 1).astype(float)
+wx['month'] = wx.gaming_date.str[5:7]
+def weather_fit(effects):
+    design = pd.concat([pd.get_dummies(wx[f], prefix=f, drop_first=i > 0).astype(float) for i, f in enumerate(effects)]
+                       + [wx[['tmax_c','rain']]], axis=1).to_numpy()
+    y = wx.coin_in_usd.to_numpy()
+    beta, *_ = np.linalg.lstsq(design, y, rcond=None)
+    resid = y - design @ beta
+    count, k = design.shape
+    bread = np.linalg.inv(design.T @ design)
+    scores = design * resid[:, None]
+    meat = scores.T @ scores
+    for lag in range(1, 8):
+        cross = scores[lag:].T @ scores[:-lag]
+        meat += (1 - lag / 8) * (cross + cross.T)
+    se = np.sqrt(np.diag(bread @ meat @ bread * count / (count - k)))[-2:]
+    return {'days': int(count), 'heat': [float(beta[-2]), float(beta[-2] - 1.96 * se[0]), float(beta[-2] + 1.96 * se[0])],
+            'rain': [float(beta[-1]), float(beta[-1] - 1.96 * se[1]), float(beta[-1] + 1.96 * se[1])]}
+# Placebo for the few rain days: mean weekday-adjusted residual of every same-size set of event-free days (10,000 draws).
+wx['residual'] = wx.coin_in_usd - wx.groupby('local_weekday').coin_in_usd.transform('mean')
+rain_days = int(wx.rain.sum())
+rain_gap = float(wx.residual[wx.rain.eq(1)].mean())
+draws = np.random.default_rng(2025).random((10000, len(wx))).argsort(axis=1)[:, :rain_days]
+placebo_share = float((wx.residual.to_numpy()[draws].mean(axis=1) <= rain_gap).mean())
+weather_context = {
+    'source': 'NOAA NCEI GHCN-Daily, station USW00023169 (Harry Reid International Airport)', 'url': weather.source_url.iloc[0],
+    'days': [[float(r.tmax_c), float(r.prcp_mm)] for r in weather.itertuples()],
+    'weekday': weather_fit(['local_weekday']), 'month': weather_fit(['local_weekday','month']),
+    'rainDays': rain_days, 'rainDates': wx.gaming_date[wx.rain.eq(1)].tolist(), 'rainGap': rain_gap, 'placebo': placebo_share,
+}
+print('Weather test:', {k: v for k, v in weather_context.items() if k not in ('days','url')})
+
+# Missouri Gaming Commission published slot totals (state and per property), monthly. A market comparison only.
+mo_state = load('benchmark_state_monthly')
+mo_property = load('benchmark_property_monthly')
+assert np.allclose(mo_property.groupby('month').handle_usd.sum().to_numpy(), mo_state.handle_usd.to_numpy())
+# Report names vary by month ("ARGOSY RIVERSIDE" / "ARGOSY - RIVERSIDE"), so key properties by the stable property_id.
+mo_names = sorted(mo_property.property_id.unique())
+assert len(mo_property) == len(mo_names) * mo_state.month.nunique()
+missouri = {
+    'source': 'Missouri Gaming Commission monthly financial reports (13 casinos)', 'publisher': 'https://www.mgc.dps.mo.gov/',
+    'state': [[r.month, int(r.slot_units), float(r.handle_usd), r.source_url] for r in mo_state.itertuples()],
+    'names': mo_names,
+    'properties': [[mo_names.index(r.property_id), int(r.month[5:7]) - 1, float(r.handle_usd), int(r.slot_units)] for r in mo_property.itertuples()],
+}
+
 locations = load('floor_locations')
 city = load('city_visitation_monthly')
 actions = load('action_catalog')
@@ -462,6 +552,8 @@ data = {
                 'tierRules': tier_rules},
     'configs': rows(configs, ['config_id','configured_rtp','volatility','payout_multiplier_variance']),
     'luck': rows(luck, ['machine_id','month_index','bank_id','luck_var'], 1),
+    'zoneTraffic': {'zones': zone_ids, 'dayMinutes': day_minutes, 'rows': rows(zone_days, ['zone','day','entries','minutes','offline'], 0)},
+    'heat': heat, 'weather': weather_context, 'missouri': missouri,
     'actions': rows(actions, ['action_type_id','name','unit_cost_cents','recurring_cost_cents_per_day','lead_days','downtime_minutes','quantity_limit']),
 }
 payload = json.dumps(data, separators=(',',':'), ensure_ascii=False, allow_nan=False).replace('</','<\\/')

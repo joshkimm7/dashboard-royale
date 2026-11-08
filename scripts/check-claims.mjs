@@ -12,7 +12,7 @@ const docs = { readme: readFileSync('README.md', 'utf8'), claims: readFileSync('
 const norm = s => s.replace(/−/g, '-');
 
 const signed = v => (v > 0 ? '+' : '') + cash(v);
-const signedPct1 = v => (v > 0 ? '+' : '') + pct(v);
+const signedPct1 = v => (v > 0 ? '+' : v < 0 ? '−' : '') + pct(Math.abs(v));
 const millions = (v, d = 2) => (v < 0 ? '−' : '') + '$' + (Math.abs(v) / 1e6).toFixed(d) + 'm';
 const thousands = v => '$' + Math.round(v / 1000) + 'k';
 const pp2 = v => (v < 0 ? '−' : '') + Math.abs(v * 100).toFixed(2);
@@ -102,6 +102,23 @@ const [tierCells, regionCells] = [reinvestBy(3), reinvestBy(2)];
 const localBase = (rows => pct(sum(rows, r => r[8]) / sum(rows, r => r[9]), 2))(data.players.filter(r => r[2] === 'Local' && r[3] === 'Base'));
 const visitorCells = regionCells.filter(([k]) => k !== 'Local');
 
+// ---- Q2 zones and real-world context (same model functions as src/tabs/DemandZones.jsx, full floor, April → June) ----
+const zf = m.zoneFinding, zc = zf.contribution, sc = v => (v > 0 ? '+' : '') + cash(v);
+const zname = z => m.zones[z];
+// The zone contributions must sum to the property change, raw and adjusted (adjusted = the Demand trend's April and June values).
+if (!(Math.abs(sum(zc.zones, r => r.change) - zc.total) < 1e-6 && Math.abs(zc.total - (M(5).coin - M(3).coin)) < 1e-6)) refFailures.push('zone contributions do not sum to the raw property change');
+if (!(Math.abs(zc.adjustedTotal - (M(5).adjusted - M(3).adjusted)) < 1e-6)) refFailures.push('adjusted zone contributions do not sum to the adjusted property change');
+if (!(Math.abs(zf.hours + zf.rate - zc.total) < 1e-6)) refFailures.push('hours and rate effects do not sum to the total');
+const ci = (v, f = sc) => f(v[0]) + ' (95% interval ' + f(v[1]) + ' to ' + f(v[2]) + ')';
+const zoneText = 'Property coin-in moved ' + sc(zc.total) + ' per day; ' + zname(zf.biggest.zone) + ' moved most (' + sc(zf.biggest.change) + ', ' + pct(zf.biggest.share, 0) + ') and ' +
+  zname(zf.steepest.zone) + ' had the steepest drop in coin-in per available hour (' + signedPct1(zf.steepest.b.rate / zf.steepest.a.rate - 1) + '). Machine-hours effect ' + sc(zf.hours) + ', rate effect ' + sc(zf.rate) +
+  '; event-free weekday-adjusted ' + sc(zc.adjustedTotal);
+const trafficText = 'Entries per day fell in ' + n(zf.trafficFell) + ' of ' + n(zf.trafficZones) + ' zones. Counters covered ' + pct(zf.coverage, 1) + ' of zone-minutes with ' + n(zf.offline) + ' offline sensor-hours';
+const peakText = 'busiest clock hour is ' + zf.peak.day + ' ' + String(zf.peak.hour).padStart(2, '0') + ':00 (' + cash(zf.peak.value) + ' per hour)';
+const weatherText = 'Heat: ' + ci(zf.heat) + ' per +10 °C weekday-adjusted, ' + ci(zf.heatMonth) + ' with month effects. Rain (' + n(zf.rainDays) + ' days): ' + ci(zf.rain) +
+  '; ' + (zf.placebo === 0 ? 'none of 10,000' : pct(zf.placebo, 2) + ' of') + ' random same-size day sets as low';
+const missouriText = 'Missouri statewide slot handle per day ' + signedPct1(zf.moChange) + ' vs ' + signedPct1(zf.ownChange) + ' at the property; ' + n(zf.moFell) + ' of ' + n(zf.moCount) + ' Missouri casinos fell';
+
 const CHECKS = [
   // Headline decision (README + appendix)
   ['reserve', cash(m.reserve), ['readme', 'claims']],
@@ -141,6 +158,13 @@ const CHECKS = [
   ['April to June adjusted wagers', pct(Math.abs(M(5).adjusted / M(3).adjusted - 1)), ['claims']],
   ['April to June visitors', pct(Math.abs(M(5).city / M(3).city - 1)), ['claims']],
   ['April to June entrances', pct(Math.abs(M(5).entrance / M(3).entrance - 1)), ['claims']],
+  ['zone contribution', zoneText, ['claims']],
+  ['zone traffic', trafficText, ['claims']],
+  ['heat map peak', peakText, ['claims']],
+  ['weather test', weatherText, ['claims']],
+  ['weather sample', 'OLS on ' + n(data.weather.weekday.days) + ' event-free gaming days', ['claims']],
+  ['rain dates', 'Rain days were ' + (d => d.slice(0, -1).map(dayName).join(', ') + ' and ' + dayName(d.at(-1)))(data.weather.rainDates), ['claims']],
+  ['Missouri comparison', missouriText, ['claims']],
   // Q3
   ['meter down hours', n(sum(m.auditRows, r => r.down)), ['claims']],
   ['wagers at risk', millions(sum(m.auditRows, r => r.lost), 3), ['claims']],
