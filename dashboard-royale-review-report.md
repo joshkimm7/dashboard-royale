@@ -18,7 +18,7 @@ The forecast page now compares the frozen January–April weekday averages with 
 | False regular flags | 4 | 4 |
 | False quiet flags | 0 | 3 |
 
-The forecast's advantage is **16.3% lower MAE** against the stronger baseline. A separate expanding-window check using only past days at each origin yields **$61,608** against **$85,997** over 122 days from March through June. That check overlaps the main holdout in May and June and uses a different training protocol. Six months still leave seasonal generalization open.
+The frozen weekday forecast had **16.3% lower sample MAE** against the stronger baseline, with an interval that crosses zero. A separate expanding-window check using only past days at each origin yields **$61,608** against **$85,997** over 122 days from March through June. The expanding model won 78 of 122 days and lowered MAE by $24,389. Its paired 95% interval was +$8,567 to +$42,162. That check overlaps the main holdout in May and June and uses a different training protocol. Six months still leave seasonal generalization open.
 
 **Why it helps.** The comparison tests whether the model adds value beyond repeating last week's weekday pattern. Including regular days exposes where borderline decisions go.
 
@@ -48,10 +48,23 @@ Dense zones still use same-day, same-configuration peer matching. Sparse zones n
 
 ## Submission note
 
-The dashboard, write-up, claims table and updated walkthrough all reflect the $98,800 reserve, deferred relocation and 16.3% forecast improvement. The July tab also models the inspection’s conditional recovery and compares three unfunded alternatives.
+The dashboard, write-up, claims table and updated walkthrough all reflect the $98,800 reserve, deferred relocation and 16.3% forecast improvement. The July tab also models the inspection’s conditional recovery and compares the full action catalog.
 
 ## Final review refinements
 
 Adjusted April–June property wagers fell 5.8% versus 7.2% fewer daily visitors citywide. January–June adjusted downtime risk fell $1,027/day while adjusted wagers fell $38,521/day. The calendar-adjusted holdout MAE is $66,566, and the frozen weekday model beat the seven-day lag on 34 of 61 days. The paired seven-day block-bootstrap interval for its MAE savings crosses zero.
 
 The July plan schedules M-1158 on July 2, 8–10 a.m. Las Vegas time, estimated to save $17 in theoretical win versus an average Wednesday window. M-1181 remains deferred. Waiting trades the chance of a small positive July net result and earlier learning against a result that can flip negative with modest displacement.
+
+
+## Promotion weekend, staffing and the July reserve
+
+The Winter Slot Tournament and Locals Appreciation Week had matched event-day lifts of $822,948 and $685,936 in wagers and $79,061 and $63,175 in configured expected win. The next seven days reduced those expected-win lifts by $5,028 and $3,989. Event and follow-up days are compared with non-event days of the same weekday and month. The follow-up excludes its own dates from its controls. Some matched sets are small, and event costs and longer-run displacement are unknown.
+
+The $15,000 weekend requires 14 days of lead time, with up to two units in the catalog. A single weekend breaks even at 20.3% of the tournament lift or 25.3% of the Locals lift after the observed follow-up dip. At 25% of the Locals lift the net is about −$203. Keep the promotion conditional. Require registrations and an all-in budget that supports clearing the hurdle. Measure whole-floor contribution through seven days after the event, using matched non-event weekdays and a recent pre-event trend. Require positive net contribution under both comparisons to repeat the pilot.
+
+Calendar flags improved sample MAE by $2,133, with a paired 95% interval of −$8,538 to +$13,399. The pooled $97,687 event adjustment overpredicted Locals Week on average and raised June event-day MAE from $56,563 to $81,686. Set routine flex coverage using the weekday forecast, which correctly flagged 18 of 19 peak holdout days with zero false peak flags. Price any additional promotion staffing separately using registrations and live traffic.
+
+## Reading the dashboard
+
+The hero explicitly shows that M-1158 belongs to both the quiet-zone and payout groups. It names the two bottom-ten cabinets with under 60 days of exposure. Entrance counts fell 3.4% from April to June compared with a 5.8% adjusted wager decline. Cost per redeemed face-value dollar stayed at 27.8–28.0% while redeemed face value per day grew about 18%. The July plan has section links, and the hash fallback preserves focus by skipping the duplicate redraw from its own navigation.

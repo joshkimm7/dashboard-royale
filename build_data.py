@@ -94,18 +94,58 @@ props['holiday_known'] = props.gaming_date.map(holidays)
 props['event_known'] = flags[:, 1].astype(bool)
 
 holdout = props.loc[~train]
-weekday_error = (holdout.coin_in_usd - holdout.weekday_pred).abs().to_numpy()
-lag_error = (holdout.coin_in_usd - holdout.last_week_pred).abs().to_numpy()
-gap = lag_error - weekday_error
-rng = np.random.default_rng(2025)
-starts = rng.integers(0, len(gap), (10000, (len(gap) + 6) // 7))
-indices = ((starts[:, :, None] + np.arange(7)) % len(gap)).reshape(len(starts), -1)[:, :len(gap)]
+def paired_errors(sample, challenger, baseline):
+    gap = ((sample.coin_in_usd - sample[baseline]).abs()
+           - (sample.coin_in_usd - sample[challenger]).abs()).to_numpy()
+    rng = np.random.default_rng(2025)
+    starts = rng.integers(0, len(gap), (10000, (len(gap) + 6) // 7))
+    indices = ((starts[:, :, None] + np.arange(7)) % len(gap)).reshape(len(starts), -1)[:, :len(gap)]
+    return {
+        'days': len(gap), 'wins': int((gap > .005).sum()),
+        'ties': int((np.abs(gap) <= .005).sum()), 'maeGap': float(gap.mean()),
+        'interval': np.quantile(gap[indices].mean(axis=1), [.025, .975]).tolist(),
+    }
+
 validation = {
-    'wins': int((gap > .005).sum()), 'ties': int((np.abs(gap) <= .005).sum()),
-    'gapInterval': np.quantile(gap[indices].mean(axis=1), [.025, .975]).tolist(),
+    'frozen': paired_errors(holdout, 'weekday_pred', 'last_week_pred'),
+    'calendar': paired_errors(holdout, 'calendar_pred', 'weekday_pred'),
+    'expanding': paired_errors(props.loc[props.gaming_date >= '2025-03-01'],
+                               'expanding_weekday_pred', 'last_week_pred'),
     'trainingFlagDays': training_flags.sum(axis=0).astype(int).tolist(),
     'effects': coefficients.tolist(),
 }
+
+# Match each event and follow-up date to event-free dates in the same month and weekday.
+money_columns = ['coin_in_usd', 'theo_usd']
+controls = props.loc[props.events_active.isna()].copy()
+controls['month'] = controls.gaming_date.str[:7]
+assert not controls.gaming_date.duplicated().any()
+
+def matched_promotion_window(start, end, exclude_window=False):
+    selected = props.loc[props.gaming_date.between(start.date().isoformat(), end.date().isoformat())]
+    assert len(selected) == (end - start).days + 1
+    reference = controls
+    if exclude_window:
+        reference = controls.loc[~controls.gaming_date.isin(selected.gaming_date)]
+    promotion_controls = reference.groupby(['month', 'local_weekday'])[money_columns].agg(['mean', 'size'])
+    deltas = np.zeros(len(money_columns))
+    counts = []
+    for day in selected.itertuples():
+        match = promotion_controls.loc[(day.gaming_date[:7], day.local_weekday)]
+        counts.append(int(match[('coin_in_usd', 'size')]))
+        for i, column in enumerate(money_columns):
+            deltas[i] += getattr(day, column) - match[(column, 'mean')]
+    return {'days': len(selected), 'coin': float(deltas[0]), 'theo': float(deltas[1]),
+            'minControls': min(counts)}
+
+promotions = []
+for event in events.loc[events.event_type.eq('property_promotion')].itertuples():
+    start, end = pd.Timestamp(event.start_date), pd.Timestamp(event.end_date)
+    promotions.append({
+        'name': event.name, 'start': event.start_date, 'end': event.end_date,
+        'during': matched_promotion_window(start, end),
+        'after': matched_promotion_window(end + pd.Timedelta(days=1), end + pd.Timedelta(days=7), exclude_window=True),
+    })
 
 # Inspection window uses the cabinet's own fully available, non-event and non-holiday hours.
 hour_path, = (repo / 'data').rglob('machine_hour.csv.gz')
@@ -274,7 +314,7 @@ for col in columns[1:8] + ['location_id']:
 data = {
     'revision': subprocess.check_output(['git','-C',str(repo),'rev-parse','HEAD'],text=True).strip(),
     'dates': dates, 'moves': moves, 'dicts': dictionaries, 'daily': rows(daily, columns),
-    'validation': validation, 'inspectionWindow': inspection_window, 'julyFlags': july_flags,
+    'validation': validation, 'promotions': promotions, 'inspectionWindow': inspection_window, 'julyFlags': july_flags,
     'property': rows(props, ['gaming_date','local_weekday','events_active','coin_in_usd','house_win_usd','theo_usd','entrance_zone_entries_observed','counter_coverage_share','comp_face_value_usd','comp_cost_usd','weekday_pred','base_pred','last_week_pred','expanding_weekday_pred','calendar_pred','holiday_known','event_known']),
     'players': rows(players, ['person','month','home_region','opening_tier','tracked_coin_in_usd','tracked_payout_usd','tracked_net_usd','comp_face_value_usd','comp_cost_usd','theo_usd'], 2),
     'locations': rows(locations[locations.node_type.isin(['bank','zone'])], ['location_id','node_type','zone_id','name','x_m','y_m']),
