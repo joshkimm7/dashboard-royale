@@ -39,6 +39,36 @@ function StaffingReplay() {
   );
 }
 
+/**
+ * One small chart per forecast, each against actual wagers on a shared y-scale, so the three can be
+ * compared side by side instead of reading four tangled lines on one plot.
+ */
+function ForecastMultiples({ holdout, mae, spike, replay, eventDay, replayDay }) {
+  const labels = holdout.map(r => months[month(r[0])] + ' ' + Number(r[0].slice(8)));
+  const all = holdout.flatMap(r => [r[3], r[10], r[12], r[14]]);
+  const lo = Math.min(...all), hi = Math.max(...all);
+  const edc = { index: spike, value: eventDay[3], label: 'May 17 · EDC weekend', yOffset: 13 };
+  const panels = [
+    ['Weekday forecast', 10, [edc]],
+    ['Same weekday last week', 12, [{ index: replay, value: replayDay[12], label: 'May 24 · spike repeated', yOffset: 13 }]],
+    ['Calendar-adjusted weekday', 14, [edc]],
+  ];
+  return (
+    <div className="multiples">
+      {panels.map(([name, col, annotations], i) => (
+        <div className="multiple" key={name}>
+          <h3 className="multiple-title">
+            <span><i className="key-line" style={{ '--c': SERIES.blue }} />{name}<span className="multiple-vs"> vs <i className="key-line" style={{ '--c': SERIES.gold }} />actual</span></span>
+            <span className="multiple-stat"><i className="miss-key" aria-hidden="true" />Shaded = miss · average <strong>{cash(mae(holdout, col))}</strong> a day</span>
+          </h3>
+          <Chart title={i === 0 ? 'A fair test on future days' : null} labels={labels} format={compact} height={200} min={lo} max={hi} annotations={annotations} fillBetween={{ a: 0, b: 1, color: SERIES.rose }}
+            series={[{ name: 'Actual', color: SERIES.gold, values: holdout.map(r => r[3]) }, { name, color: SERIES.blue, values: holdout.map(r => r[col]) }]} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function Model() {
   const m = useModel();
   const { data, holdout, mae, pairedSummary, m1, m7, mCalendar, schedulingTier, inspect } = m;
@@ -59,16 +89,7 @@ export default function Model() {
         <Panel title="A fair test on future days">
           <Takeaway>Use weekday averages to plan routine staffing. Calendar flags made little difference overall and were less accurate on June event days.</Takeaway>
           <Note>Models learn from Jan–Apr and are scored on the same 61 days (May 1–Jun 30). “Last week” simply repeats the total from seven days earlier.</Note>
-          <Chart
-            title="A fair test on future days" height={280}
-            series={[{ name: 'Actual', color: SERIES.gold, area: true, values: holdout.map(r => r[3]) }, { name: 'Weekday forecast', color: SERIES.blue, values: holdout.map(r => r[10]) }, { name: 'Same weekday last week', color: SERIES.rose, dash: '6 4', values: holdout.map(r => r[12]) }, { name: 'Calendar-adjusted weekday', color: SERIES.muted, dash: '2 4', muted: true, values: holdout.map(r => r[14]) }]}
-            labels={holdout.map(r => r[0].slice(5))}
-            format={compact}
-            annotations={[
-              { index: spike, value: eventDay[3], label: 'May 17 · EDC weekend', yOffset: 13 },
-              { index: replay, value: replayDay[12], label: 'May 24 · spike repeated', yOffset: 43 },
-            ]}
-          />
+          <ForecastMultiples holdout={holdout} mae={mae} spike={spike} replay={replay} eventDay={eventDay} replayDay={replayDay} />
           <Note>{'EDC weekend (May 17): actual ' + cash(eventDay[3]) + ', weekday forecast ' + cash(eventDay[10]) + ', calendar-adjusted ' + cash(eventDay[14]) + '. A week later, “last week” repeated the spike (' + cash(replayDay[12]) + ' vs ' + cash(replayDay[3]) + ' actual); the weekday forecast didn’t.'}</Note>
           <Table headers={['Holdout', 'Days', 'Frozen weekday MAE', 'Same weekday last week MAE', 'Calendar-adjusted MAE', 'Constant mean MAE']}
             rows={[...monthly.map(([mo, r]) => [months[mo], r.length, cash(mae(r, 10)), cash(mae(r, 12)), cash(mae(r, 14)), cash(mae(r, 11))]), ['May–Jun', holdout.length, cash(m1), cash(m7), cash(mCalendar), cash(mae(holdout, 11))]]} />

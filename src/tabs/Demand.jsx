@@ -79,8 +79,8 @@ function DemandTrend({ monthly, perDay }) {
       {comparison}
       {football}
       {after}
-      <Chart title="Demand across the period" labels={monthly.map(r => months[r.m])} format={compact} min={0}
-        series={[{ name: 'Observed daily wagers', color: SERIES.gold, area: true, values: monthly.map(r => r.coin) }, { name: 'Excluding listed events · equal weekday mix', color: SERIES.blue, values: monthly.map(r => r.adjusted) }]} />
+      <Chart title="Demand across the period" labels={monthly.map(r => months[r.m])} format={compact} height={260} markers
+        series={[{ name: 'Observed daily wagers', color: SERIES.gold, values: monthly.map(r => r.coin) }, { name: 'Excluding listed events · equal weekday mix', color: SERIES.blue, dash: '7 5', values: monthly.map(r => r.adjusted) }]} />
       <Table headers={['Month', 'Days', 'Observed $/day', 'Event-free days', 'Weekday-adjusted $/day', 'Entrance counts/day', 'Counter coverage', 'Vegas visitors/day']}
         rows={monthly.map(r => [months[r.m], n(r.days), cash(r.coin), n(r.eventFree), cash(r.adjusted), n(r.entrance), pct(r.coverage), n(r.city)])} />
       <How>The adjusted series drops days with a recorded event, then weights all seven weekdays equally (each month needs every weekday). Unrecorded events and seasonality can still affect it.</How>
