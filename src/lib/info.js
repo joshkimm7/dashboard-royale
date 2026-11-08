@@ -1,6 +1,9 @@
 // Hover explanations for the dashboard's "i" icons, keyed by the label each component already shows.
 
 export const CARD_INFO = {
+  'July reserve': 'Money from the $100,000 July budget that stays unspent after funding the one payout inspection. It waits for stronger evidence before backing a move, promotion or replacement.',
+  'Lowest earners in quiet zones': 'How many of the ten lowest earners sit where comparable machines see less than 80% of normal floor play. A high count points to location, not broken cabinets.',
+  'Forecast improvement': 'How much smaller the average daily miss is when staffing from weekday averages instead of copying the same day last week, tested on 61 days the model never saw.',
   // Machine audit
   'Bottom cohort': "How many cabinets the audit treats as the lowest earners, out of every cabinet that played in the selected months and bank. Ranking uses actual house win with no adjustment for time on the floor.",
   'Cabinets to inspect': "Bottom-ten cabinets whose house win fell short of their payout settings by more than luck explains (q-value under 0.05) and stayed short in both halves of the period.",

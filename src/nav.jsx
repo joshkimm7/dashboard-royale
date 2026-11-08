@@ -62,7 +62,7 @@ function hashFor(s, section) {
 export function revealSection(section) {
   const target = section && document.getElementById(section);
   if (!target) return;
-  target.style.scrollMarginTop = (document.querySelector('.subnav')?.offsetHeight ?? 0) + 12 + 'px';
+  target.style.scrollMarginTop = (document.querySelector('.topbar')?.offsetHeight ?? 0) + (document.querySelector('.subnav')?.offsetHeight ?? 0) + 12 + 'px';
   target.focus({ preventScroll: true });
   target.scrollIntoView({ block: 'start' });
 }
@@ -107,8 +107,10 @@ export function NavProvider({ model, children }) {
     if (focus) document.querySelector(focus)?.focus({ preventScroll: true });
     revealSection(section);
     if (toTop) {
-      const top = document.querySelector('.nav')?.getBoundingClientRect().top ?? 0;
-      if (top < 0) window.scrollBy(0, top);
+      // Bring the page header back under the sticky top bar after switching tab or sub-tab.
+      const top = document.getElementById('main')?.getBoundingClientRect().top ?? 0;
+      const bar = document.querySelector('.topbar')?.offsetHeight ?? 0;
+      if (top < bar) window.scrollBy(0, top - bar);
     }
   }, [state]);
 

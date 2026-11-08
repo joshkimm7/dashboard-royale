@@ -12,7 +12,7 @@ Built for the **Dashboard Royale challenge at TAMU Datathon 2026**. The Gilded A
 
 ## Explore the dashboard
 
-The dashboard opens on an **Overview** of the recommendation. Each analysis tab is split into sub-tabs so only one topic is on screen at a time. Every statistic has an **i** icon that explains it in plain language, and the **Ask** button (bottom right) opens a floor assistant that summarizes any tab, machine or action from the dashboard's own data and points at it on the Evidence map. The assistant runs entirely in the page, with no AI service.
+Navigation sits in a collapsible left sidebar (a drawer on phones); the top bar's search box (press `/`) sends any question to the floor assistant, and each page header carries its month and bank filters. The dashboard opens on an **Overview** of the recommendation. Each analysis tab is split into sub-tabs so only one topic is on screen at a time. Every statistic has an **i** icon that explains it in plain language, and the **Ask** button (bottom right) opens a floor assistant that summarizes any tab, machine or action from the dashboard's own data and points at it on the Evidence map. The assistant runs entirely in the page, with no AI service.
 
 | View | Sub-tabs | What you can do |
 | --- | --- | --- |
