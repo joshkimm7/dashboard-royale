@@ -76,6 +76,75 @@ assert pd.to_datetime(props.gaming_date).diff().iloc[1:].eq(pd.Timedelta(days=1)
 props['last_week_pred'] = props.coin_in_usd.shift(7)
 props['expanding_weekday_pred'] = props.groupby('local_weekday').coin_in_usd.transform(
     lambda history: history.expanding().mean().shift(1))
+# Fit calendar adjustments on the same training period as the frozen weekday model.
+events = load('events')
+def event_known(day):
+    return events[(events.announced_date < day) & (events.start_date <= day) & (events.end_date >= day)]
+def calendar_flags(day, holiday):
+    return [bool(holiday), not event_known(day).empty]
+
+holidays = cal.set_index('gaming_date').federal_holiday.fillna('').to_dict()
+flags = np.asarray([calendar_flags(day, holidays.get(day)) for day in props.gaming_date], dtype=float)
+training_flags = flags[train]
+residual = props.loc[train, 'coin_in_usd'] - props.loc[train, 'weekday_pred']
+# Four pseudo-observations at zero shrink effects from sparse flagged dates.
+coefficients = np.linalg.solve(training_flags.T @ training_flags + 4 * np.eye(2), training_flags.T @ residual)
+props['calendar_pred'] = props.weekday_pred + flags @ coefficients
+props['holiday_known'] = props.gaming_date.map(holidays)
+props['event_known'] = flags[:, 1].astype(bool)
+
+holdout = props.loc[~train]
+weekday_error = (holdout.coin_in_usd - holdout.weekday_pred).abs().to_numpy()
+lag_error = (holdout.coin_in_usd - holdout.last_week_pred).abs().to_numpy()
+gap = lag_error - weekday_error
+rng = np.random.default_rng(2025)
+starts = rng.integers(0, len(gap), (10000, (len(gap) + 6) // 7))
+indices = ((starts[:, :, None] + np.arange(7)) % len(gap)).reshape(len(starts), -1)[:, :len(gap)]
+validation = {
+    'wins': int((gap > .005).sum()), 'ties': int((np.abs(gap) <= .005).sum()),
+    'gapInterval': np.quantile(gap[indices].mean(axis=1), [.025, .975]).tolist(),
+    'trainingFlagDays': training_flags.sum(axis=0).astype(int).tolist(),
+    'effects': coefficients.tolist(),
+}
+
+# Inspection window uses the cabinet's own fully available, non-event and non-holiday hours.
+hour_path, = (repo / 'data').rglob('machine_hour.csv.gz')
+columns_hour = ['machine_id', 'hour_start_local', 'gaming_date', 'available_seconds', 'coin_in_cents']
+hourly = pd.concat([chunk.loc[chunk.machine_id.eq('M-1158')]
+                    for chunk in pd.read_csv(hour_path, usecols=columns_hour, chunksize=150000)],
+                   ignore_index=True)
+excluded = set(props.loc[props.events_active.notna(), 'gaming_date']) | {d for d,h in holidays.items() if h}
+hourly = hourly[hourly.available_seconds.eq(3600) & ~hourly.gaming_date.isin(excluded)].copy()
+hourly['local'] = pd.to_datetime(hourly.hour_start_local)
+hourly['weekday'] = hourly.local.dt.dayofweek
+hourly['hour'] = hourly.local.dt.hour
+hourly['date'] = hourly.local.dt.date
+starts_in_shift = hourly[hourly.weekday.lt(5) & hourly.hour.between(8, 18)]
+partners = hourly[['date','hour','coin_in_cents']].copy()
+partners['hour'] -= 1
+windows = starts_in_shift.merge(partners, on=['date','hour'], suffixes=('', '_next'), validate='one_to_one')
+windows['coin'] = (windows.coin_in_cents + windows.coin_in_cents_next)/100
+profile = windows.groupby(['weekday','hour']).coin.agg(['mean','size'])
+profile = profile[profile['size'] >= 8]
+weekday_means = profile.groupby(level='weekday')['mean'].mean()
+july = pd.date_range('2025-07-02','2025-07-30')
+options = [(day, hour, float(sample['mean']), int(sample['size'])) for day in july
+           if day.dayofweek < 5 and day.day != 4 and event_known(day.date().isoformat()).empty
+           for (weekday, hour), sample in profile.iterrows() if weekday == day.dayofweek]
+# Avoid delaying a potentially valuable correction just to save a few dollars of interruption.
+quietest = min(options, key=lambda v: (v[2], v[0], v[1]))
+slot_day, slot_hour, slot_coin, slot_n = min(options, key=lambda v: (v[0], v[2], v[1]))
+inspection_window = {'date':slot_day.date().isoformat(), 'weekday':slot_day.day_name(),
+    'hour':int(slot_hour), 'coin':slot_coin, 'typical':float(weekday_means[slot_day.dayofweek]), 'n':slot_n,
+    'quietestDate':quietest[0].date().isoformat(), 'quietestCoin':quietest[2],
+    'waitDays':(quietest[0]-slot_day).days}
+july_flags = []
+for day in pd.date_range('2025-07-01','2025-07-30'):
+    date = day.date().isoformat()
+    known = event_known(date)
+    holiday = 'Independence Day' if day.day == 4 else ''
+    if holiday or not known.empty:
+        july_flags.append([date, holiday, ', '.join(known.name)])
 dates = props.gaming_date.tolist()
 daily['day'] = daily.gaming_date.map({d:i for i,d in enumerate(dates)})
 
@@ -195,7 +264,6 @@ for ticket in operations[operations.event_type.eq('move')].itertuples():
 locations = load('floor_locations')
 city = load('city_visitation_monthly')
 actions = load('action_catalog')
-events = load('events')
 columns = ['day','machine_id','bank_id','zone_id','config_id','theme','volatility_class','manufacturer','available_hours','down','coin_in_usd','house_win_usd','theo_usd','floor_rate','zone_rate','zone_peer','lost_coin','lost_theo','contribution_after_supplied_costs_usd','location_id','occupied_hours']
 # Integer-code repeated strings to keep the offline file small.
 dictionaries = {}
@@ -206,7 +274,8 @@ for col in columns[1:8] + ['location_id']:
 data = {
     'revision': subprocess.check_output(['git','-C',str(repo),'rev-parse','HEAD'],text=True).strip(),
     'dates': dates, 'moves': moves, 'dicts': dictionaries, 'daily': rows(daily, columns),
-    'property': rows(props, ['gaming_date','local_weekday','events_active','coin_in_usd','house_win_usd','theo_usd','entrance_zone_entries_observed','counter_coverage_share','comp_face_value_usd','comp_cost_usd','weekday_pred','base_pred','last_week_pred','expanding_weekday_pred']),
+    'validation': validation, 'inspectionWindow': inspection_window, 'julyFlags': july_flags,
+    'property': rows(props, ['gaming_date','local_weekday','events_active','coin_in_usd','house_win_usd','theo_usd','entrance_zone_entries_observed','counter_coverage_share','comp_face_value_usd','comp_cost_usd','weekday_pred','base_pred','last_week_pred','expanding_weekday_pred','calendar_pred','holiday_known','event_known']),
     'players': rows(players, ['person','month','home_region','opening_tier','tracked_coin_in_usd','tracked_payout_usd','tracked_net_usd','comp_face_value_usd','comp_cost_usd','theo_usd'], 2),
     'locations': rows(locations[locations.node_type.isin(['bank','zone'])], ['location_id','node_type','zone_id','name','x_m','y_m']),
     'vacancies': rows(locations[locations.node_type.eq('slot') & ~locations.location_id.isin(daily.loc[daily.day.eq(len(dates)-1),'location_id'].map(dict(enumerate(dictionaries['location_id']))))], ['location_id','bank_id','zone_id']),

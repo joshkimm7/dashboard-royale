@@ -49,3 +49,9 @@ Dense zones still use same-day, same-configuration peer matching. Sparse zones n
 ## Submission note
 
 The dashboard, write-up, claims table and updated walkthrough all reflect the $98,800 reserve, deferred relocation and 16.3% forecast improvement. The July tab also models the inspection’s conditional recovery and compares three unfunded alternatives.
+
+## Final review refinements
+
+Adjusted April–June property wagers fell 5.8% versus 7.2% fewer daily visitors citywide. January–June adjusted downtime risk fell $1,027/day while adjusted wagers fell $38,521/day. The calendar-adjusted holdout MAE is $66,566, and the frozen weekday model beat the seven-day lag on 34 of 61 days. The paired seven-day block-bootstrap interval for its MAE savings crosses zero.
+
+The July plan schedules M-1158 on July 2, 8–10 a.m. Las Vegas time, estimated to save $17 in theoretical win versus an average Wednesday window. M-1181 remains deferred. Waiting trades the chance of a small positive July net result and earlier learning against a result that can flip negative with modest displacement.
