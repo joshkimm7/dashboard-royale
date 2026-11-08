@@ -46,6 +46,10 @@ function questionFacts(qid, m) {
         return n(active.length) + ' cardholders recorded carded play; the top 1% of them placed ' + pct(top / total) + ' of all carded wagers.';
       })(),
       'Comps cost ' + cash(cost) + ' over January–June, about ' + pct(cost / face, 1) + ' of their face value, and that rate held steady month to month.',
+      (f => f.detected
+        ? 'The loyalty ledger shows one program change: on ' + f.date + ' comps were repriced from ' + f.price + ' (' + f.priceChange + ', 95% interval ' + f.priceInterval + ' points; ' + f.rank + '). ' +
+          f.withinShare + ' of the drop is within tiers, so it is a rule change, not tier mix. Earn rates ' + (f.earnFlat ? 'did not change' : 'also moved') + ' and tier thresholds ' + (m.tierRules.stable ? 'held' : 'moved') + '; comp cost per $100 of carded expected win went from ' + f.reinvest + '.'
+        : 'The loyalty ledger shows no break in comp prices, earn rates or tier rules across January–June.')(m.compFinding),
     ];
   }
   if (qid === 'qm') {

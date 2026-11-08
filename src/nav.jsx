@@ -18,6 +18,7 @@ export const SECTION_SUB = {
   'machine-check': ['audit', 'machine'], 'hold-check': ['audit', 'machine'],
   'staffing-check': ['model', 'staffing'], 'action-summary': ['plan', 'summary'], 'inspection-plan': ['plan', 'inspection'],
   'move-check': ['plan', 'moves'], 'promotion-check': ['plan', 'promotion'], 'catalog-check': ['plan', 'catalog'],
+  'comp-break-check': ['guests', 'comps'],
 };
 export const firstSub = tab => SUBTABS[tab]?.[0]?.[0] ?? '';
 

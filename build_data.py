@@ -232,6 +232,52 @@ assert np.allclose(players.tracked_payout_usd - players.tracked_coin_in_usd, pla
 players['person'] = pd.factorize(players.player_id, sort=True)[0]
 players['month'] = players.period_month.str[-2:].astype(int) - 1
 
+# Q5 loyalty ledger: award and redemption totals per gaming day x home region x opening tier x tier at the event.
+# Awards take the gaming day and wagers of the carded segment that earned them; redemptions use the Vegas
+# 06:00-06:00 gaming day of the event. Economic cost equals the linked POS cogs, so it is counted once, here only.
+def guide_path(name):
+    path, = (repo / 'data').rglob(f'{name}.csv.gz')
+    return path
+ledger = pd.read_csv(guide_path('loyalty_ledger'), usecols=['player_id','event_at_utc','event_type','points_delta','tier_before','tier_after',
+                                                             'face_value_cents','economic_cost_cents','source_segment_id'])
+assert set(ledger.event_type) == {'award', 'redeem'}
+segments = pd.read_csv(guide_path('sessions'), usecols=['session_segment_id','gaming_date','coin_in_cents','theo_cents'])
+members = pd.read_csv(guide_path('players'), usecols=['player_id','home_region','opening_tier'])
+awards = ledger[ledger.event_type.eq('award')].merge(segments, left_on='source_segment_id', right_on='session_segment_id',
+                                                       how='left', validate='one_to_one')
+assert awards.gaming_date.notna().all()
+redeems = ledger[ledger.event_type.eq('redeem')].copy()
+redeem_local = pd.to_datetime(redeems.event_at_utc, utc=True).dt.tz_convert('America/Los_Angeles').dt.tz_localize(None)
+redeems['gaming_date'] = (redeem_local - pd.Timedelta(hours=6)).dt.date.astype(str)
+loyalty_keys = ['gaming_date','home_region','opening_tier','tier_before']
+earned = awards.merge(members, on='player_id', validate='many_to_one').groupby(loyalty_keys).agg(
+    earned=('points_delta','sum'), coin=('coin_in_cents','sum'), theo=('theo_cents','sum'))
+spent = redeems.merge(members, on='player_id', validate='many_to_one').groupby(loyalty_keys).agg(
+    redemptions=('points_delta','size'), spent=('points_delta','sum'), face=('face_value_cents','sum'), cost=('economic_cost_cents','sum'))
+loyalty = earned.join(spent, how='outer').fillna(0).reset_index()
+assert loyalty.gaming_date.isin(set(cal.gaming_date)).all()
+loyalty['day'] = loyalty.gaming_date.map({d: i for i, d in enumerate(cal.gaming_date)})
+loyalty['spent'] = -loyalty.spent
+for col in ['coin','theo','face','cost']:
+    loyalty[col] = loyalty[col] / 100  # cents -> dollars, once
+loyalty_dicts = {}
+for col in ['home_region','opening_tier','tier_before']:
+    loyalty[col], values = pd.factorize(loyalty[col], sort=True)
+    loyalty_dicts[col] = values.tolist()
+# Tier rules: lifetime points = opening lifetime points + awards to date. Per month, the lowest lifetime balance seen
+# in each tier and the highest seen in the tier below it bracket the threshold; a rule change would move the bracket.
+opening = pd.read_csv(guide_path('players'), usecols=['player_id','opening_lifetime_points']).set_index('player_id').opening_lifetime_points
+ledger_events = pd.concat([awards[['player_id','event_at_utc','points_delta','tier_after','gaming_date']].assign(kind=0),
+                    redeems[['player_id','event_at_utc','points_delta','tier_after','gaming_date']].assign(kind=1)], ignore_index=True)
+ledger_events = ledger_events.sort_values(['player_id','event_at_utc','kind'], kind='stable')
+ledger_events['lifetime'] = ledger_events.player_id.map(opening) + ledger_events.points_delta.where(ledger_events.kind.eq(0), 0).groupby(ledger_events.player_id).cumsum()
+assert len(ledger_events) == len(ledger) and ledger_events.lifetime.notna().all()
+ledger_events['month'] = ledger_events.gaming_date.str[5:7].astype(int) - 1
+bands = ledger_events.groupby(['month','tier_after']).lifetime.agg(['min','max']).unstack()
+tier_rules = [[int(mo), int(bands.loc[mo, ('max','Base')]), int(bands.loc[mo, ('min','Gold')]),
+               int(bands.loc[mo, ('max','Gold')]), int(bands.loc[mo, ('min','Platinum')])] for mo in bands.index]
+print(f'Loyalty ledger: {len(awards):,} awards and {len(redeems):,} redemptions in {len(loyalty):,} day-segment rows')
+
 # Allocate ticket duration across shifts by actual elapsed hour, using Vegas wall time for shift labels.
 operations = load('operations')
 ops = operations[operations.event_type.eq('fault_repair')].copy()
@@ -366,6 +412,9 @@ data = {
     'city': rows(city, ['month','mean_visitors_per_calendar_day','source_url']),
     'events': rows(events, ['name','start_date','end_date','local_scope']),
     'payoutConfig': payout_config,
+    'loyalty': {'dicts': loyalty_dicts, 'rows': rows(loyalty, ['day','home_region','opening_tier','tier_before','earned','coin','theo',
+                                                              'redemptions','spent','face','cost'], 2),
+                'tierRules': tier_rules},
     'configs': rows(configs, ['config_id','configured_rtp','volatility','payout_multiplier_variance']),
     'luck': rows(luck, ['machine_id','month_index','bank_id','luck_var'], 1),
     'actions': rows(actions, ['action_type_id','name','unit_cost_cents','recurring_cost_cents_per_day','lead_days','downtime_minutes','quantity_limit']),
