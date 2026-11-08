@@ -2,10 +2,11 @@
 // Each answer carries the evidence-map boxes it is about, so the map can point at them.
 import { by, cash, month, months, n, pct, pp, sum } from '../lib/format.js';
 import { FLAG_LABELS } from '../lib/evidence.js';
+import { downHeat } from '../lib/downtime.js';
 
 const QUESTION_PATTERNS = [
   ['q1', /\bq\s*1\b|machine audit|bottom[\s-]*(ten|10)|lowest|low earn|underperform|verdict|replace/],
-  ['q2', /\bq\s*[23]\b|demand|uptime|downtime|traffic|visitor|entrance|repair|ticket|outage|zone|weather|missouri|heat ?map/],
+  ['q2', /\bq\s*[23]\b|demand|uptime|downtime|traffic|visitor|entrance|repair|ticket|outage|zone|weather|missouri|heat ?map|technician|maintenance|response time/],
   ['q4', /\bq\s*[45]\b|guest|player|comp\b|comps|loyalty|carded|reward/],
   ['qm', /model|forecast|holdout|validation|predict|staff|mae|accuracy/],
   ['q6', /\bq\s*6\b|july|decision|plan\b|budget|reserve|catalog|spend|fund/],
@@ -31,6 +32,16 @@ function questionFacts(qid, m) {
     return [
       'Daily wagers averaged ' + cash(first[1]) + ' in ' + months[first[0]] + ' and ' + cash(last[1]) + ' in ' + months[last[0]] + ' (raw, before event and weekday adjustment).',
       'Machine downtime put about ' + cash(sum(auditRows, r => r.lost) / fullDays) + ' of wagers at risk per day over ' + n(sum(auditRows, r => r.down), 0) + ' out-of-service hours; even full recovery would not reverse the adjusted decline.',
+      (dt => {
+        const cells = downHeat(data, '', 0, 5), total = sum(cells, c => c.down);
+        const share = k => sum(cells.filter(c => Math.floor(((c.hour - 6 + 24) % 24) / 8) === k), c => c.down) / total;
+        const peak = cells.reduce((a, b) => b.value > a.value ? b : a);
+        return 'When: day, swing and grave shifts carry ' + pct(share(0), 0) + ', ' + pct(share(1), 0) + ' and ' + pct(share(2), 0) + ' of down machine-hours, and the worst slot is ' + data.heat.weekdays[peak.weekday] + ' ' + String(peak.hour).padStart(2, '0') + ':00. Fault tickets explain ' +
+          n(dt.overlap.faultHours, 0) + ' of the ' + n(dt.overlap.meterHours, 0) + ' down hours (they never overlap on one machine); moves, installs and maintenance the rest.';
+      })(m.downtime),
+      (dt => 'Response: with one technician on duty, weekday day-shift faults waited ' + n(dt.tests[0].mean1, 0) + ' min for work to start against ' + n(dt.tests[0].mean2, 0) + ' with two (95% interval for the gap ' + n(dt.tests[0].lo, 0) + ' to ' + n(dt.tests[0].hi, 0) +
+        ' min), and swing shifts ' + n(dt.tests[1].mean1, 0) + ' against ' + n(dt.tests[1].mean2, 0) + '. Still, a second ' + ['day', 'swing', 'grave'][dt.tech.best.shift] + '-shift technician would recover only about ' + cash(dt.tech.best.value) + ' of expected win in July against its ' + cash(dt.tech.cost) +
+        ' cost, and a ' + dt.pm.full.make + ' preventive sweep breaks even only if it removes ' + pct(dt.pm.breakEven, 0) + ' of that make’s excess faults' + (dt.tech.best.value < dt.tech.cost && dt.pm.breakEven > .5 ? ', so neither is funded.' : '.'))(m.downtime),
       n(data.events.length) + ' listed events are compared with similar ordinary days to see how much they lifted play.',
       (zf => 'April to June, property coin-in moved ' + cash(zf.contribution.total) + ' per day. By zone, ' + m.zones[zf.biggest.zone] + ' moved most (' + cash(zf.biggest.change) + '), and ' + m.zones[zf.steepest.zone] +
         ' had the steepest drop in coin-in per available hour. Almost all of the change is coin-in per available hour (' + cash(zf.rate) + ') rather than machine-hours (' + cash(zf.hours) + '). Zone entries fell in ' + n(zf.trafficFell) + ' of ' + n(zf.trafficZones) + ' zones (counters covered ' + pct(zf.coverage, 1) + ' of hours; entries are not unique guests).')(m.zoneFinding),

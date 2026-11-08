@@ -169,20 +169,24 @@ function Promotion() {
 }
 
 function ConsideredActions() {
-  const { data, catalogue, auditRows, fullDays, netMove, actionCost, reserve, compFinding: f } = useModel();
-  const maintenance = catalogue['A-PREVENTIVE'], tech = catalogue['A-TECH-SHIFT'], comp = catalogue['A-COMP-PILOT'];
+  const { data, catalogue, fullDays, netMove, actionCost, reserve, compFinding: f, downtime: dt } = useModel();
+  const comp = catalogue['A-COMP-PILOT'];
   const daysAfterLead = action => Math.max(0, 30 - action[4]);
-  const projected = (rows, action) => sum(rows, r => r.lostTheo) / fullDays * daysAfterLead(action);
-  const ridge = auditRows.filter(r => r.make === 'Ridgeline');
-  const ridgeRisk = projected(ridge, maintenance), techRisk = projected(auditRows, tech);
+  const { tech, pm } = dt, [dayTest, swingTest] = dt.tests, best = tech.best;
+  const minutes = v => n(v, 0) + ' min';
   const compSpend = sum(data.property, r => r[9]) / fullDays * daysAfterLead(comp);
   const reasons = {
     'A-MOVE-MACHINE': 'Deferred. 50% capture and 10% displacement implies ' + cash(netMove(.5, .10)) + ' net.',
     'A-MOVE-BANK': 'Deferred. The four cabinet moves do not establish a bank-wide lift large enough to justify the cost and full-bank interruption.',
     'A-REPLACE-LEASE': 'Pass. ' + cash(catalogue['A-REPLACE-LEASE'][3] / 100) + '/day after installation. The screened cabinets show no weak local demand signal.',
     'A-REPLACE-BUY': 'Pass. ' + daysAfterLead(catalogue['A-REPLACE-BUY']) + ' July operating days after lead. A purchase needs evidence of a title or cabinet problem.',
-    'A-TECH-SHIFT': 'Pass. Needs ' + pct(actionCost(tech) / techRisk, 0) + ' of ' + cash(techRisk) + ' floor-wide exposure over ' + daysAfterLead(tech) + ' days. One shift covers only part of the schedule.',
-    'A-PREVENTIVE': 'Pass. Ridgeline has ' + cash(ridgeRisk) + ' at risk over ' + daysAfterLead(maintenance) + ' days, before the sweep’s own downtime.',
+    'A-TECH-SHIFT': (best.value >= tech.cost ? 'Fund. ' : 'Pass. ') + (dayTest.lo > 0 && swingTest.lo > 0 ? 'Staffing matters: ' : 'Staffing shows no clear effect: ') + 'with one technician, weekday day-shift faults waited ' + minutes(dayTest.mean1) + ' for work to start against ' + minutes(dayTest.mean2) +
+      ' with two (gap 95% interval ' + n(dayTest.lo, 0) + '–' + n(dayTest.hi, 0) + ' min), and swing ' + minutes(swingTest.mean1) + ' against ' + minutes(swingTest.mean2) + '. The best target is the ' + ['day', 'swing', 'grave'][best.shift] +
+      ' shift, which had one technician on ' + n(best.loneDays) + ' of ' + n(best.days) + ' days. A second technician there would remove about ' + n(best.avoidedPerDay, 1) + ' machine-hours of waiting a day, worth ' + cash(best.value) +
+      ' in expected win over ' + tech.days + ' days (' + cash(best.low) + '–' + cash(best.high) + '), so it needs ' + n(tech.need, 1) + '× that value to pay ' + cash(tech.cost) + '. Even removing all waiting would return ' + cash(best.all) + '.',
+    'A-PREVENTIVE': (pm.breakEven <= .5 ? 'Fund. ' : 'Pass. ') + pm.full.make + ' faults ' + n(1000 * pm.full.rate, 1) + ' times per 1,000 machine-days against ' + n(1000 * pm.full.others, 1) + ' for the other makes, and ' + pct(pm.full.repeat, 0) +
+      ' of its faults recur within 14 days. If a sweep brought it level for ' + pm.days + ' days, avoided downtime and repair bills would be worth at most ' + cash(pm.full.upper) + ' (' + cash(pm.recent.upper) + ' at April–June rates). After ' + cash(pm.sweepDowntime) +
+      ' of sweep downtime on ' + n(pm.cabinets) + ' cabinets, ' + cash(pm.cost) + ' breaks even only if the sweep removes ' + pct(pm.breakEven, 0) + ' of the excess faults (' + pct(pm.breakEvenRecent, 0) + ' at recent rates). The ' + n(dt.overlap.maintenance) + ' scheduled-maintenance tickets on record are too few to show what a sweep achieves.',
     'A-INSPECT': 'Fund one. Meter and paytable checks target the persistent payout flag on M-1158.',
     'A-WAYFINDING': 'Deferred. Quiet placement warrants a traffic test before committing to a signage refresh.',
     'A-COMP-PILOT': 'Deferred. ' + (f.detected

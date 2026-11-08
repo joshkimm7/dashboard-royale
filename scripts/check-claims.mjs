@@ -4,6 +4,7 @@
 import { readFileSync } from 'node:fs';
 import { createModel, playerBreakdown, playerOutcomes } from '../src/lib/model.js';
 import { by, cash, month, n, pct, ratio, sum } from '../src/lib/format.js';
+import { downHeat, responseStats } from '../src/lib/downtime.js';
 
 const data = JSON.parse(readFileSync('data/dashboard.json', 'utf8'));
 const m = createModel(data);
@@ -79,11 +80,19 @@ const pairPcts = m.moveCases.map(r => r.main.bankPct);
 const slot = m.inspectionSlot, hold = m.windowHold;
 const [tournament, locals] = data.promotions;
 const daysAfterLead = a => Math.max(0, 30 - a[4]);
-const ridge = m.auditRows.filter(r => r.make === 'Ridgeline');
-const maint = m.catalogue['A-PREVENTIVE'], tech = m.catalogue['A-TECH-SHIFT'], comp = m.catalogue['A-COMP-PILOT'];
-const ridgeRisk = sum(ridge, r => r.lostTheo) / m.fullDays * daysAfterLead(maint);
-const techRisk = sum(m.auditRows, r => r.lostTheo) / m.fullDays * daysAfterLead(tech);
+const comp = m.catalogue['A-COMP-PILOT'];
 const compSpend = sum(data.property, r => r[9]) / m.fullDays * daysAfterLead(comp);
+
+// ---- Q3 downtime: when, response times and avoidability (same functions as Demand → Downtime impact / Response times) ----
+const dt = m.downtime, [dayTest, swingTest] = dt.tests, [dayAll, swingAll] = dt.robust;
+const testText = t => n(t.mean1, 0) + ' vs ' + n(t.mean2, 0) + ' minutes (gap 95% interval ' + n(t.lo, 0) + ' to ' + n(t.hi, 0) + ')';
+const downCells = downHeat(data, '', 0, 5), downTotal = sum(downCells, c => c.down);
+const shiftShare = k => pct(sum(downCells.filter(c => Math.floor(((c.hour - 6 + 24) % 24) / 8) === k), c => c.down) / downTotal, 0);
+const downPeak = downCells.reduce((a, b) => b.value > a.value ? b : a);
+const perDayDown = [...by(m.auditRows, r => r.d).entries()].map(([d, g]) => ({ date: data.dates[d], down: sum(g, r => r.down) }));
+const worstDay = perDayDown.reduce((a, b) => b.down > a.down ? b : a);
+const repairBy = k => n(responseStats(dt.tickets.filter(t => t.techs === k)).repair, 0);
+const av = dt.avoid, shiftName = ['day', 'swing', 'grave'][dt.tech.best.shift];
 
 // ---- Q1 adjusted ranking (same model functions as src/tabs/Audit.jsx → Adjusted ranking, full period, all banks) ----
 const adj = m.fullOverlap, cfg = m.payoutConfig;
@@ -242,8 +251,25 @@ const CHECKS = [
   // Repair
   ['repair gross benefits', (vals => vals.slice(0, -1).join(', ') + ', and ' + vals.at(-1))(m.repairScenarios.map(s => cash(m.inspectionGapPerDay * s * m.repairPaybackDays))), ['claims']],
   // Alternatives
-  ['Ridgeline sweep', cash(m.actionCost(maint)) + ' Ridgeline sweep vs ' + cash(ridgeRisk), ['claims']],
-  ['technician shift', cash(m.actionCost(tech)) + ' technician needs ' + pct(m.actionCost(tech) / techRisk, 0) + ' of ' + cash(techRisk), ['claims']],
+  ['technician shift', cash(dt.tech.cost) + ' technician package needs ' + n(dt.tech.need, 1) + '× the ' + cash(dt.tech.best.value) + ' a second ' + shiftName + '-shift technician would recover over ' + dt.tech.days + ' days (' + cash(dt.tech.best.low) + '–' + cash(dt.tech.best.high), ['claims']],
+  ['technician all waiting', 'removing all waiting would return ' + cash(dt.tech.best.all), ['claims']],
+  ['preventive sweep', cash(dt.pm.cost) + ' ' + dt.pm.full.make + ' sweep breaks even only if it removes ' + pct(dt.pm.breakEven, 0) + ' of its excess faults (' + pct(dt.pm.breakEvenRecent, 0) + ' at April–June rates)', ['claims']],
+  ['preventive upper bound', 'worth at most ' + cash(dt.pm.full.upper) + ' (' + cash(dt.pm.recent.upper) + ' at April–June rates) before ' + cash(dt.pm.sweepDowntime) + ' of sweep downtime on ' + n(dt.pm.cabinets) + ' cabinets', ['claims']],
+  // Q3 downtime: when, response, overlap and avoidability
+  ['downtime by shift', 'day ' + shiftShare(0) + ', swing ' + shiftShare(1) + ', grave ' + shiftShare(2), ['claims']],
+  ['worst downtime slot', data.heat.weekdays[downPeak.weekday] + ' ' + String(downPeak.hour).padStart(2, '0') + ':00 (' + n(downPeak.value, 2) + ' machine-hours down on average)', ['claims']],
+  ['downtime per day', n(downTotal / data.dates.length, 1) + ' machine-hours per gaming day; worst ' + worstDay.date + ' (' + n(worstDay.down, 1) + ')', ['claims']],
+  ['day-shift response test', 'weekday day shifts ' + testText(dayTest), ['claims']],
+  ['swing response test', 'swing shifts ' + testText(swingTest), ['claims']],
+  ['full-period response test', 'January–June: ' + n(dayAll.lo, 0) + ' to ' + n(dayAll.hi, 0) + ' and ' + n(swingAll.lo, 0) + ' to ' + n(swingAll.hi, 0), ['claims']],
+  ['response load', n(dayTest.load1, 2) + ' vs ' + n(dayTest.load2, 2) + ' tickets per shift-day on the day shift and ' + n(swingTest.load1, 2) + ' vs ' + n(swingTest.load2, 2) + ' on swing', ['claims']],
+  ['pooled waiting share', pct(dt.share.share, 0) + ' of the waiting (95% interval ' + pct(dt.share.lo, 0) + ' to ' + pct(dt.share.hi, 0) + ')', ['claims']],
+  ['grave response', 'shifts, always one technician, averaged ' + n(responseStats(dt.tickets.filter(t => t.shift === 2)).response, 0) + ' minutes', ['claims']],
+  ['repair by staffing', 'repairs took ' + repairBy(1) + ' minutes with one technician and ' + repairBy(2) + ' with two', ['claims']],
+  ['make fault rates', dt.pm.full.make + ' faults ' + n(1000 * dt.pm.full.rate, 1) + ' times per 1,000 machine-days against ' + n(1000 * dt.pm.full.others, 1) + ' for the other makes; ' + pct(dt.pm.full.repeat, 0) + ' recur within 14 days', ['claims']],
+  ['maintenance tickets', 'only ' + n(dt.overlap.maintenance) + ' scheduled-maintenance tickets exist', ['claims']],
+  ['ticket overlap', n(dt.overlap.faultHours, 1) + ' fault-ticket hours + ' + n(dt.overlap.otherHours, 1) + ' other operation hours = ' + n(dt.overlap.meterHours, 1) + ' meter hours; up to ' + n(dt.overlap.maxOpen) + ' faults open at once', ['claims']],
+  ['avoidable downtime', 'technician ' + n(av.tech, 0) + ' h (' + pct(av.tech / av.meter, 0) + '), preventive maintenance at most ' + n(av.pm, 0) + ' h (' + pct(av.pm / av.meter, 0) + '), either ' + n(av.either, 0) + ' h (' + pct(av.either / av.meter, 0) + ') after ' + n(av.overlap, 0) + ' h of overlap', ['claims']],
   ['comp pilot', cash(m.actionCost(comp)) + ' comp pilot needs about ' + pct(m.actionCost(comp) / compSpend, 0) + ' savings on ' + cash(compSpend), ['claims']],
 ];
 

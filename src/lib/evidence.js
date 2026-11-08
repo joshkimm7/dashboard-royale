@@ -10,7 +10,7 @@ const RANK = { source: 0, evidence: 1, action: 2, decision: 3 };
 // Builds nodes and links from the same analysis objects the tabs use, so the map can't drift from them.
 export function buildEvidenceGraph(m) {
   const { reserve, inspect, inspectionCost, moveCases, peakThreshold, promoCost, quietCohort, payoutCohort, moveBreakEven, m1, m7,
-    schedulingScore, auditRows, fullDays, promoHurdle, cohort, reviewAction, move, data, fullOverlap, payoutConfig, compFinding, zoneFinding: zf, zones } = m;
+    schedulingScore, auditRows, fullDays, promoHurdle, cohort, reviewAction, move, data, fullOverlap, payoutConfig, compFinding, zoneFinding: zf, zones, downtime: dt } = m;
   const nodes = [], links = [];
   const add = (id, type, label, summary, value, go) => nodes.push({ id, type, label, summary, value: value ?? '', go: go ?? null });
   const link = (a, b) => links.push({ a, b });
@@ -25,7 +25,12 @@ export function buildEvidenceGraph(m) {
   add('act-promo', 'action', 'Promotion (conditional)', 'Pilot only with registrations above the break-even hurdle.', cash(promoCost), { jump: 'promotion-check' });
   add('act-reserve', 'action', 'Hold reserve', 'Keep unspent budget until other actions have stronger evidence.', cash(reserve), { jump: 'catalog-check' });
   add('act-comp', 'action', 'Hold comp changes', 'No comp pilot and no floor-wide comp change in July; the two are mutually exclusive' + (compFinding.detected ? ', and the ' + compFinding.date + ' repricing needs reading first.' : '.'), '$0', { jump: 'catalog-check' });
-  for (const a of ['act-inspect', 'act-move', 'act-staff', 'act-promo', 'act-reserve', 'act-comp']) link('plan', a);
+  const minutes = v => n(v, 0) + ' min';
+  add('act-tech', 'action', dt.tech.best.value >= dt.tech.cost ? 'Add a technician' : 'No added technician', 'A second ' + ['day', 'swing', 'grave'][dt.tech.best.shift] + '-shift technician would recover about ' + cash(dt.tech.best.value) +
+    ' of expected win in July, against a ' + cash(dt.tech.cost) + ' cost.', dt.tech.best.value >= dt.tech.cost ? cash(dt.tech.cost) : '$0', { jump: 'catalog-check' });
+  add('act-pm', 'action', dt.pm.breakEven <= .5 ? 'Preventive sweep' : 'No preventive sweep', 'A ' + dt.pm.full.make + ' sweep breaks even only if it removes ' + pct(dt.pm.breakEven, 0) + ' of that make’s excess faults.',
+    dt.pm.breakEven <= .5 ? cash(dt.pm.cost) : '$0', { jump: 'catalog-check' });
+  for (const a of ['act-inspect', 'act-move', 'act-staff', 'act-promo', 'act-reserve', 'act-comp', 'act-tech', 'act-pm']) link('plan', a);
 
   add('q1', 'question', 'Q1 · Machine audit', 'Why do the lowest earners earn so little?', '', { goto: 'audit' });
   add('q2', 'question', 'Q2/Q3 · Demand & uptime', 'How did demand and machine uptime change?', '', { goto: 'demand' });
@@ -45,7 +50,7 @@ export function buildEvidenceGraph(m) {
   add('ev-holdout', 'evidence', 'Forecast holdout test', 'Weekday averages vs “same day last week” on 61 unseen days.', pct(1 - m1 / m7) + ' lower error', { goto: 'model/holdout' });
   add('ev-staffing', 'evidence', 'Staffing replay', 'Simulated May–June staffing calls from each forecast.', n(staffing.hits) + ' of ' + n(staffing.hits + staffing.missed) + ' peaks caught', { jump: 'staffing-check' });
   add('ev-demand', 'evidence', 'Demand trend', 'Monthly wagers alongside events, entrances and city visitors.', '', { goto: 'demand/trend' });
-  add('ev-downtime', 'evidence', 'Downtime impact', 'Whether lost play from downtime explains the demand trend.', cash(sum(auditRows, r => r.lost) / fullDays) + '/day at risk', { goto: 'demand/downtime' });
+  add('ev-downtime', 'evidence', 'Downtime impact', 'Whether lost play from downtime explains the demand trend, which days it struck and which weekday hours machines are down.', cash(sum(auditRows, r => r.lost) / fullDays) + '/day at risk', { goto: 'demand/downtime' });
   const signedCash = v => (v > 0 ? '+' : '') + cash(v);
   add('ev-zones', 'evidence', 'Zones, traffic & hours', 'April to June, property coin-in moved ' + signedCash(zf.contribution.total) + ' per day: ' + zones[zf.biggest.zone] + ' moved most (' + signedCash(zf.biggest.change) +
     '), and coin-in per available hour accounts for ' + signedCash(zf.rate) + ' of it versus ' + signedCash(zf.hours) + ' from machine-hours. Entries fell in ' + n(zf.trafficFell) + ' of ' + n(zf.trafficZones) + ' zones; play peaks ' + zf.peak.day + ' ' + String(zf.peak.hour).padStart(2, '0') + ':00.',
@@ -53,6 +58,10 @@ export function buildEvidenceGraph(m) {
   add('ev-context', 'evidence', 'Weather & Missouri context', 'Competing explanations from real outside data: ' + (zf.heat[1] < 0 && zf.heat[2] > 0 ? 'no detectable heat effect' : 'a measurable heat effect') + ' on weekday-adjusted wagers, ' + n(zf.rainDays) +
     ' rain days below expectation, and Missouri slot handle per day ' + signedPct(zf.moChange) + ' April to June against ' + signedPct(zf.ownChange) + ' here. Context only, never a forecast input.',
     'Missouri ' + signedPct(zf.moChange), { goto: 'demand/zones' });
+  const [dayTest, swingTest] = dt.tests;
+  add('ev-response', 'evidence', 'Repair response times', 'Faults wait longer for work to start with one technician on duty: weekday day shifts ' + minutes(dayTest.mean1) + ' vs ' + minutes(dayTest.mean2) + ', swing ' + minutes(swingTest.mean1) + ' vs ' + minutes(swingTest.mean2) +
+    '. ' + dt.pm.full.make + ' faults ' + n(dt.pm.full.rate / dt.pm.full.others, 1) + '× as often as the other makes. A technician shift could avoid about ' + pct(dt.avoid.tech / dt.avoid.meter, 0) + ' of downtime and preventive maintenance at most ' + pct(dt.avoid.pm / dt.avoid.meter, 0) + '.',
+    minutes(dayTest.mean1) + ' vs ' + minutes(dayTest.mean2), { jump: 'response-check' });
   add('ev-events', 'evidence', 'Event days', 'Wagers on event days vs similar ordinary days.', n(data.events.length) + ' events', { goto: 'demand/events' });
   add('ev-promo', 'evidence', 'Promotion evidence', 'Lift from past promotions and the hurdle a July pilot must clear.', pct(promoHurdle, 1) + ' hurdle', { jump: 'promotion-check' });
   const outcomes = m.fullOutcomes;
@@ -67,7 +76,8 @@ export function buildEvidenceGraph(m) {
 
   for (const [a, list] of Object.entries({ 'act-inspect': ['ev-hold', 'ev-verdicts', 'ev-adjusted'], 'act-move': ['ev-moves', 'ev-move-econ'], 'act-staff': ['ev-staffing', 'ev-holdout', 'ev-zones'],
     'act-promo': ['ev-promo', 'ev-events'], 'act-reserve': ['ev-catalog', 'ev-adjusted'],
-    q1: ['ev-verdicts', 'ev-adjusted', 'ev-hold'], q2: ['ev-demand', 'ev-zones', 'ev-context', 'ev-downtime', 'ev-events'], q4: ['ev-players', 'ev-comps', 'ev-comp-break'], 'ev-comps': ['ev-catalog'], 'act-comp': ['ev-comp-break', 'ev-comps', 'ev-players'], 'ev-comp-break': ['ev-catalog'], qm: ['ev-holdout', 'ev-staffing'], q6: ['ev-catalog', 'ev-moves', 'ev-move-econ', 'ev-promo'] }))
+    q1: ['ev-verdicts', 'ev-adjusted', 'ev-hold'], q2: ['ev-demand', 'ev-zones', 'ev-context', 'ev-downtime', 'ev-response', 'ev-events'],
+    'act-tech': ['ev-response', 'ev-downtime', 'ev-catalog'], 'act-pm': ['ev-response', 'ev-downtime', 'ev-catalog'], q4: ['ev-players', 'ev-comps', 'ev-comp-break'], 'ev-comps': ['ev-catalog'], 'act-comp': ['ev-comp-break', 'ev-comps', 'ev-players'], 'ev-comp-break': ['ev-catalog'], qm: ['ev-holdout', 'ev-staffing'], q6: ['ev-catalog', 'ev-moves', 'ev-move-econ', 'ev-promo'] }))
     for (const b of list) link(a, b);
 
   const flagsSeen = new Set();
@@ -89,13 +99,15 @@ export function buildEvidenceGraph(m) {
   add('src-moves', 'source', 'Move history', 'Past cabinet relocations and their comparison groups.', n(data.moves.length) + ' moves');
   add('src-gamemath', 'source', 'Game math & placements', 'Published payout rate and variance per game, and which configuration each cabinet ran.', n(payoutConfig.configs) + ' configurations');
   add('src-ledger', 'source', 'Loyalty ledger', 'Every points award and comp redemption, with tier, face value and cost.', n(sum(data.loyalty.rows, r => r[7])) + ' redemptions');
+  add('src-roster', 'source', 'Shift roster', 'Slot technicians planned and actually on duty for every day, swing and grave shift.', n(data.downtime.roster.length) + ' technician shifts');
+  add('src-tickets', 'source', 'Fault tickets', 'Repair tickets with the time each fault opened, work started and the machine came back.', n(data.downtime.tickets.length) + ' tickets');
   add('src-catalog', 'source', 'Action catalog', 'Costs and lead times for every July action.', n(data.actions.length) + ' actions');
   add('src-city', 'source', 'LVCVA visitation', 'Monthly Las Vegas visitor counts for market context.', n(data.city.length) + ' months');
-  add('src-hourly', 'source', 'Hourly machine meters', 'Wagers by cabinet and local clock hour, aggregated to zone × weekday × hour.', '7 × 24 cells');
+  add('src-hourly', 'source', 'Hourly machine meters', 'Wagers and available time by cabinet and local clock hour, aggregated to weekday × hour cells.', '7 × 24 cells');
   add('src-traffic', 'source', 'Zone traffic counters', 'Hourly door and zone entries; offline hours excluded, entries are not unique guests.', pct(zf.coverage, 1) + ' coverage');
   add('src-weather', 'source', 'NOAA weather', 'Daily high temperature and rain at Las Vegas airport (real data, context only).', n(data.weather.days.length) + ' days');
   add('src-missouri', 'source', 'Missouri benchmark', 'Missouri Gaming Commission monthly slot handle for 13 casinos (real data, context only).', n(data.missouri.state.length) + ' months');
-  for (const [a, list] of Object.entries({ 'src-hourly': ['ev-zones'], 'src-traffic': ['ev-zones'], 'src-weather': ['ev-context'], 'src-missouri': ['ev-context'], 'src-meters': ['ev-verdicts', 'ev-adjusted', 'ev-hold', 'ev-downtime', 'ev-moves', 'ev-demand', 'ev-players', 'ev-zones'], 'src-property': ['ev-demand', 'ev-context', 'ev-holdout', 'ev-staffing', 'ev-events'],
+  for (const [a, list] of Object.entries({ 'src-roster': ['ev-response'], 'src-tickets': ['ev-response', 'ev-downtime'], 'src-hourly': ['ev-zones', 'ev-downtime'], 'src-traffic': ['ev-zones'], 'src-weather': ['ev-context'], 'src-missouri': ['ev-context'], 'src-meters': ['ev-verdicts', 'ev-adjusted', 'ev-hold', 'ev-downtime', 'ev-moves', 'ev-demand', 'ev-players', 'ev-zones'], 'src-property': ['ev-demand', 'ev-context', 'ev-holdout', 'ev-staffing', 'ev-events'],
     'src-players': ['ev-players', 'ev-comps'], 'src-ledger': ['ev-comp-break'], 'src-events': ['ev-events', 'ev-holdout', 'ev-promo'], 'src-moves': ['ev-moves'], 'src-gamemath': ['ev-adjusted'], 'src-catalog': ['ev-catalog', 'ev-move-econ'], 'src-city': ['ev-demand'] }))
     for (const b of list) link(a, b);
 

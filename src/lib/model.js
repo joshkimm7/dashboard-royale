@@ -2,6 +2,7 @@
 // createModel runs once at startup; components read the result through useModel().
 import { by, cash, month, months, n, ratio, sum, week } from './format.js';
 import { heatGrid, missouriMonthly, zoneContribution, zoneTraffic } from './zones.js';
+import { downtimeFinding } from './downtime.js';
 
 export const peerDemandCutoff = .8;
 export const hasPeerBenchmark = (machine, key) => machine.zoneCover >= .5 && machine[key] != null;
@@ -540,8 +541,11 @@ export function createModel(data) {
     };
   })();
 
+  // Q3 downtime: response times, technician staffing and the avoidable share (full period), for the July catalog.
+  const downtime = downtimeFinding({ data, auditRows, fullDays, catalogue, actionCost });
+
   return {
-    zoneFinding,
+    zoneFinding, downtime,
     data, dict, zones, fullDays, auditRows, zoneBanks, fullSummary, scope, regions, tiers, ageBands, ageOf, playerRows, fullOutcomes, months,
     holdout, mae, pairedSummary, m1, m7, mCalendar, peakThreshold, quietThreshold, schedulingTier, schedulingScore,
     inspect, focalWeeks, holdGap, worstWeek, leaveOneOut, withoutWorst, maxLeaveOneOutQ, inspectPeers, peerWeeks, weekLabel, matchedPayoutPeers,

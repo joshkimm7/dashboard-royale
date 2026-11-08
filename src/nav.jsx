@@ -5,7 +5,7 @@ export const SUBTABS = {
   overview: [],
   map: [],
   audit: [['verdicts', 'Bottom-ten verdicts'], ['adjusted', 'Adjusted ranking'], ['machine', 'Machine file & floor map'], ['method', 'How to read the audit']],
-  demand: [['trend', 'Demand trend'], ['zones', 'Zones & context'], ['downtime', 'Downtime impact'], ['repairs', 'Repairs & tickets'], ['events', 'Event days']],
+  demand: [['trend', 'Demand trend'], ['zones', 'Zones & context'], ['downtime', 'Downtime impact'], ['repairs', 'Repairs & tickets'], ['response', 'Response times'], ['events', 'Event days']],
   guests: [['players', 'Player concentration'], ['comps', 'Comps & loyalty']],
   model: [['holdout', 'Holdout test'], ['staffing', 'Staffing calls'], ['july', 'July forecast']],
   plan: [['summary', 'Action summary'], ['inspection', 'Inspect & defer'], ['moves', 'Past moves'], ['promotion', 'Promotion'], ['catalog', 'Full catalog']],
@@ -18,7 +18,7 @@ export const SECTION_SUB = {
   'machine-check': ['audit', 'machine'], 'hold-check': ['audit', 'machine'],
   'staffing-check': ['model', 'staffing'], 'action-summary': ['plan', 'summary'], 'inspection-plan': ['plan', 'inspection'],
   'move-check': ['plan', 'moves'], 'promotion-check': ['plan', 'promotion'], 'catalog-check': ['plan', 'catalog'],
-  'players-check': ['guests', 'players'], 'zones-check': ['demand', 'zones'], 'comp-break-check': ['guests', 'comps'],
+  'players-check': ['guests', 'players'], 'zones-check': ['demand', 'zones'], 'response-check': ['demand', 'response'], 'comp-break-check': ['guests', 'comps'],
 };
 export const firstSub = tab => SUBTABS[tab]?.[0]?.[0] ?? '';
 

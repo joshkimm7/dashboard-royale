@@ -35,6 +35,16 @@ export const CARD_INFO = {
 };
 
 export const LINE_INFO = {
+  // Demand → Response times
+  'Fault tickets opened': "Repair tickets for machine faults opened in the selected months and bank. Each ticket runs from the moment the machine went down to the moment it was playable again.",
+  'Response · mean / median': "Minutes from a fault being opened to a technician starting work. The median is often zero because most faults are picked up at once; the mean shows the long waits.",
+  'Work started at once': "Share of fault tickets where the technician started work the moment the machine went down. A falling share means faults are queueing behind busy technicians.",
+  'Repair · mean / median': "Minutes from a technician starting work to the machine being playable again. Extra staff shortens the wait for a technician, not this part.",
+  'Meter downtime': "Scheduled machine-hours the meters show as unavailable in the selection, from every cause: faults, moves, installs and scheduled maintenance. It is the total the other lines are measured against.",
+  'Fault-ticket hours · waiting / repair': "Hours machines spent on fault tickets, split into waiting for a technician and the repair itself. Tickets never overlap on one machine, so nothing is counted twice.",
+  'Technician shift could avoid': "Waiting hours on tickets opened with one technician or none on duty, scaled by how much of the wait a second technician removed in like-for-like shifts.",
+  'Preventive maintenance could avoid · upper bound': "Ticket hours above the other makes' fault rate for any manufacturer that breaks down more often. It assumes a sweep brings that make fully level, so treat it as a ceiling.",
+  'Either action, overlap counted once': "Hours either action could avoid, with the waiting on excess-fault tickets counted once rather than twice. The remainder is repair work neither action shortens.",
   // Machine file
   'Banks during selection': "The floor banks this cabinet sat in during the selected months. More than one bank means it was moved during the period.",
   'Zones during selection': "The floor zones this cabinet occupied in the selected months. Zone matters because the audit compares the cabinet with same-game machines in the same zone.",
@@ -146,6 +156,12 @@ export const PANEL_INFO = {
   'When downtime cost the most': "Estimated wagers lost to downtime, month by month, with the single worst days listed. Use it to spot whether downtime clusters in time.",
   'Downtime estimate': "How lost wagers are estimated: lost hours times the cabinet's normal rate on fully working days of the same weekday, with a peer rate as fallback.",
   'Where to look for repairs': "Downtime and lost expected win by manufacturer, and fault-ticket hours by shift. Use it to see which makers and shifts carry the most downtime.",
+  'Daily downtime timeline': "Machine-hours out of service on each gaming day, with a seven-day average. Use it to see whether downtime comes in bursts or a steady trickle.",
+  'When machines are down': "Average machine-hours down in each weekday and clock hour, from the hourly meters. It shows which shift carries the downtime a technician would have to cover.",
+  'How fast are faults answered?': "How long faults wait for a technician and how long repairs take, by shift and by how many technicians were on duty, with a like-for-like test of one technician against two.",
+  'Response and repair by manufacturer': "Fault frequency, repeat failures, waiting and repair time for each machine maker. A maker that fails often but repairs normally is a candidate for preventive maintenance.",
+  'Response and repair by month': "Average minutes to start work and to finish repairs each month, next to the number of short-staffed technician shifts. Slow months should line up with staff shortages.",
+  'Which downtime could be avoided?': "Splits meter downtime into the part an extra technician could shorten, the part preventive maintenance could prevent at best, and the repair work neither action reaches.",
   'Event days vs similar weekdays': "Wagers on each listed event's days compared with event-free days on the same weekday in the same month. A positive figure means the event days ran busier.",
   // Guests & comps
   'Who accounted for play and losses': "How concentrated loyalty-card play and losses are. Each player's months are added together first, so one guest counts once.",
@@ -192,6 +208,9 @@ export const CHART_INFO = {
   'Machine file': "Actual house win each month against what the cabinet's payout settings say it should have kept. A win line that keeps sitting below expected win suggests a payout problem rather than bad luck.",
   'M-1158 · Weekly payout check': "Weekly hold gap for M-1158 against the wager-weighted gap of every cabinet running the same game. Zero means paying exactly as configured; points below it mean the house kept less.",
   'Demand across the period': "Average daily wagers by month as recorded, and with event days removed and each weekday weighted equally. The second line shows the underlying trend without calendar quirks.",
+  'Daily downtime timeline': "Gold area: machine-hours down each gaming day. Dashed blue: the trailing seven-day average. Spikes are single bad days; a rising average is a lasting problem.",
+  'When machines are down': "Each cell is one weekday and clock hour; lighter gold means more machine-hours down on average. Rows are gaming days, so hours after midnight belong to the previous day.",
+  'Response and repair by month': "Gold: average minutes before work starts on a fault. Dashed blue: average minutes of repair once work starts. A gold peak with flat blue means faults queued for technicians.",
   'When downtime cost the most': "Estimated wagers lost to downtime per day, averaged within each month so months of different lengths compare fairly.",
   'Did the comp program change?': "Weekly points charged per $1 of comp face value, by tier at redemption, with all tiers dashed. A step in every tier line at the marked week is a price change.",
   'Placebo dates': "The before/after price shift if the split were placed at each date. Ordinary dates sit near zero; the marked date is the detected break.",

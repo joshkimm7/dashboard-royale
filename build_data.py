@@ -347,6 +347,74 @@ for item in ops.itertuples():
 shift_parts = pd.DataFrame(shift_parts, columns=['day','bank','shift','hours','wait'])
 shift_parts = shift_parts.groupby(['day','bank','shift'],as_index=False)[['hours','wait']].sum()
 
+# Q3 response times. Each fault ticket gets response (opened -> work started) and repair (work started -> restored) minutes,
+# the slot-tech roster row whose UTC window contains its opening (techs actually on duty), its manufacturer, its gaming day's
+# weekday, and whether the same machine had been restored less than 14 days earlier (a repeat fault).
+roster = load('shift_roster')
+techs = roster[roster.role.eq('slot_tech')].copy()
+assert techs.zone_id.isna().all() and not techs.duplicated(['gaming_date','shift']).any()
+techs['start'] = pd.to_datetime(techs.start_utc, utc=True)
+techs['end'] = pd.to_datetime(techs.end_utc, utc=True)
+shift_names = ['day', 'swing', 'grave']
+tickets = ops.sort_values('opened').copy()
+tickets = pd.merge_asof(tickets, techs.sort_values('start')[['start','end','gaming_date','shift','planned_headcount','actual_headcount']],
+                        left_on='opened', right_on='start', direction='backward')
+assert (tickets.opened < tickets.end).all() and tickets.restored.notna().all() and tickets.work.notna().all()
+local_open = tickets.opened.dt.tz_convert('America/Los_Angeles').dt.tz_localize(None)
+assert (tickets['shift'].map(shift_names.index) == (local_open.dt.hour - 6) % 24 // 8).all()
+assert (tickets.gaming_date == (local_open - pd.Timedelta(hours=6)).dt.date.astype(str)).all()
+tickets['response'] = (tickets.work - tickets.opened).dt.total_seconds() / 60
+tickets['repair'] = (tickets.restored - tickets.work).dt.total_seconds() / 60
+tickets = tickets.merge(load('machines')[['machine_id','manufacturer']], on='machine_id', validate='many_to_one')
+tickets = tickets.sort_values(['machine_id','opened'])
+previous = tickets.groupby('machine_id').restored.shift()
+assert not (tickets.opened < previous).any()  # no two fault tickets on one machine overlap, so ticket hours never double-count
+tickets['repeat'] = ((tickets.opened - previous).dt.total_seconds() < 14 * 86400).astype(int)
+tickets = tickets.sort_values('opened').reset_index(drop=True)
+tickets['day'] = tickets.gaming_date.map({d: i for i, d in enumerate(cal.gaming_date)})
+tickets['weekday'] = tickets.gaming_date.map(cal.set_index('gaming_date').local_weekday).map(['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].index)
+tickets['shift_code'] = tickets['shift'].map(shift_names.index)
+tickets['bank'] = tickets.location_id.map(slot.bank_id)
+tickets['cost'] = tickets.direct_cost_cents / 100  # cents -> dollars, once
+ticket_makes = sorted(tickets.manufacturer.unique())
+tickets['make'] = tickets.manufacturer.map(ticket_makes.index)
+techs['day'] = techs.gaming_date.map({d: i for i, d in enumerate(cal.gaming_date)})
+techs['shift_code'] = techs['shift'].map(shift_names.index)
+loads = tickets.groupby(['day','shift_code']).size()
+techs['tickets'] = [int(loads.get((d, s), 0)) for d, s in zip(techs.day, techs.shift_code)]
+
+# Like-for-like test: the same shift and day type, one technician vs two, inside April-June (when the shortages happened),
+# so season and weekday mix match. Bootstrap 95% interval (10,000 resamples) for the gap in mean response, and a one-sided
+# permutation p-value. Load (tickets per shift-day) is reported because a busier day could slow response on its own.
+rng = np.random.default_rng(2025)
+techs['weekday'] = techs.gaming_date.map(cal.set_index('gaming_date').local_weekday).map(['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].index)
+def response_test(label, shift, weekdays_only, months):
+    in_scope = lambda f: f['shift'].eq(shift) & f.gaming_date.str[5:7].isin(months) & (f.weekday.lt(5) if weekdays_only else True)
+    group, days = tickets[in_scope(tickets)], techs[in_scope(techs)]
+    one, two = (group.loc[group.actual_headcount.eq(k), 'response'].to_numpy() for k in (1, 2))
+    boot = rng.choice(one, (10000, len(one))).mean(1) - rng.choice(two, (10000, len(two))).mean(1)
+    pooled = np.concatenate([one, two])
+    shuffled = np.take_along_axis(np.tile(pooled, (10000, 1)), rng.random((10000, len(pooled))).argsort(1), 1)
+    perm = shuffled[:, :len(one)].mean(1) - shuffled[:, len(one):].mean(1)
+    days1, days2 = int(days.actual_headcount.eq(1).sum()), int(days.actual_headcount.eq(2).sum())
+    return {'label': label, 'n1': len(one), 'n2': len(two), 'days1': days1, 'days2': days2, 'load1': len(one) / days1, 'load2': len(two) / days2,
+            'mean1': float(one.mean()), 'mean2': float(two.mean()), 'median1': float(np.median(one)), 'median2': float(np.median(two)),
+            'lo': float(np.percentile(boot, 2.5)), 'hi': float(np.percentile(boot, 97.5)),
+            'p': float(((perm >= one.mean() - two.mean()).sum() + 1) / 10001), 'samples': (one, two)}
+spring, half = ['04','05','06'], ['01','02','03','04','05','06']
+response_tests = [response_test('Day shift, Mon–Fri, Apr–Jun', 'day', True, spring), response_test('Swing shift, Apr–Jun', 'swing', False, spring)]
+robust_tests = [response_test('Day shift, Mon–Fri, Jan–Jun', 'day', True, half), response_test('Swing shift, Jan–Jun', 'swing', False, half)]
+# Pooled share of waiting a second technician removed, weighting each stratum by its one-technician tickets.
+def pooled_share(pairs):
+    weights = [len(one) for one, _ in pairs]
+    return 1 - sum(w * two.mean() for w, (_, two) in zip(weights, pairs)) / sum(w * one.mean() for w, (one, _) in zip(weights, pairs))
+pairs = [t['samples'] for t in response_tests]
+share_draws = [pooled_share([(rng.choice(one, len(one)), rng.choice(two, len(two))) for one, two in pairs]) for _ in range(4000)]
+response_share = {'share': float(pooled_share(pairs)), 'lo': float(np.percentile(share_draws, 2.5)), 'hi': float(np.percentile(share_draws, 97.5))}
+for t in response_tests + robust_tests:
+    del t['samples']
+print('Response tests:', [{k: (round(v, 3) if isinstance(v, float) else v) for k, v in t.items()} for t in response_tests + robust_tests], response_share)
+
 # Event study. The move day itself is dropped, including any transport downtime.
 def compare_move(machine, day, width):
     window = daily[daily.day.between(day - width, day + width) & daily.day.ne(day)].copy()
@@ -449,8 +517,8 @@ print(f'Zone traffic: {int(traffic.counter_status.eq("offline").sum())} offline 
 
 # Q2 weekday x hour heat map from machine_hour: coin-in per zone x month x gaming-day weekday x local clock hour, ordered
 # 06:00..05:00 so each row is one gaming day. Off-floor and unreported days are dropped by joining to the placed daily rows.
-hour_rows = pd.read_csv(guide_path('machine_hour'), usecols=['machine_id','gaming_date','local_hour','coin_in_cents'])
-hour_rows = hour_rows.merge(daily[['machine_id','gaming_date','zone_id']], on=['machine_id','gaming_date'], validate='many_to_one')
+hour_rows = pd.read_csv(guide_path('machine_hour'), usecols=['machine_id','gaming_date','local_hour','coin_in_cents','available_seconds'])
+hour_rows = hour_rows.merge(daily[['machine_id','gaming_date','zone_id','bank_id','configured_rtp']], on=['machine_id','gaming_date'], validate='many_to_one')
 assert np.isclose(hour_rows.coin_in_cents.sum() / 100, daily.coin_in_usd.sum())
 weekday_order = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
 hour_rows['cell'] = hour_rows.gaming_date.map(cal.set_index('gaming_date').local_weekday).map(weekday_order.index) * 24 + (hour_rows.local_hour - 6) % 24
@@ -461,7 +529,42 @@ occurrences = hour_rows.drop_duplicates(['gaming_date','local_hour']).groupby(['
 heat = {'zones': zone_ids, 'weekdays': weekday_order,
         'coin': [[[int(round(heat_sum.get((z, mo, c), 0))) for c in range(168)] for mo in range(6)] for z in zone_ids],
         'n': [[int(occurrences.get((mo, c), 0)) for c in range(168)] for mo in range(6)]}
+
+# Q3 "when": down machine-hours per bank x month x weekday x clock hour. Every machine_hour row is one clock hour, so its
+# scheduled time is 3,600 s (the spring-forward day simply has 23 rows); down = 3,600 - available_seconds. The hourly total
+# must equal the daily scheduled-minus-available hours. Shipped sparse (non-zero cells only) in tenths of an hour.
+hour_rows['down'] = (3600 - hour_rows.available_seconds) / 3600
+assert (hour_rows.available_seconds.between(0, 3600)).all() and np.isclose(hour_rows.down.sum(), daily.down.sum())
+down_banks = sorted(hour_rows.bank_id.unique())
+down_cells = hour_rows[hour_rows.down > 0].groupby(['bank_id','month','cell']).down.sum().reset_index()
+down_cells['bank'] = down_cells.bank_id.map(down_banks.index)
+down_cells['tenths'] = (down_cells.down * 10).round().astype(int)
+down_cells = down_cells[down_cells.tenths > 0]
+# Expected win and wagers per available machine-hour in each Vegas shift (06-14 day, 14-22 swing, 22-06 grave), whole floor,
+# January-June: the price of an hour of downtime in that shift. Hold is each machine-day's configured hold.
+hour_rows['shift'] = (hour_rows.local_hour - 6) % 24 // 8
+hour_rows['theo'] = hour_rows.coin_in_cents / 100 * (1 - hour_rows.configured_rtp)
+by_shift = hour_rows.groupby('shift').agg(theo=('theo','sum'), coin=('coin_in_cents','sum'), available=('available_seconds','sum'))
+shift_rates = {'theo': (by_shift.theo / (by_shift.available / 3600)).tolist(), 'coin': (by_shift.coin / 100 / (by_shift.available / 3600)).tolist()}
+assert np.isclose(hour_rows.theo.sum(), daily.theo_usd.sum(), rtol=1e-6)
+print('Downtime heat cells:', len(down_cells), 'shift rates', shift_rates)
 del hour_rows
+
+# Ticket overlap: fault tickets never overlap on one machine (asserted above), so fault hours inside the period add up without
+# double counting. Other operations (moves, installs, maintenance) explain the rest of the meter downtime. Floor-wide, tickets
+# do overlap in time, which is what loads the technicians: count the most fault tickets open at once.
+period_start, period_end = limits.iloc[0], end
+def clipped_hours(frame):
+    start = frame.opened.clip(lower=period_start); stop = frame.restored.clip(upper=period_end)
+    return float(((stop - start).dt.total_seconds().clip(lower=0) / 3600).sum())
+others = operations[~operations.event_type.eq('fault_repair')].copy()
+others['opened'] = pd.to_datetime(others.opened_at_utc, utc=True); others['restored'] = pd.to_datetime(others.available_at_utc, utc=True)
+edges = pd.concat([pd.Series(1, index=tickets.opened), pd.Series(-1, index=tickets.restored)]).sort_index(kind='stable')
+edges = edges.groupby(level=0).sum().cumsum()
+ticket_overlap = {'faultHours': clipped_hours(tickets), 'otherHours': clipped_hours(others), 'meterHours': float(daily.down.sum()),
+                  'tickets': len(tickets), 'sameMachineOverlaps': 0, 'maxOpen': int(edges.max()),
+                  'maintenance': int(operations.event_type.eq('scheduled_maintenance').sum())}
+print('Ticket overlap:', ticket_overlap)
 
 # Q2 real-world context (guide: real_sources are later publications, so context only, never forecast inputs).
 # Weather: NOAA calendar day matched to the gaming day that starts at 06:00 on that date (18 of its 24 hours overlap).
@@ -541,6 +644,15 @@ data = {
     'locations': rows(locations[locations.node_type.isin(['bank','zone'])], ['location_id','node_type','zone_id','name','x_m','y_m']),
     'vacancies': rows(locations[locations.node_type.eq('slot') & ~locations.location_id.isin(daily.loc[daily.day.eq(len(dates)-1),'location_id'].map(dict(enumerate(dictionaries['location_id']))))], ['location_id','bank_id','zone_id']),
     'shifts': rows(shift_parts, ['day','bank','shift','hours','wait']),
+    'downtime': {
+        'makes': ticket_makes, 'banks': down_banks,
+        # day, bank, shift (0 day, 1 swing, 2 grave), techs on duty, make, response min, repair min, repair cost $, weekday, repeat
+        'tickets': rows(tickets, ['day','bank','shift_code','actual_headcount','make','response','repair','cost','weekday','repeat'], 1),
+        # day, shift, planned and actual slot techs, fault tickets opened in that shift
+        'roster': rows(techs.sort_values(['day','shift_code']), ['day','shift_code','planned_headcount','actual_headcount','tickets'], 0),
+        'heat': rows(down_cells, ['bank','month','cell','tenths'], 0),
+        'rates': shift_rates, 'tests': response_tests, 'robust': robust_tests, 'share': response_share, 'overlap': ticket_overlap,
+    },
     'city': rows(city, ['month','mean_visitors_per_calendar_day','source_url']),
     'events': rows(events, ['name','start_date','end_date','local_scope']),
     'payoutConfig': payout_config,
