@@ -58,6 +58,34 @@
 .machine-pick{margin-bottom:10px}.machine-pick label{display:grid;gap:3px;color:var(--muted);font-size:12px}.machine-pick select{color:var(--text);max-width:100%}
 .verdict-table td:last-child{white-space:normal;min-width:135px}.move-result-card{min-width:0;border:1px solid var(--edge);border-radius:9px;padding:10px 13px;background:#421e19}.move-result-card dl{margin:5px 0 0}.move-result-card dl div{display:flex;justify-content:space-between;gap:12px;padding:4px 0}.move-result-card dd{margin:0;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}.move-result-card dl div:last-child{border-top:1px solid var(--edge);margin-top:3px;padding-top:6px}.move-cases{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0}.hero-audit-link{margin-top:10px}.review-tags{display:block;font-size:11px;color:var(--muted);margin-top:3px}@media(max-width:620px){.move-cases{grid-template-columns:minmax(0,1fr)}}
 .verdict-list{margin:10px 0}.verdict-list details{padding:0}.verdict-list summary{display:grid;grid-template-columns:minmax(100px,.8fr) minmax(0,1.4fr) minmax(0,1.2fr) 1.25rem;gap:12px;align-items:center;padding:10px 3px;list-style:none;color:var(--text)}.verdict-list summary::-webkit-details-marker{display:none}.verdict-list summary::after{content:'+';color:var(--gold);font-weight:700}.verdict-list details[open] summary::after{content:'−'}.verdict-list .verdict-id strong{color:var(--gold)}.verdict-list .verdict-id small{display:block}.verdict-detail{padding:0 3px 12px}.verdict-detail dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:8px;margin:4px 0 12px}.verdict-detail dl div{border-left:2px solid var(--edge);padding-left:8px}.verdict-detail dt{font-size:12px;color:var(--muted)}.verdict-detail dd{margin:0}.repair-inputs{display:flex;gap:8px 12px;flex-wrap:wrap;margin-bottom:10px}.repair-inputs label{display:grid;gap:4px;min-width:0}.repair-inputs input{font:inherit;max-width:100%;width:10rem;padding:6px;background:var(--bg);color:var(--text);border:1px solid var(--edge);border-radius:5px}.repair-grid td,.repair-grid th{white-space:normal}.repair-grid th{min-width:83px}@media(max-width:560px){.verdict-list summary{grid-template-columns:minmax(95px,.75fr) minmax(0,1.25fr) 1rem;gap:2px 9px}.verdict-list .verdict-action{grid-column:2;grid-row:2}.verdict-list summary::after{grid-column:3;grid-row:1}}
+
+/* Motion: short, eased transitions; disabled for reduced-motion users */
+:root{--ease:cubic-bezier(.22,.8,.24,1);--fast:170ms;--med:320ms}
+html{scroll-behavior:smooth}
+button,select,input,a,summary,.card,.decision-card,.move-result-card,.bank-zone,.subnav button,tbody tr,.verdict-list summary{transition:background-color var(--fast) var(--ease),border-color var(--fast) var(--ease),color var(--fast) var(--ease),box-shadow var(--med) var(--ease),transform var(--fast) var(--ease),opacity var(--fast) var(--ease)}
+button:active{transform:scale(.97)}
+.nav button:hover:not([aria-pressed=true]){background:#5c2b23}
+.card:hover,.bank-zone:hover{border-color:#8a5243}
+.decision-card:hover,.move-result-card:hover{border-color:#a66b5c;transform:translateY(-2px);box-shadow:0 10px 26px -14px rgba(0,0,0,.75)}
+tbody tr:hover{background:#3f1d19}
+.verdict-list summary:hover{background:#3f1d19}
+.verdict-list summary::after{display:inline-block;transition:transform var(--med) var(--ease)}
+.verdict-list details[open] summary::after{content:'+';transform:rotate(45deg)}
+.bar span{transition:width var(--med) var(--ease)}
+@supports (interpolate-size:allow-keywords){
+  :root{interpolate-size:allow-keywords}
+  details::details-content{height:0;overflow:clip;opacity:0;transition:height var(--med) var(--ease),opacity var(--med) var(--ease),content-visibility var(--med) allow-discrete}
+  details[open]::details-content{height:auto;opacity:1}
+}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes settle{from{opacity:.55}to{opacity:1}}
+#view.enter>*,#view.enter .stack>*,.hero.enter>*{animation:rise var(--med) var(--ease) both}
+#view.enter .stack>*:nth-child(2),.hero.enter>*:nth-child(2){animation-delay:50ms}
+#view.enter .stack>*:nth-child(3),.hero.enter>*:nth-child(3){animation-delay:100ms}
+#view.enter .stack>*:nth-child(n+4),.hero.enter>*:nth-child(n+4){animation-delay:150ms}
+#view.enter .stack{animation:none}
+#view.refresh{animation:settle 220ms var(--ease)}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after,::details-content{animation:none!important;transition:none!important}html{scroll-behavior:auto}}
 </style></head>
 <body><a class="skip" href="#main">Skip to dashboard</a>
 <header><div class="wrap brand"><strong><span class="mark" aria-hidden="true">♦</span>The Gilded Ace</strong><span class="sub">Dashboard Royale / Las Vegas, NV</span></div></header>
@@ -114,6 +142,7 @@ const rowsTable = (headers,rows) => '<div class="tablewrap"><table><thead><tr>'+
 const note = text => '<p class="muted">'+text+'</p>';
 const metrics = (...cards) => '<div class="grid metrics">'+cards.join('')+'</div>';
 const details = (title,body) => '<details><summary>'+title+'</summary><p>'+body+'</p></details>';
+const how = body => details('How this works',body);
 const SUBTABS = {
   overview:[],
   audit:[['verdicts','Bottom-ten verdicts'],['machine','Machine file & floor map'],['method','How to read the audit']],
@@ -257,7 +286,7 @@ function verdictSensitivity(bottom){
   if(!bottom.length)return '';
   const count=(key,cutoff)=>bottom.filter(x=>underPeerCutoff(x,key,cutoff)).length;
   return '<details><summary>How sensitive are the demand flags?</summary>'+
-    note('The same '+n(bottom.length)+' cabinets are tested at each cutoff. A cabinet needs a matched benchmark for at least half its available hours to be eligible. The default is 80%. Payout and availability flags use separate tests.')+
+    note('Flag counts for the same '+n(bottom.length)+' cabinets at other cutoffs (default 80%). Only cabinets with a peer benchmark for at least half their hours are eligible.')+
     rowsTable(['Cutoff','Quiet placement flags','Weak local demand flags'],[.75,peerDemandCutoff,.85].map(c=>[pct(c,0),n(count('zone',c))+' of '+n(bottom.filter(x=>hasPeerBenchmark(x,'zone')).length)+' eligible',n(count('local',c))+' of '+n(bottom.filter(x=>hasPeerBenchmark(x,'local')).length)+' eligible']))+placementCoverage(bottom)+'</details>';
 }
 function renderAudit(s){
@@ -304,22 +333,22 @@ function renderAudit(s){
   }
   return metrics(card('Bottom cohort',n(bottom.length)+' / '+n(all.length),'Machines by raw house win'),card('Cabinets to inspect',n(bottom.filter(x=>x.flags.includes('Inspect hold')).length)+' of '+n(bottom.length),'Persistent payout shortfall'),card('Cabinets with weak local demand',n(bottom.filter(x=>x.flags.includes('Low peer demand')).length)+' of '+n(bottom.length),'Under 80% of comparable local play'),card('Bottom cohort downtime',n(sum(bottom,x=>x.down),1)+' h',cash(sum(bottom,x=>x.lost))+' estimated coin-in at risk'))+
     tabbed('audit',{
-    verdicts:()=>panel('Bottom-ten verdicts',note('Rank #1 earned the least in this period and bank. Expand a cabinet for its diagnostics or open the full comparison.')+
+    verdicts:()=>panel('Bottom-ten verdicts',note('The ten lowest earners for the selected months and bank. Expand a row for its evidence.')+
       compactVerdicts(bottom)+
       '<details id="comparison-details"'+(comparisonOpen?' open':'')+'><summary>Full sortable cabinet comparison</summary>'+
-      note('Play vs local peers compares wagers at the same available hours. Zone vs floor measures how quiet the placement was. The payout gap compares observed and configured casino win per dollar wagered.')+
+      note('<b>Play vs local peers</b>: wagers vs similar nearby cabinets at the same hours. <b>Zone vs floor</b>: how busy the location is. <b>Payout gap</b>: actual minus configured house win per dollar wagered.')+
       '<div class="controls"><button id="show-all" aria-pressed="'+state.all+'">'+(state.all?'Show bottom 10':'Show all machines')+'</button></div><div class="verdict-table">'+table+'</div></details>'+
       verdictSensitivity(bottom),'verdict-check'),
     machine:()=>'<div class="grid split">'+panel(chosen?'Machine file · '+chosen.id:'Machine file',
       (all.length?'<div class="machine-pick"><label>Machine (ranked by house win)<select id="machine-pick">'+all.map((x,i)=>'<option value="'+x.id+'"'+(x.id===state.machine?' selected':'')+'>#'+(i+1)+' · '+x.id+'</option>').join('')+'</select></label></div>':'')+
-      drill+(chosen?.id===inspect.id?'<button data-evidence="M-1158" data-section="hold-check">Open weekly payout check</button>':''),'machine-check')+panel('Floor banks by zone',note('Gold buttons mark shortlist banks. An outlined button shows the selected bank.')+map)+'</div>'+
+      drill+(chosen?.id===inspect.id?'<button data-evidence="M-1158" data-section="hold-check">Open weekly payout check</button>':''),'machine-check')+panel('Floor banks by zone',note('Gold banks hold a bottom-ten cabinet. Click a bank to filter; click again to clear.')+map)+'</div>'+
       (chosen?.id===inspect.id?renderHoldCheck():''),
     method:()=>panel('How to read the audit',details('Exposure, local demand and placement','We compare observed coin-in with expected coin-in at the same available hours. Each day uses other cabinets with the same configuration in the same zone when at least four peers exist. Sparse groups use only the prior 28 gaming days to estimate a zone index, excluding the focal cabinet from the historical totals. The index uses historical observed wagers divided by historical matched floor wagers, then scales the current same-day floor rate. With less than $5,000 in matched historical exposure, there is no local estimate. Local and zone ratios use covered days only. Both demand flags require at least half of available hours to have a zone comparison. Same-day peer matching is descriptive. Moves are reflected on their effective dates.')+
     details('Payout variation and review thresholds','Hold gap = (house win − configured theoretical win) ÷ total coin-in. Intervals use a weekly clustered standard error with a normal approximation and at least six wagering weeks. Two-sided p-values receive Benjamini–Hochberg adjustment across eligible machines in the current scope. An inspection flag also requires negative gaps in both halves. Intervals are pointwise and are less reliable with few weeks or rare jackpots. Thresholds of 80% peer demand, 70% exposure and 2% downtime are screening rules. The peer demand analysis is retrospective and cannot establish placement causality.'))});
 }
 function demandBridge(base,current){
   if(!base||!current||base.m===current.m||!base.intensity||!current.intensity){
-    return note('Select at least two months with occupied play to compare the drivers of daily wagers.');
+    return note('Select at least two months to compare.');
   }
   const timeEffect=(current.occupied-base.occupied)*(base.intensity+current.intensity)/2;
   const rateEffect=(current.intensity-base.intensity)*(base.occupied+current.occupied)/2;
@@ -331,7 +360,7 @@ function demandBridge(base,current){
       ['Available machine-hours per day',n(base.available,1),n(current.available,1),change(base.available,current.available)],
       ['Occupied machine-hours per day',n(base.occupied,1),n(current.occupied,1),change(base.occupied,current.occupied)],
       ['Coin-in per occupied hour',cash(base.intensity),cash(current.intensity),change(base.intensity,current.intensity)]
-    ])+note('Daily wagers equal occupied hours per day × wagers per occupied hour. The dollar bridge weights each change by the other factor’s two-month average, so both effects add to the total change. The comparison describes where wagers changed. Visitor traffic, game mix, and other causes can still influence the result.');
+    ])+how('Daily wagers = occupied hours × wagers per occupied hour. Each effect is weighted by the other factor’s two-month average, so the two add up to the total. This shows where wagers changed, not why.');
 }
 function weekdayAdjusted(days,value){
   const weekdays=[...by(days.filter(r=>!data.property[r.d][2]),r=>data.property[r.d][1]).values()];
@@ -356,23 +385,23 @@ function renderDemandTrend(monthly,perDay){
     comparison='<p class="takeaway">April to June, adjusted '+(state.bank?'bank':'property')+' wagers changed '+signedPct(wagerChange)+
       ' and Las Vegas visitors per day changed '+signedPct(visitorChange)+'.</p>';
     if(state.bank){
-      comparison+=note('City visitation is a market benchmark. A single bank’s demand also depends on its cabinet mix and placement.');
+      comparison+=note('City visitation is market context; a single bank also depends on its cabinet mix and placement.');
     }else{
       const bothFell=wagerChange<0&&visitorChange<0;
       const ordering=Math.abs(wagerChange-visitorChange)<.0005?'Both fell by about the same proportion.':
         visitorChange<wagerChange?'City visitation fell more.':'Property wagers fell more.';
       comparison+=note((bothFell?ordering+' The shared decline is consistent with market softness or seasonality. ':'')+
-        'City visitors and casino wagers measure different things, and six months cannot separate seasonality from other causes.');
+        'Six months of data can’t separate seasonality from other causes.');
       if(entranceChange!=null)comparison+=line('Observed entrances per day · April to June',signedPct(entranceChange))+
         line('Adjusted wagers per observed entrance · April to June',signedPct((1+wagerChange)/(1+entranceChange)-1))+
-        note('The wager and entrance series use different adjustments. Entries can repeat for the same person, so the ratio is a property-level traffic proxy. It cannot separate guest conversion from spend.');
+        note('Entrances count door crossings, not unique guests, so this is a rough traffic proxy.');
     }
   }
   return comparison+football+after+
     chart([{name:'Observed daily wagers',color:gold,values:monthly.map(r=>r.coin)},{name:'Excluding listed events · equal weekday mix',color:green,values:monthly.map(r=>r.adjusted)}],monthly.map(r=>months[r.m]),{format:compact,min:0})+
     rowsTable(['Month','Days','Observed $/day','Event-free days','Weekday-adjusted $/day','Entrance counts/day','Counter coverage','Vegas visitors/day'],
       monthly.map(r=>[months[r.m],n(r.days),cash(r.coin),n(r.eventFree),cash(r.adjusted),n(r.entrance),pct(r.coverage),n(r.city)]))+
-    note('For each month, remove all days with a recorded event, then give the seven weekday means equal weight. A month requires observations for every weekday. Event exclusions and weekday weights reduce two sources of distortion. Unrecorded events and seasonal changes can still affect the trend.');
+    how('The adjusted series drops days with a recorded event, then weights all seven weekdays equally (each month needs every weekday). Unrecorded events and seasonality can still affect it.');
 }
 function renderDowntimeScale(monthly,days,total){
   const first=monthly[0],last=monthly.at(-1);
@@ -396,7 +425,7 @@ function renderDowntimeScale(monthly,days,total){
     (sized?line('Change in adjusted wagers per day',cash(last.adjusted-first.adjusted))+
       line('Change in adjusted downtime risk per day',cash(last.adjustedRisk-first.adjustedRisk))+
       line('Adjusted wager change even with no modeled downtime',cash(recovered)):'')+
-    note('Daily risk measures wager exposure while machines were unavailable. Changes in that risk are the relevant comparison for the demand trend. The full-recovery scenario is a generous counterfactual before substitution and within-day variation. See the monthly risk column for the whole selection.')+
+    note('Wagers at risk = estimated play lost while machines were down. “Full recovery” is a generous upper bound.')+
     rowsTable(['Month','Downtime risk/day','Event-free weekday-adjusted risk/day'],monthly.map(r=>[months[r.m],cash(r.lost/r.days),cash(r.adjustedRisk)]));
 }
 function renderDemand(s){
@@ -429,19 +458,19 @@ function renderDemand(s){
   const tickets=data.shifts.filter(r=>r[0]>=s.dates[0]&&r[0]<=s.dates.at(-1)&&(!state.bank||r[1]===state.bank));
   const first=monthly[0],last=monthly.at(-1);
   const downtimeMethod=downtimeMethodPanel(theo);
-  return metrics(card('Coin-in',cash(sum(s.rows,r=>r.coin)),'All play · wagers including replay'),card('Out-of-service time',n(down,1)+' h','Scheduled minus available machine hours'),card('Estimated coin-in at risk',cash(lost),'Historical same-weekday available rate'),card('Estimated theo at risk',cash(theo),'Before guest substitution or incremental costs'))+
+  return metrics(card('Coin-in',cash(sum(s.rows,r=>r.coin)),'Total wagered, incl. replayed credits'),card('Out-of-service time',n(down,1)+' h','Machine hours lost to downtime'),card('Estimated coin-in at risk',cash(lost),'Wagers likely lost while down'),card('Estimated theo at risk',cash(theo),'House win lost · upper bound'))+
     tabbed('demand',{
     trend:()=>panel('Demand across the period',renderDemandTrend(monthly,perDay)+
-    note('Entrance counts are observed crossings. Coverage is the property-wide sensor coverage share. City visitation is retrospective context. <a href="'+esc(data.city[0][2])+'">LVCVA revised 2025 summary</a>'))+
-    panel('What drove the raw change in wagers?',note('Compare the first and last selected months before event or weekday adjustment.')+demandBridge(first,last)),
+    note('Counter coverage = share of entrance sensors reporting. Visitor figures: <a href="'+esc(data.city[0][2])+'">LVCVA 2025 summary</a>.'))+
+    panel('What drove the raw change in wagers?',note('First vs last selected month (unadjusted), split into playing time and wagers per hour played.')+demandBridge(first,last)),
     downtime:()=>panel('Can downtime explain the demand trend?',renderDowntimeScale(monthly,s.dates.length,lost))+
-    panel('When downtime cost the most',note('The chart compares daily averages so shorter months are comparable.')+chart([{name:'Estimated wagers at risk per day',color:red,values:monthly.map(r=>r.lost/r.days)}],monthly.map(r=>months[r.m]),{format:cash,height:190,min:0})+
+    panel('When downtime cost the most',note('Daily averages, so months of different lengths compare fairly.')+chart([{name:'Estimated wagers at risk per day',color:red,values:monthly.map(r=>r.lost/r.days)}],monthly.map(r=>months[r.m]),{format:cash,height:190,min:0})+
     rowsTable(['Highest-risk days','Down hours','Coin-in at risk'],worst.map(r=>[r.date,n(r.down,1),cash(r.lost)])))+
     downtimeMethod,
     repairs:()=>panel('Where to look for repairs',rowsTable(['Manufacturer','Down hours','Scheduled share','Expected win at risk'],byMake.map(r=>[esc(r[0]),n(r[1],1),pct(r[3],2),cash(r[2])]))+
-    '<h3 style="margin-top:16px">Fault ticket hours by Vegas shift</h3>'+rowsTable(['Shift','Open → restored','Before work started'],shifts.map((name,i)=>[name,n(sum(tickets.filter(r=>r[2]===i),r=>r[3]),1),n(sum(tickets.filter(r=>r[2]===i),r=>r[4]),1)]))+note('Ticket hours can overlap and cover fault repairs only. Meter downtime is the basis for estimated lost play.')),
+    '<h3 style="margin-top:16px">Fault ticket hours by Vegas shift</h3>'+rowsTable(['Shift','Open → restored','Before work started'],shifts.map((name,i)=>[name,n(sum(tickets.filter(r=>r[2]===i),r=>r[3]),1),n(sum(tickets.filter(r=>r[2]===i),r=>r[4]),1)]))+note('Tickets cover fault repairs only and can overlap; lost-play estimates use meter downtime.')),
     events:()=>panel('Event days vs similar weekdays',rowsTable(['Event','Scope','Matched days','Coin-in vs non-event days'],events.map(r=>[esc(r.name),esc(r.scopeName),r.days,(r.lift>=1?'+':'')+pct(r.lift-1)]))+
-    note('Reference days share the weekday and calendar month and have no recorded event. Traffic, promotions and other changes can still confound the comparison.'))});
+    note('Each event is compared with same-weekday, same-month days that had no event. Other changes can still blur the comparison.'))});
 }
 function downtimeMethodPanel(theo){
   return panel('Downtime estimate',details('Counterfactual and uncertainty','For each placed cabinet-day, subtract available time from the actual gaming-day length, including the 23-hour daylight-saving day. Multiply the lost hours by that cabinet’s wager rate on other fully available days of the same weekday, requiring at least 48 such hours. Otherwise use the matched peer rate. Expected house win at risk multiplies by configured hold. This retrospective estimate assumes equal demand across available and unavailable hours within the day. A low-to-high recovery scenario of 25%–75% implies '+cash(.25*theo)+'–'+cash(.75*theo)+' in expected win for the selected historical period before cost. The remainder can reflect substitution, timing or downtime that can’t be avoided.'));
@@ -469,14 +498,14 @@ function renderGuests(s){
   const compTakeaway=blocks.length>1&&rates.length&&faceChange!=null?
     '<p class="takeaway">From '+months[first[0]]+' to '+months[last[0]]+', face value redeemed per day changed '+signedPct(faceChange)+' ('+cash(first[1]/first[5])+' to '+cash(last[1]/last[5])+'). Cost per face-value dollar ranged from '+pct(Math.min(...rates),1)+' to '+pct(Math.max(...rates),1)+'. '+(Math.max(...rates)-Math.min(...rates)<.003&&faceChange>.01?'The cost increase reflects more face value redeemed, with a stable cost rate.':'')+'</p>':'';
   const high=n(active.filter(r=>r[1]>0).length), low=n(active.filter(r=>r[1]<0).length);
-  return '<div class="controls"><label>Home region<select id="region">'+opt('','All regions')+regions.map(r=>opt(r,r)).join('')+'</select></label><label>Opening tier<select id="tier">'+opt('','All tiers')+tiers.map(t=>opt(t,t)).join('')+'</select></label><small>Guest filters apply to carded play and the selected group’s comps. Bank filters do not apply on this tab.</small></div>'+
+  return '<div class="controls"><label>Home region<select id="region">'+opt('','All regions')+regions.map(r=>opt(r,r)).join('')+'</select></label><label>Opening tier<select id="tier">'+opt('','All tiers')+tiers.map(t=>opt(t,t)).join('')+'</select></label><small>Filters apply to loyalty-card play and comps. The bank filter doesn’t apply here.</small></div>'+
     metrics(card('Carded coin-in',cash(coin),n(active.length)+' active carded players'),card('Returned to players',cash(payout),'Payouts on tracked play'),card('Player net',cash(net),'Payouts minus wagers'),card('Property comp cost',cash(allCost),cash(face)+' face value · selected months'))+
     tabbed('guests',{
-    players:()=>panel('Who accounted for play and losses',line('Top 1% of players by wagers',pct(ratio(topCoin,coin))+' of tracked wagers')+line('Top 1% by losses',pct(ratio(topLoss,grossLoss))+' of gross tracked losses')+line('Active players ahead / behind / even',high+' / '+low+' / '+n(even))+line('Cardholders with zero recorded wagers',n(p.length-active.length)+' of '+n(p.length))+line('Gross losses among losing players',cash(grossLoss/100))+note('An active carded player recorded positive wagers in the selected group and months. Outcomes and top-1% ranks use these active players after aggregating their results across the period. Cardholders with zero recorded wagers may have visited without recorded carded play.')),
-    comps:()=>panel('What comps actually cost',line('Selected group cost',cash(groupCost))+line('Group comp face value',cash(sum(filtered,r=>r[7])))+line('Selected group comp cost / expected win from that group’s carded play',pct(ratio(groupCost,sum(filtered,r=>r[9])),2))+line('Property cost / face value',pct(ratio(allCost,face),2))+note('Property comp cost is included in POS cost of goods. Subtract it once when calculating contribution. Player results cover loyalty-card play only.'))+
+    players:()=>panel('Who accounted for play and losses',line('Top 1% of players by wagers',pct(ratio(topCoin,coin))+' of tracked wagers')+line('Top 1% by losses',pct(ratio(topLoss,grossLoss))+' of gross tracked losses')+line('Active players ahead / behind / even',high+' / '+low+' / '+n(even))+line('Cardholders with zero recorded wagers',n(p.length-active.length)+' of '+n(p.length))+line('Gross losses among losing players',cash(grossLoss/100))+note('“Active” means the player recorded card play in the selected group and months. Results are totaled per player.')),
+    comps:()=>panel('What comps actually cost',line('Selected group cost',cash(groupCost))+line('Group comp face value',cash(sum(filtered,r=>r[7])))+line('Selected group comp cost / expected win from that group’s carded play',pct(ratio(groupCost,sum(filtered,r=>r[9])),2))+line('Property cost / face value',pct(ratio(allCost,face),2))+note('Comp cost is already inside POS cost of goods, so don’t subtract it twice.'))+
     panel('Monthly loyalty economics',compTakeaway+chart([{name:'Property comp cost / expected win from all slot play',color:gold,values:blocks.map(r=>r[3]?r[2]/r[3]:null)}],blocks.map(r=>months[r[0]]),{format:v=>pct(v,2),height:190})+
     rowsTable(['Month','Property face value/day','Property comp cost','Cost / face value','Cost / expected win from all slot play','Selected group cost'],blocks.map(r=>[months[r[0]],cash(r[1]/r[5]),cash(r[2]),pct(ratio(r[2],r[1]),2),pct(ratio(r[2],r[3]),2),cash(r[4])]))+
-    note('A higher dollar cost can reflect more redemptions or a different mix. Cost per expected slot dollar is an intensity measure and does not identify a policy change.'))});
+    note('Higher cost can mean more redemptions or a different mix, not necessarily a policy change.'))});
 }
 const holdout=data.property.filter(r=>r[0]>='2025-05-01');
 const mae=(a,i)=>sum(a,r=>Math.abs(r[3]-r[i]))/a.length;
@@ -500,7 +529,7 @@ function renderSchedulingScores(){
     const {hits,missed,falseFlags}=schedulingScore(tier,column);
     return [tier,model,n(hits+missed),n(hits),n(missed),n(falseFlags)];
   }));
-  return note('Use the existing scheduling cutoffs on the same 61 holdout days. Peak means at least '+cash(peakThreshold)+' wagered and quiet means below '+cash(quietThreshold)+'. Regular includes the 14 actual days between the cutoffs. A false flag means the actual day belonged to a different tier.')+
+  return note('Same 61 holdout days. Peak ≥ '+cash(peakThreshold)+', quiet < '+cash(quietThreshold)+', regular in between. A false flag means the forecast tier was wrong.')+
     rowsTable(['Day type','Model','Actual days','Correct flags','Missed days','False flags'],rows);
 }
 function renderStaffingReplay(){
@@ -514,7 +543,7 @@ function renderStaffingReplay(){
   const falseLag=holdout.filter(day=>schedulingTier(day[3])!=='Peak'&&schedulingTier(day[12])==='Peak');
   return panel('Staffing decision · holdout replay','<p class="takeaway">Schedule routine flex coverage when forecast wagers reach '+cash(peakThreshold)+'. Review announced events separately using bookings and live traffic.</p>'+
     rowsTable(['Cutoff','Forecast','Actual peaks','Coverage days','Peaks caught','Peaks missed','Unneeded coverage'],rows)+
-    note('Simulated May–June staffing. Each row uses its cutoff for both actual and forecast wagers. At $1.45m, the weekday rule caught one more peak than last week with seven more coverage days. Keep $1.50m as the planning cutoff if flex capacity is limited: both caught 18 of 19 peaks and weekday averages called for 18 coverage days versus 19. The cost of a missed peak and actual staffing outcomes were not measured.')+
+    note('Simulated May–June. At $1.45m the weekday rule caught one more peak but added seven coverage days. At $1.50m both rules caught 18 of 19 peaks, with 18 vs 19 coverage days. The cost of a missed peak wasn’t measured.')+
     details('Which days changed the call?', 'The weekday rule missed '+weekdayMisses.map(r=>r[0]+' (actual '+cash(r[3])+', forecast '+cash(r[10])+')').join(', ')+
       '. The last-week rule scheduled unneeded coverage on '+falseLag.map(r=>r[0]+' (actual '+cash(r[3])+', forecast '+cash(r[12])+')').join(', ')+'.'),'staffing-check');
 }
@@ -532,26 +561,26 @@ function renderModel(){
   const juneEvents=holdout.filter(r=>month(r[0])===5&&r[16]);
   return metrics(card('Weekday forecast MAE',cash(m1),'May–Jun holdout · 61 gaming days'),card('Same weekday last week MAE',cash(m7),'Same holdout · rolling day-ahead'),card('Error reduction',pct(1-m1/m7),'Versus same weekday last week'),card('Calendar-adjusted MAE',cash(mCalendar),'Holiday and announced-event flags'))+
     tabbed('model',{
-    holdout:()=>panel('A fair test on future days','<p class="takeaway">Use weekday averages to plan routine staffing. Calendar flags made little difference overall and were less accurate on June event days.</p>'+note('The weekday forecast and constant benchmark use Jan 1–Apr 30 only. Same weekday last week uses the realized wager total seven days before each forecast date. All models are scored on the same 61 days from May 1 to Jun 30. The rolling baseline answers a day-ahead question.')+
+    holdout:()=>panel('A fair test on future days','<p class="takeaway">Use weekday averages to plan routine staffing. Calendar flags made little difference overall and were less accurate on June event days.</p>'+note('Models learn from Jan–Apr and are scored on the same 61 days (May 1–Jun 30). “Last week” simply repeats the total from seven days earlier.')+
     chart([{name:'Actual',color:gold,values:holdout.map(r=>r[3])},{name:'Weekday forecast',color:green,dash:'6 5',values:holdout.map(r=>r[10])},{name:'Same weekday last week',color:red,dash:'2 4',values:holdout.map(r=>r[12])},{name:'Calendar-adjusted weekday',color:'#d5c3f0',dash:'9 4 2 4',values:holdout.map(r=>r[14])}],holdout.map(r=>r[0].slice(5)),{format:compact,annotations:[
       {index:spike,value:eventDay[3],label:'May 17 · EDC weekend',yOffset:13},
       {index:replay,value:replayDay[12],label:'May 24 · spike repeated',yOffset:43}
-    ]})+note('May 17 was listed as EDC weekend. Actual wagers reached '+cash(eventDay[3])+'. The weekday forecast was '+cash(eventDay[10])+' and the calendar-adjusted forecast was '+cash(eventDay[14])+'. On May 24 the last-week baseline repeated '+cash(replayDay[12])+' against '+cash(replayDay[3])+' actual. The weekday forecast underpredicted the May 17 spike but avoided carrying it forward.')+
+    ]})+note('EDC weekend (May 17): actual '+cash(eventDay[3])+', weekday forecast '+cash(eventDay[10])+', calendar-adjusted '+cash(eventDay[14])+'. A week later, “last week” repeated the spike ('+cash(replayDay[12])+' vs '+cash(replayDay[3])+' actual); the weekday forecast didn’t.')+
     rowsTable(['Holdout','Days','Frozen weekday MAE','Same weekday last week MAE','Calendar-adjusted MAE','Constant mean MAE'],[...monthly.map(([m,r])=>[months[m],r.length,cash(mae(r,10)),cash(mae(r,12)),cash(mae(r,14)),cash(mae(r,11))]),['May–Jun',holdout.length,cash(m1),cash(m7),cash(mCalendar),cash(mae(holdout,11))]])+
     note('Frozen weekday vs. last week: '+pairedSummary(data.validation.frozen)+' The interval crosses zero.')+
-    note('Calendar-adjusted vs. frozen weekday: '+pairedSummary(data.validation.calendar)+' The interval crosses zero. Across '+juneEvents.length+' June announced-event days (Locals Appreciation Week), MAE rose from '+cash(mae(juneEvents,10))+' to '+cash(mae(juneEvents,14))+'. The pooled '+cash(data.validation.effects[1])+' event adjustment overpredicted demand on average for Locals Week.')+
+    note('Calendar-adjusted vs. frozen weekday: '+pairedSummary(data.validation.calendar)+' The interval crosses zero. On '+juneEvents.length+' Locals Week days, error rose from '+cash(mae(juneEvents,10))+' to '+cash(mae(juneEvents,14))+': the '+cash(data.validation.effects[1])+' event adjustment overshot.')+
     details('Calendar flags and paired uncertainty','The calendar adjustment fits January–April weekday residuals to two flags, federal holiday and events announced before the forecast date. It shrinks each adjustment with four zero-effect pseudo-observations. Training included '+data.validation.trainingFlagDays[0]+' holiday days and '+data.validation.trainingFlagDays[1]+' known event days. The event effect is pooled across events. The paired interval resamples seven-day circular blocks of daily error differences 10,000 times, keeping forecasts fixed.'))+
-    panel('Does it hold over an earlier window?','<p class="takeaway">Expanding weekday vs. last week: '+pairedSummary(data.validation.expanding)+' This interval stays above zero.</p>'+note('A separate expanding-window check refits weekday averages using only days before each prediction. It starts in March after two months of initial history. The May–June slice overlaps the primary holdout; the 122 days are one rolling test.')+
+    panel('Does it hold over an earlier window?','<p class="takeaway">Expanding weekday vs. last week: '+pairedSummary(data.validation.expanding)+' This interval stays above zero.</p>'+note('Refits weekday averages using only earlier days, from March onward (122 days). May–June overlaps the main holdout.')+
       rowsTable(['Period','Days','Expanding weekday MAE','Same weekday last week MAE'],
         [['Mar–Apr',data.property.filter(r=>r[0]>='2025-03-01'&&r[0]<'2025-05-01')],['May–Jun',holdout],['Mar–Jun',data.property.filter(r=>r[0]>='2025-03-01')]].map(([label,r])=>[label,r.length,cash(mae(r,13)),cash(mae(r,12))]))),
     staffing:()=>renderStaffingReplay()+panel('Did the forecast flag the right days?',renderSchedulingScores()+
       '<details><summary>Calendar flags in the holdout</summary>'+
       rowsTable(['Gaming date','Holiday','Announced event','Actual wagers','Weekday forecast','Calendar-adjusted forecast'],
         holdout.filter(r=>r[15]||r[16]).map(r=>[r[0],esc(r[15]||'—'),r[16]?'Yes':'—',cash(r[3]),cash(r[10]),cash(r[14])]))+'</details>'),
-    july:()=>panel('Use the forecast to staff routine days','<p class="takeaway">Use routine weekday tiers to plan flex coverage. Keep event staffing separate and confirm the roster using bookings and live traffic.</p>'+note('For a proposed promotion, build the no-promotion staffing roster from the weekday tier, then use reservations or registrations to plan and price any added staffing. The base forecast repeats each weekday. July 4 gets a holiday flag and a pooled holiday adjustment, which is based on few training dates. The event table contains no announced July events; check the operating calendar before staffing.')+
+    july:()=>panel('Use the forecast to staff routine days','<p class="takeaway">Use routine weekday tiers to plan flex coverage. Keep event staffing separate and confirm the roster using bookings and live traffic.</p>'+note('The base forecast repeats each weekday. July 4 gets a holiday adjustment (based on few past holidays). No July events are announced yet, so check the calendar. Staff any promotion on top of this base using registrations.')+
     rowsTable(['Flagged date','Weekday','Base daily wagers','Calendar-adjusted wagers','Known flags'],scheduled.filter(r=>r[4]).map(r=>[r[0],r[1],cash(r[2]),cash(r[3]),esc(r[4])]))+
     rowsTable(['Weekday','Base daily wagers','Scheduling tier'],weekday.map(day=>[day,cash(sample[day]),schedulingTier(sample[day])]))+
-    note('The cabinet’s separate hour-of-week profile saves about '+cash((data.inspectionWindow.typical-data.inspectionWindow.coin)*ratio(inspect.theo,inspect.coin))+' in expected win relative to an average weekday window. That small scheduling gain is secondary to staffing.')+
+    note('Timing the M-1158 inspection in a quiet window saves about '+cash((data.inspectionWindow.typical-data.inspectionWindow.coin)*ratio(inspect.theo,inspect.coin))+' in expected win, which is small next to staffing.')+
     details('Inputs, limits and reproducibility','The weekday forecast is the training-set mean coin-in for each weekday. The constant benchmark is the training-set daily mean. MAE averages the absolute dollar error per holdout day. Rolling methods can use outcomes already known on the forecast date. The models exclude future wagers, traffic, revised tourism data and event outcomes. Calendar flags use schedules known before the forecast date. Six months limit evidence about other seasons. The $1.5m and $1.25m tiers are operational planning assumptions. The model ranks days at property level. For within-day scheduling, confirm low bank traffic with live observations.'))});
 }
 const inspect=fullSummary.find(x=>x.id==='M-1158');
@@ -582,7 +611,7 @@ function matchedPayoutPeers(){
   return '<h3>How unusual was the gap among comparable cabinets?</h3>'+
     line('Peers with gaps as low as M-1158',n(peers.filter(gap=>gap<=inspect.res).length)+' of '+n(peers.length))+
     line('Median peer payout gap',pp(median))+line('Peer range',pp(peers[0])+' to '+pp(peers.at(-1)))+
-    note('Same game configuration and positive wagers in all '+n(weeks.size)+' weeks when M-1158 played. Included peers wagered 50% to 200% of M-1158’s total. This descriptive comparison gives context for the payout gap. The observed rank does not estimate the chance of a fault.');
+    note('Peers share M-1158’s configuration, played all '+n(weeks.size)+' weeks and wagered 50–200% of its total. This is context, not a fault probability.');
 }
 function renderHoldCheck(){
   const labels=focalWeeks.map(([w])=>weekLabel(w));
@@ -593,7 +622,7 @@ function renderHoldCheck(){
     '<p class="takeaway">M-1158 earned '+cash(inspect.theo-inspect.win)+' less than its payout settings implied.</p>'+
     line('Weeks below expectation',n(negative)+' of '+n(values.length))+
     line('Payout gap after dropping the worst week',pp(withoutWorst.res))+
-    note('January–June audit. Peers with the same game settings are weighted by wagers. This pattern warrants checking the paytable and meters.')+
+    note('January–June. Peers share M-1158’s game settings and are weighted by wagers.')+
     chart([{name:'M-1158 hold gap',color:red,values},{name:'Same-configuration peers',color:green,values:peerValues},{name:'Configured expectation',color:gold,dash:'6 5',values:labels.map(()=>0)}],labels,{format:pp})+
     line('Full-period payout gap',pp(inspect.res))+matchedPayoutPeers()+
     line('Sensitivity interval and adjusted q',pp(withoutWorst.lo)+' to '+pp(withoutWorst.hi)+' · q '+(withoutWorst.q<.001?'&lt; 0.001':n(withoutWorst.q,3)))+
@@ -619,10 +648,10 @@ const moveBreakEven=(moveCost+disruption)/grossLift;
 function renderMoveSensitivity(){
   const displacement=[0,.10,.25,.50];
   const capture=[.25,.50,.75];
-  return note('Each cell shows July incremental expected house win after move cost, three hours of disruption, and displaced expected win. Displacement is the share of the relocated cabinet’s incremental expected win offset by losses elsewhere.')+
+  return note('July net expected win from the move after its cost, three hours of disruption and displaced play. <b>Displaced</b> = share of the gain lost elsewhere on the floor.')+
     rowsTable(['Placement gap captured',...displacement.map(x=>pct(x,0)+' displaced')],capture.map(x=>[pct(x,0),...displacement.map(d=>cash(netMove(x,d)))]))+
     line('Break-even placement capture at 0% / 25% displacement',pct(moveBreakEven,0)+' / '+pct(moveBreakEven/.75,0))+
-    note('These inputs are scenarios. The placement gap comes from June same-configuration rates. Historical comparisons below show why capture and displacement remain uncertain. Other operating costs are outside the estimate.');
+    note('Scenarios built from June same-configuration rates. Past moves show why capture and displacement are uncertain.');
 }
 const reserve=100000-inspectionCost;
 function renderMoves(){
@@ -642,14 +671,14 @@ function renderMoves(){
     cash(m.originChange),cash(m.targetChange),cash(m.bankChange),signedPct(m.bankPct),signedPct(short?.bankPct)]);
   return '<section id="move-check" class="panel" tabindex="-1"><h2>What happened after past moves?</h2>'+
     '<p class="takeaway">'+destinationGains+' of '+cases.length+' destination banks gained. '+cabinetGains+' moved cabinets improved, and only '+positive+' bank pairs gained overall.</p>'+
-    note('Changes are relative to comparison cabinets or banks over 14 days. The closest route, Back Forty to Main Entrance, gained '+pct(cases[0].main.bankPct)+' across both banks, and the moved cabinet’s play was already improving before the move.')+
+    note('14 days before vs after, relative to comparison cabinets and banks. The closest route (Back Forty → Main Entrance) gained '+pct(cases[0].main.bankPct)+' across both banks, but that cabinet was already improving.')+
     '<div class="move-cases" aria-label="Four historical relocations">'+overview+'</div>'+
     '<details><summary>Full results and pre-move trends</summary>'+rowsTable(['Machine','Move date','Bank route','Cabinet peers','Coin-in/hr before → after','Pre-move relative trend','Cabinet change · 14d','Cabinet change · 7d','Source $/day','Destination $/day','Pair $/day','Pair change · 14d','Pair change · 7d'],detailsRows)+'</details>'+
     details('Comparison design and limitations','Exclude the move day. Compare 14 days before and after against same-configuration cabinets that stayed at the same slot with complete coverage outside the affected banks. Cabinet change is the before/after ratio divided by the controls’ before/after ratio, minus one. The pre-move trend compares the two preceding seven-day blocks the same way. For each bank, subtract expected daily wagers using its pre-move wagers scaled by the before/after change of other banks in its zone. Combine the two differences and divide by their pre-move daily wagers for the pair percentage. Repeat the comparison with seven days on each side. Moves were selected operationally, pre-trends differ, and other banks could lose displaced wagers. These are descriptive comparisons.')+'</section>';
 }
 function renderHistoricalEconomics(){
   const comparable=data.moves.filter(({main})=>main?.capture!=null);
-  return note('Only '+comparable.length+' of four historical moves had a positive pre-move target-zone rate gap in the 14-day comparison. One captured more than the observed gap and the other lost ground. No historical move matches the proposed route and configuration.')+
+  return note('Only '+comparable.length+' of 4 moves started with a gap to capture: one captured more than all of it, the other lost ground. None matches the proposed route and configuration.')+
     rowsTable(['Machine','Target peers','Pre-move gap/hr','Matched gain/hr','14-day capture','7-day capture','Cabinet theo gain/day','Bank pair theo gain/day','Implied pair offset'],data.moves.filter(r=>r.main).map(({id,main:m,short})=>[
       id,m.targetPeers,cash(m.preGap),cash(m.rateGain),signedPct(m.capture),signedPct(short?.capture),cash(m.focalTheoGain),cash(m.pairTheoGain),signedPct(m.offset)
     ]))+
@@ -665,19 +694,18 @@ const windowHold=ratio(inspect.theo,inspect.coin);
 function inspectionWindowSummary(){
   const hour=String(inspectionSlot.hour).padStart(2,'0'), end=String(inspectionSlot.hour+2).padStart(2,'0');
   return '<p class="takeaway">M-1158 inspection window · '+inspectionSlot.weekday+', '+inspectionSlot.date+', '+hour+':00–'+end+':00 Las Vegas time.</p>'+
-    note('Estimated opportunity cost is '+cash(inspectionSlot.coin*windowHold)+' in theoretical win, about '+cash((inspectionSlot.typical-inspectionSlot.coin)*windowHold)+
-    ' less than an average eligible window on the same weekday ('+cash(inspectionSlot.typical-inspectionSlot.coin)+' in wagers). Based on '+inspectionSlot.n+
-    ' fully available historical windows. The search picks the quietest two-hour slot on the first eligible day after lead time, using weekday starts from 08:00 through 18:00 and excluding recorded events and holidays. Waiting for the overall quietest window on '+inspectionSlot.quietestDate+' would save only '+cash((inspectionSlot.coin-inspectionSlot.quietestCoin)*windowHold)+' more in modeled interruption cost but could forgo '+cash(inspectionSlot.waitDays*inspectionGapPerDay)+' if the gap is fully correctable. Confirm technician availability and live demand.');
+    note('Costs about '+cash(inspectionSlot.coin*windowHold)+' in expected win, '+cash((inspectionSlot.typical-inspectionSlot.coin)*windowHold)+' less than a typical window that weekday. '+
+    'Waiting for the quietest slot ('+inspectionSlot.quietestDate+') would save just '+cash((inspectionSlot.coin-inspectionSlot.quietestCoin)*windowHold)+' but could forgo '+cash(inspectionSlot.waitDays*inspectionGapPerDay)+'. Confirm a technician is available.')+
+    how('Picks the quietest two-hour weekday slot (08:00–18:00 starts) on the first day after lead time, excluding events and holidays, based on '+inspectionSlot.n+' fully available past windows ('+cash(inspectionSlot.typical-inspectionSlot.coin)+' fewer wagers than average).');
 }
 function inspectionEvidence(){
-  return note('M-1158 ran below configured hold in 23 of 27 weeks. The weekly-clustered 95% interval is '+pp(inspect.lo)+' to '+pp(inspect.hi)+
-    ', with a multiple-testing-adjusted q below 0.001. That is strong evidence against the modeled luck-only explanation. The q-value measures statistical evidence under the test assumptions; it does not estimate the probability of a fault or a successful repair.')+
+  return note('Below configured hold in 23 of 27 weeks (95% interval '+pp(inspect.lo)+' to '+pp(inspect.hi)+', adjusted q < 0.001). That’s strong evidence it isn’t luck, but not the odds of a fault or a fix.')+
     line('Historical payout shortfall per day',cash(inspectionGapPerDay))+
     line('30 days at the historical gap',cash(30*inspectionGapPerDay))+
     line('Conditional July recovery after lead time',cash(inspectionCeiling))+
     line('Break-even chance of full correction',pct(inspectionBreakEven,1))+
     rowsTable(['Assumed chance of full correction','July expected net after inspection'],[.10,.20,.30,.50].map(p=>[pct(p,0),cash(p*inspectionCeiling-inspectionCost)]))+
-    note('The recovery case assumes a real fault, a successful correction after the one-day lead, and July play similar to the audit period. The other outcome credits zero recovery. Break-even is a threshold; the data do not estimate the chance of a correctable fault. Remediation cost and the two-hour interruption are outside this calculation.');
+    note('Assumes a real, fixable fault and July play like the audit period; otherwise recovery is zero. Repair cost and the two-hour interruption aren’t included.');
 }
 const repairScenarios=[.25,repairRecoveryShare,.75];
 function repairScenarioResults(quote,otherCost){
@@ -693,11 +721,11 @@ function repairScenarioResults(quote,otherCost){
 }
 function repairApproval(){
   return '<h3>When to approve a repair</h3>'+
-    note('First verify a correctable fault and get a written quote. Use the 50% planning case to check whether the incremental repair pays back within 30 operating days after service resumes. Use 25% to see the downside. Enter the quote and estimated lost expected win during repair plus any added costs for the first 30 operating days.')+
+    note('Once a fault is confirmed, enter the quote plus downtime and added costs. Approve if the 50% case pays back within 30 operating days; 25% shows the downside.')+
     '<div class="repair-inputs"><label>Repair quote ($)<input id="repair-quote" type="number" min="0" step="0.01" placeholder="Enter quote"></label><label>Downtime and added costs ($)<input id="repair-other" type="number" min="0" step="0.01" value="0"></label></div>'+
     '<div class="repair-grid" id="repair-results">'+repairScenarioResults(null,0)+'</div>'+
     '<p id="repair-status" role="status" class="muted">Enter a quote to check the three scenarios.</p>'+
-    note('Maximum repair quote equals the 30-day gross benefit minus downtime and added costs. Total project payback includes the inspection fee and its modeled interruption. The payback estimate starts when play resumes and treats the entered costs as a one-time total. Update the recovery estimate using the technician’s findings and current play.');
+    how('Maximum quote = 30-day gross benefit − downtime and added costs. Payback includes the inspection fee and its interruption, counts from when play resumes, and treats entered costs as one-time. Update recovery using the technician’s findings.');
 }
 function updateRepairResults(){
   const quote=$('repair-quote'),other=$('repair-other');
@@ -721,10 +749,10 @@ function renderPromotion(){
     rowsTable(['Past event','Days','Event wager lift','Event expected win lift','Next 7 days · wagers','Next 7 days · expected win','Combined expected win lift','Break-even share'],data.promotions.map(event=>[
       esc(event.name.replace('Gilded Ace ','')),n(event.during.days),cash(event.during.coin),cash(event.during.theo),
       cash(event.after.coin),cash(event.after.theo),cash(retainedTheo(event)),pct(promoCost/retainedTheo(event),1)]))+
-    note('Each date is matched to same-month, same-weekday dates with no listed event. The follow-up also excludes its own seven dates from the reference. The smallest matched set has '+Math.min(...data.promotions.map(event=>event.after.minControls))+' reference day. Expected win uses the configured hold and wagers observed on each date. The seven-day dip was small relative to the event lift, but past event costs, other demand shifts and longer-run substitution are unknown.')+
+    note('Lift is measured against same-weekday, same-month days without events (smallest comparison set: '+Math.min(...data.promotions.map(event=>event.after.minControls))+' day). The following week dipped only slightly, but past event costs are unknown.')+
     rowsTable(['Assumed share of historical combined lift','Tournament-like net','Locals-like net'],cases.map(share=>[
       pct(share,0),...data.promotions.map(event=>cash(share*retainedTheo(event)-promoCost))]))+
-    note('The share accounts for transfer to a shorter July event and any additional displaced play beyond the matched seven-day result. These are scenarios. The budget covers one weekend at the catalog cost. Any incremental staffing, comps or prizes outside that cost raise the hurdle.')+
+    note('Share = how much of the past lift a shorter July event keeps. Extra staffing, comps or prizes beyond catalog cost raise the hurdle.')+
     details('Pilot gate and measurement','If signed off by July 4, July 18–20 leaves the catalog lead and room for a full seven-day follow-up. Require registration evidence and an all-in budget supporting more than '+pct(promoHurdle,1)+' of the weaker historical lift at catalog cost. Build routine staffing from the weekday forecast and price extra event coverage using registrations. Before launch, freeze non-event matched weekdays and a recent pre-event trend as comparisons. Track whole-floor wagers, configured expected win, attendance and incremental costs during the event and seven days after. Count the follow-up once. Require positive incremental contribution after all costs under both comparisons before funding a second weekend. Waiting could forgo a profitable event and delays learning. Without the gate, keep the reserve.');
 }
 function consideredActions(){
@@ -751,7 +779,7 @@ function consideredActions(){
   };
   return '<div class="action-summary">'+rowsTable(['Catalog action','July cost per unit','Decision and reason'],
     data.actions.map(action=>[esc(action[1]),cash(actionCost(action)),reasons[action[0]]]))+'</div>'+
-    note('Cost includes recurring charges for eligible July days after lead. Downtime figures and comp spend use historical daily rates.');
+    note('Costs include recurring July charges after lead time. Risk and spend figures use historical daily rates.');
 }
 function renderPlan(){
   const suspects=fullSummary.slice(0,10);
@@ -766,22 +794,22 @@ function renderPlan(){
   return metrics(card('Inspection · 1 unit',cash(inspectionCost),inspect.id+' · '+inspection[4]+' day lead'),card('Relocation · deferred',cash(moveCost),move.id+' · cost if authorized later'),card('Reserve',cash(reserve),'July 1–30 · inspection only'),card('Move break-even',pct(moveBreakEven,0),'Placement gap captured at zero displacement'))+
     tabbed('plan',{
     summary:()=>actions+keepRest,
-    inspection:()=>panel('The decision and its evidence',note('This plan uses the fixed January–June audit and the June 30 placement snapshot. The July budget is based on that full-period evidence.')+
+    inspection:()=>panel('The decision and its evidence',note('Based on the full January–June audit and the June 30 floor layout.')+
     '<div class="grid split"><div><h3>1 · Verify '+inspect.id+'’s payout configuration</h3>'+line('Observed / configured hold',pct(inspect.hold,2)+' / '+pct(ratio(inspect.theo,inspect.coin),2))+
     line('House win below configured expectation',cash(inspect.theo-inspect.win))+line('Coin-in per hour vs local peers',pct(inspect.local,0))+
-    '<p>Book '+inspection[5]+' minutes of cabinet downtime in a quiet window after the one-day lead. Compare approved paytable and configuration, verify meter and payout handling, and review accounting and event logs. Record the findings and any remediation. If a discrepancy is confirmed and corrected, track four weeks of residuals against the same configuration, using a matched comparison.</p>'+
+    '<p>Book '+inspection[5]+' minutes of downtime in a quiet window after the one-day lead. Check the paytable, configuration, meters and logs, and record any fix.</p>'+
     inspectionWindowSummary()+inspectionEvidence()+repairApproval()+
-    note('Measure the payout residual per $100 wagered for four weeks after correction against the four-week pre-inspection period and same-configuration peers. Verify the meter and paytable change and track coin-in, availability and the estimated dollar recovery. Record zero verified recovery if no correctable fault is found.')+
+    note('After a fix, compare four weeks of payout gap with the prior four weeks and same-configuration peers. If no fault is found, record zero recovery.')+
     '<button data-evidence="'+inspect.id+'">Open '+inspect.id+' audit</button></div>'+
     '<div><h3>2 · Defer the '+move.id+' relocation</h3>'+line('Target slot','B-07 / '+destination[0]+' · vacant June 30')+
     line('June theo per available hour',cash(recentRate)+' source / '+cash(destinationRate)+' destination peers')+
     line('Same-config destination cabinets',n(new Set(destinationPeers.map(r=>r.id)).size))+
-    '<p>If later authorized, confirm slot availability and approvals, then allow two days of lead time and a three-hour move. Keep the configuration unchanged. Use M-1179 to track the moved cabinet, and pick comparison banks with similar June trends outside the affected area before the move.</p>'+
-    note('The July budget funds only the inspection. Waiting could forgo about '+cash(netMove(.5,0))+' in July net win in the 50% capture, no-displacement scenario and delays learning from a pilot. At 50% capture the net estimate moves from '+cash(netMove(.5,0))+' with no displacement to '+cash(netMove(.5,.10))+' at 10% displacement. The four historical moves make displaced play a material concern.')+
+    '<p>If approved later: confirm the slot, allow two days’ lead and a three-hour move, keep the configuration, track it as M-1179, and pick comparison banks beforehand.</p>'+
+    note('Waiting could forgo about '+cash(netMove(.5,0))+' (50% capture, no displacement), but at 10% displacement that becomes '+cash(netMove(.5,.10))+'. Past moves make displacement a real risk.')+
     '<button data-evidence="'+move.id+'">Open '+move.id+' audit</button></div></div>','inspection-plan'),
     moves:()=>renderMoves()+panel('What past moves tell us about the assumptions',renderHistoricalEconomics())+
     panel('Relocation economics with displaced play',renderMoveSensitivity()+
-      note('Trigger for reconsideration. Require evidence from comparable moves or a separately authorized controlled pilot that supports more than '+pct(moveBreakEven/.75,0)+' capture at 25% displacement. Before funding a rollout, require estimated incremental expected win across the affected floor area to clear '+cash(moveCost)+' after disruption and displacement, with the conclusion surviving reasonable controls.')+
+      note('Reconsider if comparable moves or a pilot show more than '+pct(moveBreakEven/.75,0)+' capture at 25% displacement, and the floor-wide gain clears '+cash(moveCost)+' after disruption.')+
       details('Pilot measurement and expansion rule','Before the move, fix the source, destination, nearby banks, and comparison banks. Compare the 28-day July operating window, including the partial move day, with 28 days before the move, matched by weekday. Estimate incremental expected win for the affected banks as a group against the comparison trend, account for move-day downtime once, and check the rest of the floor for offsets. Use M-1179 for the separate cabinet-rate comparison. Expand only if the net floor gain clears $1,800 and the conclusion survives reasonable comparison choices. Hold if the signal is too noisy.')),
     promotion:()=>panel('Promotion weekend evidence',renderPromotion(),'promotion-check'),
     catalog:()=>panel('Decisions across the action catalog',consideredActions(),'catalog-check')});
@@ -863,6 +891,16 @@ function openEvidence(section){
     target.scrollIntoView({block:'start'});
   }
 }
+let lastViewKey=null;
+// Replays the entrance animation on a new tab/sub-tab, or a light fade when filters redraw the same view.
+function animateView(kind){
+  const targets=[$('view')];
+  if(kind==='enter'&&state.tab==='overview')targets.push($('overview'));
+  for(const el of [$('view'),$('overview')])el.classList.remove('enter','refresh');
+  if(lastViewKey===null)return;
+  void $('view').offsetWidth;
+  for(const el of targets)el.classList.add(kind);
+}
 function draw(focus){
   $('from').value=state.from;$('through').value=state.to;$('bank').value=state.bank;
   const s=scope();
@@ -879,6 +917,9 @@ function draw(focus){
   $('scope').textContent=(state.tab==='model'||state.tab==='plan'?'Fixed evidence window':s.dates[0]+' – '+s.dates.at(-1))+' · '+(state.bank&&['audit','demand'].includes(state.tab)?state.bank:'Property scope');
   document.querySelectorAll('nav button[data-tab]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.tab===state.tab)));
   $('view').innerHTML=renderers[state.tab](s);
+  const viewKey=state.tab+'/'+state.sub;
+  animateView(viewKey!==lastViewKey?'enter':'refresh');
+  lastViewKey=viewKey;
   if(state.tab==='guests'){$('region').value=state.region;$('tier').value=state.tier;}
   if(focus)document.querySelector(focus)?.focus({preventScroll:true});
 }
