@@ -9,7 +9,7 @@ Built for the **Dashboard Royale challenge at TAMU Datathon 2026**. The Gilded A
 
 Start on **Overview**, then use the left sidebar. Every view has a shareable URL, so the links in [VIDEO-SCRIPT.md](VIDEO-SCRIPT.md) open straight to each step.
 
-Links: [Challenge guide and dataset](https://github.com/tamu-datathon-org/dashboard-royale/blob/5f9274bdc3efa6614e6c081becaeadda34c57a32/GUIDE.md) · [Devpost: what to submit (guide §8)](https://github.com/tamu-datathon-org/dashboard-royale/blob/5f9274bdc3efa6614e6c081becaeadda34c57a32/GUIDE.md#8-what-to-submit-on-devpost) · [Write-up](WRITEUP.md) · [Claims and evidence appendix](CLAIMS-AND-EVIDENCE.md)
+Links: [Challenge guide and dataset](https://github.com/tamu-datathon-org/dashboard-royale/blob/5f9274bdc3efa6614e6c081becaeadda34c57a32/GUIDE.md) · [Devpost challenge page](https://tamu-datathon-26-casino-royale.devpost.com/) · [What to submit (guide §8)](https://github.com/tamu-datathon-org/dashboard-royale/blob/5f9274bdc3efa6614e6c081becaeadda34c57a32/GUIDE.md#8-what-to-submit-on-devpost) · [Write-up](WRITEUP.md) · [Claims and evidence appendix](CLAIMS-AND-EVIDENCE.md)
 
 ## What the dashboard found
 
@@ -37,7 +37,7 @@ The analysis uses synthetic casino data from January–June 2025, with separatel
 
 ## Devpost submission checklist
 
-Mapped to [guide §8](https://github.com/tamu-datathon-org/dashboard-royale/blob/5f9274bdc3efa6614e6c081becaeadda34c57a32/GUIDE.md#8-what-to-submit-on-devpost).
+Submit on the [Devpost challenge page](https://tamu-datathon-26-casino-royale.devpost.com/) (linked from the upstream guide after the pinned data commit). Mapped to [guide §8](https://github.com/tamu-datathon-org/dashboard-royale/blob/5f9274bdc3efa6614e6c081becaeadda34c57a32/GUIDE.md#8-what-to-submit-on-devpost).
 
 | §8 item | Where |
 | --- | --- |
