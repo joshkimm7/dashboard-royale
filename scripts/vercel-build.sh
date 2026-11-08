@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Builds dist/index.html for Vercel: fetches the pinned official challenge data,
-# installs the pinned Python dependencies in a throwaway venv, and runs build_data.py.
+# Builds dist/index.html for Vercel: fetches the pinned official challenge data, prepares it with
+# build_data.py in a throwaway Python venv, then builds the React app and inlines the data.
 set -euo pipefail
 
 DATA_REPO=https://github.com/tamu-datathon-org/dashboard-royale.git
@@ -43,7 +43,12 @@ else
   exit 1
 fi
 
-mkdir -p dist
+# 1. Prepare the dataset (data/dashboard.json).
 "$VENV/bin/python" build_data.py "$DATA_DIR"
+test -s data/dashboard.json
+
+# 2. Build the React app as one file and inline the dataset (dist/index.html).
+npm ci --no-audit --no-fund
+npm run build
 test -s dist/index.html
 echo "Built dist/index.html ($(du -h dist/index.html | cut -f1))"

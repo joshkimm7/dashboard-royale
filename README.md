@@ -28,16 +28,31 @@ The analysis uses synthetic casino data from January–June 2025, with separatel
 
 ## Reproduce locally
 
-Run these commands from the repository root with **Python 3.11 or later** and **Git**. The build pins the official challenge data to the revision used in the analysis.
+Run these commands from the repository root with **Python 3.11–3.13**, **Node.js 18 or later** and **Git**. The build pins the official challenge data to the revision used in the analysis.
 
 ```bash
 git clone https://github.com/tamu-datathon-org/dashboard-royale.git official-data
 git -C official-data checkout 5f9274bdc3efa6614e6c081becaeadda34c57a32
 python -m pip install 'pandas==2.2.3' 'numpy==2.3.5'
-mkdir -p dist
-python build_data.py official-data
+python build_data.py official-data   # writes data/dashboard.json
+npm ci
+npm run build                        # writes dist/index.html with the data inlined
 ```
 
 Or run `bash scripts/vercel-build.sh`, which does the same steps in a throwaway virtual environment. Vercel runs this script on every deploy (see [`vercel.json`](vercel.json)), so pushing to `main` publishes a freshly built dashboard.
 
-Open `dist/index.html` in a browser. The generated page embeds its data and works offline. [`build_data.py`](build_data.py) prepares the data and forecast holdout, and [`dashboard.html`](dashboard.html) contains the interface and browser-side analysis.
+Open `dist/index.html` in a browser. The generated page embeds its data and works offline. For live editing, run `npm run dev` after `build_data.py`; the dev server serves `data/dashboard.json`.
+
+## Code layout
+
+```text
+build_data.py            prepares the challenge data and forecast holdout → data/dashboard.json
+scripts/inject-data.mjs  inlines that JSON into the single-file React build → dist/index.html
+src/
+├── lib/format.js        number formatting and list helpers
+├── lib/model.js         dataset-wide analysis (audit statistics, forecast scores, July economics), computed once
+├── nav.jsx              view state, URL-hash links, back/forward, evidence jumps
+├── components/ui.jsx    shared Panel, Card, Table, Chart, sub-tab bar
+├── App.jsx              header, tabs, filters, view transitions
+└── tabs/                Overview, EvidenceMap, Audit, Demand, Guests, Model, Plan
+```

@@ -325,5 +325,6 @@ data = {
     'actions': rows(actions, ['action_type_id','name','unit_cost_cents','recurring_cost_cents_per_day','lead_days','downtime_minutes','quantity_limit']),
 }
 payload = json.dumps(data, separators=(',',':'), ensure_ascii=False, allow_nan=False).replace('</','<\\/')
-template = (project/'dashboard.html').read_text()
-(project/'dist'/'index.html').write_text(template.replace('/*__DATA__*/null',payload))
+# The React app (npm run build) inlines this file into dist/index.html; `npm run dev` serves it as /data.json.
+(project/'data').mkdir(exist_ok=True)
+(project/'data'/'dashboard.json').write_text(payload)
