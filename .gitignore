@@ -1,0 +1,4 @@
+dist/
+.official-data/
+.venv-build/
+.vercel/

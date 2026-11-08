@@ -37,4 +37,6 @@ mkdir -p dist
 python build_data.py official-data
 ```
 
+Or run `bash scripts/vercel-build.sh`, which does the same steps in a throwaway virtual environment. Vercel runs this script on every deploy (see [`vercel.json`](vercel.json)), so pushing to `main` publishes a freshly built dashboard.
+
 Open `dist/index.html` in a browser. The generated page embeds its data and works offline. [`build_data.py`](build_data.py) prepares the data and forecast holdout, and [`dashboard.html`](dashboard.html) contains the interface and browser-side analysis.
