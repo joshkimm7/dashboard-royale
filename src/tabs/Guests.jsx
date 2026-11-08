@@ -88,6 +88,29 @@ function CompBreak({ state }) {
   );
 }
 
+/** P10 · Did the cheaper comps bring comp users back more often? Difference in differences on recorded visits, with placebo dates. */
+function CompVisits() {
+  const { compVisits: v, compFinding: f } = useModel();
+  const r = v.real, dateText = d => months[month(d)] + ' ' + Number(d.slice(8));
+  const placeboRange = [Math.min(...v.placebos.map(p => p.did)), Math.max(...v.placebos.map(p => p.did))];
+  const inside = r.interval[0] < 0 && r.interval[1] > 0;
+  const row = (x, label) => [label, signedPct(x.usersChange), signedPct(x.othersChange), signedPct(x.did), signedPct(x.interval[0]) + ' to ' + signedPct(x.interval[1])];
+  return (
+    <Panel title="Did cheaper comps bring guests back?" id="comp-visits-check">
+      <Takeaway>{(inside ? 'No measurable lift. ' : 'Possible change. ') + 'In the 28 days after the ' + dateText(r.split) + ' repricing, comp users’ visits changed ' + signedPct(r.usersChange) + ' against ' + signedPct(r.othersChange) +
+        ' for other recent guests, a difference of ' + signedPct(r.did) + ' (95% interval ' + signedPct(r.interval[0]) + ' to ' + signedPct(r.interval[1]) + '). Dates with no program change give ' + signedPct(placeboRange[0]) + ' to ' + signedPct(placeboRange[1]) +
+        ', so the repricing ' + (r.did <= placeboRange[1] ? 'sits inside ordinary drift' : 'stands above ordinary drift') + ' while comp cost per $100 of expected win went from ' + f.reinvest + '.'}</Takeaway>
+      <Line label="Cohort · comp users" value={n(r.cohort) + ' recent guests · ' + n(r.users) + ' had redeemed a comp'} />
+      <Line label="Comp users’ visits per person, 28 days before / after" value={n(r.perMember[0], 2) + ' / ' + n(r.perMember[1], 2)} />
+      <Line label="Other guests’ visits per person, 28 days before / after" value={n(r.perMember[2], 2) + ' / ' + n(r.perMember[3], 2)} />
+      <Table headers={['Split date', 'Comp users', 'Others', 'Difference', '95% interval']}
+        rows={[row(r, dateText(r.split) + ' (repricing)'), ...v.placebos.map(p => row(p, dateText(p.split) + ' (placebo)'))]} />
+      <Note>Cohort: card holders with a recorded visit in the 28 days before the “before” window; comp users had redeemed at least one comp by then. Visits are recorded visits to this casino only. Uses all regions, tiers and ages and the whole timeline, so the filters above do not apply.</Note>
+      <How>Each row compares visits in the 28 days from the split date with the 28 days before it (four of each weekday), as a ratio of sums within each group, then subtracts the other guests’ change from the comp users’ change. The interval resamples guests 2,000 times. Comp users are far more frequent visitors, so the two groups drift apart even without a policy change; the placebo rows measure that drift. A null here means the repricing bought no visits large enough to see in two months, not that it had no effect at all.</How>
+    </Panel>
+  );
+}
+
 /** Comp reinvestment (comp cost ÷ theo) by opening tier and home region, from player_period for the selected months. */
 function Reinvestment({ filtered }) {
   const regions = [...new Set(filtered.map(r => r[2]))].sort(), tiers = [...new Set(filtered.map(r => r[3]))].sort();
@@ -275,6 +298,7 @@ export default function Guests({ scope: s }) {
               <Note>Comp cost is already inside POS cost of goods, so don’t subtract it twice.</Note>
             </Panel>
             <CompBreak state={state} />
+            <CompVisits />
             <Reinvestment filtered={filtered} />
             <Panel title="Monthly loyalty economics">
               {compTakeaway}

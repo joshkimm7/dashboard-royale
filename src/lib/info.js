@@ -79,6 +79,14 @@ export const LINE_INFO = {
   'Configured RTP vs published game math': "Machine-days whose recorded payout rate differs from the published rate for that game configuration. Any mismatch is a record to inspect, not proof of tampering.",
   'Raw meter theo vs published RTP': "Cabinets whose raw meter expected win implies a payout rate different from their published game math on any day. Zero means the meters apply the published settings.",
   'Mid-period configuration changes': "Cabinets whose game configuration changed during January to June, in the daily records and in the placement history. A change would split a cabinet's record into two games.",
+  // Hit-frequency check
+  'Cabinets tested · flagged at q < 0.01': "How many cabinets had spins in the selection, and how many hit a paying spin more or less often than their published game math, after adjusting for testing many cabinets at once.",
+  'Observed vs published hit rate': "Share of the flagged cabinet's spins that paid anything, next to the share its published game says should. The z-score shows how many standard errors apart they are.",
+  'Every other cabinet (placebo)': "The same test on every unflagged cabinet. If luck is the only force, their z-scores average near 0 with a spread near 1; a far larger spread would mean the test itself is off.",
+  'Weeks above the published rate (full period)': "Weeks in which the flagged cabinet's paying-spin share sat above its published hit probability. A count near all weeks means a steady difference, not a few odd weeks.",
+  'Carded vs uncarded spins (full period)': "The flagged cabinet's hit rate for loyalty-card play and for anonymous play separately. Matching rates mean no single group of players is behind the pattern.",
+  'Hit rate by bet size (carded, full period)': "The flagged cabinet's paying-spin share at each bet size from carded sessions. A paytable difference shows at every bet; a bet-mix quirk would show at only one.",
+  'One day of play to verify a fix': "Spins on a typical day and how many daily standard errors separate the current rate from the published one. A large number means one day of play can confirm a repair.",
   // Demand across the period
   'Observed entrances per day · April to June': "Change in average daily door counts from April to June. Counts are crossings, not unique guests, so treat this as a rough traffic gauge.",
   'Adjusted wagers per observed entrance · April to June': "Change in adjusted daily wagers per door crossing from April to June. Negative means each visit produced less play, on top of any drop in traffic.",
@@ -113,6 +121,10 @@ export const LINE_INFO = {
   'Tier thresholds (lifetime points)': "Lifetime points needed for Gold and Platinum, read from the lowest balance in each tier and the highest balance below it each month. Unchanged means tier rules didn't move.",
   'Change explained by tier mix': "Part of the floor-wide price change caused only by redemptions shifting toward tiers with better prices. Each tier's price is held at its before-break value.",
   'Change within tiers (policy)': "Part of the floor-wide price change that comes from prices changing inside each tier. A large share here means the program's rules changed, not who was redeeming.",
+  // Did cheaper comps bring guests back?
+  'Cohort · comp users': "Card holders who visited shortly before the comparison, and how many of them had already redeemed a comp. Comp users are the group the cheaper comps should affect.",
+  'Comp users’ visits per person, 28 days before / after': "Recorded visits per comp user in the four weeks before the repricing and the four weeks after. A lift from cheaper comps would raise the second number.",
+  'Other guests’ visits per person, 28 days before / after': "The same visit counts for recent guests who had not redeemed a comp. Their change is the baseline that strips out season and calendar effects.",
   // Why keep the rest?
   'Bottom-ten cabinets flagged for quiet placement': "Lowest earners over January to June whose zone drew under 80% of the play that the same game drew across the floor. Low earnings there point to location, not the cabinet.",
   'Bottom-ten cabinets flagged for downtime': "Lowest earners over January to June that were unavailable for more than 2% of scheduled time. Zero means breakdowns don't explain their low earnings.",
@@ -145,10 +157,13 @@ export const PANEL_INFO = {
   'Machine file': "One cabinet's record for the selected months: where it sat, how it earned against its settings and its neighbors, and which screening flags it triggered.",
   'Floor banks by zone': "A floor map grouped by zone. Use it to see whether low earners cluster in one area, and click a bank to narrow the audit and demand views to it.",
   'M-1158 · Weekly payout check': "Tests whether M-1158's shortfall is steady or driven by a few weeks. It compares each week with its settings and with cabinets running the same game.",
+  'Hit-frequency check': "Weekly share of the flagged cabinet's spins that paid anything, against the dashed published hit probability. A line that never meets the dashed one is a steady difference, not luck.",
   'How to read the audit': "Method notes for the audit: how peer benchmarks are built, how the payout gap and its significance are tested, and which cutoffs trigger each flag.",
   'Adjusted ranking': "Ranks every cabinet by expected win per working hour against same-game cabinets in its zone, with thin records pulled toward average. It shows which cabinets are weak, not just unlucky or badly placed.",
   'Payout gap vs luck bounds': "Each cabinet's payout gap against its wagers. Gaps inside the funnel are ordinary luck; gaps outside it are worth a meter or paytable check before anyone draws conclusions.",
   'Payout-configuration check': "Compares every cabinet's recorded payout rate with the published game math and looks for configuration changes mid-period. A mismatch would be a lead to inspect.",
+  'Hit-frequency check': "Tests how often each cabinet's spins paid anything against its published game math. This signal is far steadier than house win, so a wrong paytable shows within days.",
+  'Did cheaper comps bring guests back?': "Compares comp users' visits before and after the comp repricing with other recent guests, and repeats the test at dates with no change to show ordinary drift.",
   // Demand & uptime
   'Demand across the period': "Monthly wagers for the property, with a version that removes event days and evens out the weekday mix so months compare fairly, plus city visitor context.",
   'What drove the raw change in wagers?': "Splits the change in daily wagers into two parts: more or fewer hours of play on the machines, and more or less wagered per hour played. It shows where the change came from, not why.",

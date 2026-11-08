@@ -100,6 +100,7 @@ const focalRank = m.fullRanking.rows.find(r => r.id === m.inspect.id);
 const seRatios = m.fullRanking.rows.filter(r => r.x.se && r.luckSE).map(r => r.x.se / r.luckSE).sort((a, b) => a - b);
 
 // ---- Q5 comp-program break (same model function as src/tabs/Guests.jsx → Comps & loyalty, all regions and tiers) ----
+const hit = m.hitFinding, cv = m.compVisits.real;
 const cb = m.fullBreak, cf = m.compFinding, dayName = d => ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'][month(d)] + ' ' + Number(d.slice(8));
 const metricOf = key => cb.results.find(r => r.metric.key === key);
 const fromTo = (r, d) => n(r.before, d) + ' to ' + n(r.after, d);
@@ -270,6 +271,12 @@ const CHECKS = [
   ['maintenance tickets', 'only ' + n(dt.overlap.maintenance) + ' scheduled-maintenance tickets exist', ['claims']],
   ['ticket overlap', n(dt.overlap.faultHours, 1) + ' fault-ticket hours + ' + n(dt.overlap.otherHours, 1) + ' other operation hours = ' + n(dt.overlap.meterHours, 1) + ' meter hours; up to ' + n(dt.overlap.maxOpen) + ' faults open at once', ['claims']],
   ['avoidable downtime', 'technician ' + n(av.tech, 0) + ' h (' + pct(av.tech / av.meter, 0) + '), preventive maintenance at most ' + n(av.pm, 0) + ' h (' + pct(av.pm / av.meter, 0) + '), either ' + n(av.either, 0) + ' h (' + pct(av.either / av.meter, 0) + ') after ' + n(av.overlap, 0) + ' h of overlap', ['claims']],
+  // P10 hidden-pattern hunt (analysis/FINDINGS.md): hit frequency vs game math, and the comp repricing visit test
+  ['hit-frequency check', hit.lead.id + ' paid on ' + pct(hit.lead.observed) + ' of ' + n(hit.lead.spins) + ' all-play spins against a published ' + pct(hit.lead.published) + ' (z ' + n(hit.lead.z, 1) + '), above it in ' + n(hit.detail.above) + ' of ' + n(hit.detail.weeks.length) + ' weeks', ['claims']],
+  ['hit-frequency alternatives', 'carded ' + pct(hit.detail.carded) + ', uncarded ' + pct(hit.detail.uncarded) + '; by bet ' + hit.detail.bets.map(b => pct(b.rate)).join(', ') + '; other ' + n(hit.others.length) + ' cabinets z mean ' + n(hit.meanZ, 2) + ', SD ' + n(hit.sdZ, 2) + ', largest |z| ' + n(hit.maxOther, 2), ['claims']],
+  ['hit-frequency verification', n(hit.detail.medianDaySpins) + ' spins on a median day put the gap at ' + n(hit.detail.daySeparation, 1) + ' daily standard errors', ['claims']],
+  ['comp visits test', 'comp users ' + signedPct1(cv.usersChange) + ', other recent guests ' + signedPct1(cv.othersChange) + '; difference ' + signedPct1(cv.did) + ' (95% interval ' + signedPct1(cv.interval[0]) + ' to ' + signedPct1(cv.interval[1]) + ')', ['claims']],
+  ['comp visits placebos', 'Placebo splits ' + m.compVisits.placebos.map(x => dayName(x.split) + ' ' + signedPct1(x.did)).join(', '), ['claims']],
   ['comp pilot', cash(m.actionCost(comp)) + ' comp pilot needs about ' + pct(m.actionCost(comp) / compSpend, 0) + ' savings on ' + cash(compSpend), ['claims']],
 ];
 

@@ -5,7 +5,7 @@ import { FLAG_LABELS } from '../lib/evidence.js';
 import { downHeat } from '../lib/downtime.js';
 
 const QUESTION_PATTERNS = [
-  ['q1', /\bq\s*1\b|machine audit|bottom[\s-]*(ten|10)|lowest|low earn|underperform|verdict|replace/],
+  ['q1', /\bq\s*1\b|machine audit|hit (rate|frequency)|paytable|bottom[\s-]*(ten|10)|lowest|low earn|underperform|verdict|replace/],
   ['q2', /\bq\s*[23]\b|demand|uptime|downtime|traffic|visitor|entrance|repair|ticket|outage|zone|weather|missouri|heat ?map|technician|maintenance|response time/],
   ['q4', /\bq\s*[45]\b|guest|player|comp\b|comps|loyalty|carded|reward/],
   ['qm', /model|forecast|holdout|validation|predict|staff|mae|accuracy/],
@@ -24,6 +24,10 @@ function questionFacts(qid, m) {
       m.inspect.id + ' kept ' + cash(m.inspect.theo - m.inspect.win) + ' less than its settings imply (payout gap ' + pp(m.inspect.res) + '), which is why it is the one cabinet to inspect.',
       (o => 'Once exposure, luck and placement are removed, ' + (o.both.length ? o.both.length + ' of the ten (' + o.both.map(r => r.id).join(', ') + ')' : 'none of the ten') +
         ' stay in the adjusted bottom ten; the weakest cabinets by that measure are ' + o.adjustedTen.slice(0, 3).map(r => r.id).join(', ') + '.')(m.fullOverlap),
+      (h => h.lead
+        ? 'A second, independent signal points the same way: ' + h.lead.id + '’s spins paid something ' + pct(h.lead.observed, 1) + ' of the time against ' + pct(h.lead.published, 1) + ' in its published game math (z ' + n(h.lead.z, 0) + '), in ' + n(h.detail.above) + ' of ' + n(h.detail.weeks.length) +
+          ' weeks, for carded (' + pct(h.detail.carded, 1) + ') and uncarded (' + pct(h.detail.uncarded, 1) + ') play alike; no other cabinet is outside luck (largest |z| ' + n(h.maxOther, 1) + '). That is a paytable lead, not an accusation, and one ordinary day of play after an inspection would show whether the rate is back to published.'
+        : 'No cabinet’s share of paying spins differs from its published game math.')(m.hitFinding),
     ];
   }
   if (qid === 'q2') {
@@ -62,6 +66,8 @@ function questionFacts(qid, m) {
         ? 'The loyalty ledger shows one program change: on ' + f.date + ' comps were repriced from ' + f.price + ' (' + f.priceChange + ', 95% interval ' + f.priceInterval + ' points; ' + f.rank + '). ' +
           f.withinShare + ' of the drop is within tiers, so it is a rule change, not tier mix. Earn rates ' + (f.earnFlat ? 'did not change' : 'also moved') + ' and tier thresholds ' + (m.tierRules.stable ? 'held' : 'moved') + '; comp cost per $100 of carded expected win went from ' + f.reinvest + '.'
         : 'The loyalty ledger shows no break in comp prices, earn rates or tier rules across January–June.')(m.compFinding),
+      (v => 'Cheaper comps did not bring comp users back measurably more often: in the 28 days after the ' + months[month(v.split)] + ' ' + Number(v.split.slice(8)) + ' repricing their visits moved ' + pct(v.usersChange) + ' against ' + pct(v.othersChange) + ' for other recent guests, a ' + pct(v.did) +
+        ' difference (95% interval ' + pct(v.interval[0]) + ' to ' + pct(v.interval[1]) + '), inside the ' + pct(Math.min(...m.compVisits.placebos.map(p => p.did))) + ' to ' + pct(Math.max(...m.compVisits.placebos.map(p => p.did))) + ' seen at placebo dates.')(m.compVisits.real),
     ];
   }
   if (qid === 'qm') {
@@ -96,6 +102,7 @@ function machineAnswer(id, m) {
       'Payout gap ' + pp(x.res) + ', availability ' + pct(x.availability, 1) + ', play vs local peers ' + pct(x.local, 0) + '.',
       (a => a?.adjRank ? 'Adjusted for exposure, luck and placement it ranks #' + a.adjRank + ' of ' + m.fullRanking.ordered.length + ', earning ' + pct(a.index, 0) + ' of matched peers’ expected win per hour.' : 'It has no matched-peer benchmark for the adjusted ranking.')(m.fullRanking.rows.find(r => r.id === id)),
       ...(id === m.inspect.id ? ['It kept ' + cash(x.theo - x.win) + ' less than its settings imply, a shortfall too persistent to be luck, so the July plan funds a ' + cash(m.inspectionCost) + ' meter and paytable inspection.'] : []),
+      ...(m.hitFinding.lead?.id === id ? ['Its spins paid something ' + pct(m.hitFinding.lead.observed, 1) + ' of the time against ' + pct(m.hitFinding.lead.published, 1) + ' in its published game math, in ' + n(m.hitFinding.detail.above) + ' of ' + n(m.hitFinding.detail.weeks.length) + ' weeks: a paytable lead to inspect, and one day of play after a fix would confirm it.'] : []),
       ...(id === m.move.id ? ['Its move to a busier bank is deferred: only ' + m.moveCases.filter(r => r.main.bankPct > 0).length + ' of ' + m.moveCases.length + ' past moves gained across both affected banks, so displaced play is a real risk.'] : []),
     ],
     items: [{ label: id + ' machine file', value: cash(x.win), summary: 'Monthly win, payout check and placement for this cabinet.', go: { evidence: id } }],

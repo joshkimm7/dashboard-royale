@@ -14,11 +14,11 @@ export const TABS = [['overview', 'Overview'], ['map', 'Evidence map'], ['audit'
   ['guests', 'Q4/Q5 · Guests & comps'], ['model', 'Model validation'], ['plan', 'Q6 · July decision']];
 /** Evidence sections reachable by deep link, and the tab/sub-tab that renders each. */
 export const SECTION_SUB = {
-  'verdict-check': ['audit', 'verdicts'], 'adjusted-check': ['audit', 'adjusted'], 'funnel-check': ['audit', 'adjusted'], 'config-check': ['audit', 'adjusted'],
+  'verdict-check': ['audit', 'verdicts'], 'adjusted-check': ['audit', 'adjusted'], 'funnel-check': ['audit', 'adjusted'], 'config-check': ['audit', 'adjusted'], 'hit-check': ['audit', 'adjusted'],
   'machine-check': ['audit', 'machine'], 'hold-check': ['audit', 'machine'],
   'staffing-check': ['model', 'staffing'], 'action-summary': ['plan', 'summary'], 'inspection-plan': ['plan', 'inspection'],
   'move-check': ['plan', 'moves'], 'promotion-check': ['plan', 'promotion'], 'catalog-check': ['plan', 'catalog'],
-  'players-check': ['guests', 'players'], 'zones-check': ['demand', 'zones'], 'response-check': ['demand', 'response'], 'comp-break-check': ['guests', 'comps'],
+  'players-check': ['guests', 'players'], 'zones-check': ['demand', 'zones'], 'response-check': ['demand', 'response'], 'comp-break-check': ['guests', 'comps'], 'comp-visits-check': ['guests', 'comps'],
 };
 export const firstSub = tab => SUBTABS[tab]?.[0]?.[0] ?? '';
 

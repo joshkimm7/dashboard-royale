@@ -39,7 +39,7 @@ assert np.allclose(daily.coin_in_usd * (1-daily.configured_rtp), daily.theo_usd)
 # machines whose configuration changed mid-period in the daily view, the raw meters or the placement history.
 game_math = load('game_math')
 placements = load('placements')
-meters = load('machine_day')[['machine_id','gaming_date','config_id','coin_in_cents','theo_cents','sum_bet_squared']]
+meters = load('machine_day')[['machine_id','gaming_date','config_id','coin_in_cents','theo_cents','sum_bet_squared','paid_spins','payout_positive_spins']]
 published = game_math.set_index('config_id')
 daily_rtp = daily.config_id.map(published.configured_rtp)
 rtp_mismatch = daily[daily_rtp.isna() | (daily.configured_rtp - daily_rtp).abs().gt(1e-9)]
@@ -64,7 +64,8 @@ payout_config = {
 }
 print('Payout-config check:', {k: (len(v) if isinstance(v, list) else v) for k, v in payout_config.items()})
 # Spin-level luck: payout variance per spin is the game's multiplier variance times the bet squared (cents² → dollars²).
-daily = daily.merge(placed_meters[['machine_id','gaming_date','sum_bet_squared']], on=['machine_id','gaming_date'], validate='one_to_one')
+daily = daily.merge(placed_meters[['machine_id','gaming_date','sum_bet_squared','payout_positive_spins']], on=['machine_id','gaming_date'], validate='one_to_one')
+assert daily.payout_positive_spins.le(daily.paid_spins).all()
 daily['luck_var'] = daily.config_id.map(published.payout_multiplier_variance) * daily.sum_bet_squared / 1e4
 assert daily.luck_var.notna().all()
 
@@ -635,6 +636,71 @@ for col in columns[1:8] + ['location_id']:
 daily['month_index'] = daily.gaming_date.str[5:7].astype(int) - 1
 luck = daily.groupby(['machine_id','month_index','bank_id'], as_index=False).luck_var.sum()
 configs = game_math.assign(volatility=game_math.volatility_class)
+
+# Hit-frequency check (P10, analysis/hidden_patterns.py C1): spins that paid anything, against the published
+# hit_probability of the configuration, summed per machine x month x bank so period and bank filters apply in the app.
+hit_rows = daily.groupby(['machine_id','month_index','bank_id','config_id'], as_index=False)[['paid_spins','payout_positive_spins']].sum()
+hit_machine = hit_rows.groupby(['machine_id','config_id'])[['paid_spins','payout_positive_spins']].sum().reset_index()
+hit_p = hit_machine.config_id.map(dict(enumerate(dictionaries['config_id']))).map(published.hit_probability)
+hit_machine['z'] = (hit_machine.payout_positive_spins - hit_machine.paid_spins * hit_p) / np.sqrt(hit_machine.paid_spins * hit_p * (1 - hit_p))
+hit_flagged = hit_machine.loc[hit_machine.z.abs().gt(6), 'machine_id'].tolist()  # far past any multiple-test threshold; the app recomputes BH
+hit_week = daily[daily.machine_id.isin(hit_flagged)].assign(week=lambda f: (f.day + 2) // 7).groupby(['machine_id','week'], as_index=False)[['paid_spins','payout_positive_spins']].sum()
+# Alternative test: carded play (sessions) against uncarded play (meters minus carded) on the same flagged cabinets.
+carded_hits = pd.read_csv(guide_path('sessions'), usecols=['machine_id','paid_spins','payout_positive_spins','fixed_bet_cents'])
+carded_hits = carded_hits[carded_hits.machine_id.isin([dictionaries['machine_id'][i] for i in hit_flagged])]
+hit_daily_spins = daily[daily.machine_id.isin(hit_flagged)].groupby('machine_id').paid_spins.median()
+hit_check = {
+    'hitProbability': [float(published.hit_probability[c]) for c in dictionaries['config_id']],
+    # machine, month, bank, config (dictionary codes), all-play spins, spins that paid more than zero
+    'rows': rows(hit_rows, ['machine_id','month_index','bank_id','config_id','paid_spins','payout_positive_spins'], 0),
+    'weeks': rows(hit_week, ['machine_id','week','paid_spins','payout_positive_spins'], 0),
+    'split': [[int(m), int(g.paid_spins.sum()), int(g.payout_positive_spins.sum()),
+               *[int(v) for v in hit_machine.loc[hit_machine.machine_id.eq(m), ['paid_spins','payout_positive_spins']].iloc[0]],
+               [[int(b), int(x.paid_spins.sum()), int(x.payout_positive_spins.sum())] for b, x in g.groupby('fixed_bet_cents')],
+               float(hit_daily_spins[m])]
+              for m, g in carded_hits.assign(machine_id=carded_hits.machine_id.map({v: i for i, v in enumerate(dictionaries['machine_id'])})).groupby('machine_id')],
+}
+print('Hit-frequency check: flagged', [dictionaries['machine_id'][i] for i in hit_flagged], 'max |z| elsewhere',
+      round(float(hit_machine.loc[~hit_machine.machine_id.isin(hit_flagged), 'z'].abs().max()), 2))
+
+# Comp repricing and visits (P10, analysis/hidden_patterns.py C2): difference in differences on recorded visits.
+# Cohort = card holders with a visit in the 28 days before the before-window; comp users = redeemed before it.
+# Outcome = visits in the 28 days from the split over the 28 days before, comp users minus other cohort members.
+visits = pd.read_csv(guide_path('trips'), usecols=['player_id','first_observed_local'], parse_dates=['first_observed_local'])
+visits['gd'] = (visits.first_observed_local - pd.Timedelta(hours=6)).dt.normalize()
+redeem_days = pd.to_datetime(redeems.gaming_date)
+did_rng = np.random.default_rng(2025)
+def visit_did(split, reps=2000):
+    split = pd.Timestamp(split)
+    c0, a0, b1 = split - pd.Timedelta(days=56), split - pd.Timedelta(days=28), split + pd.Timedelta(days=28)
+    cohort = visits.loc[visits.gd.ge(c0) & visits.gd.lt(a0), 'player_id'].unique()
+    users = set(redeems.loc[redeem_days.lt(a0).to_numpy(), 'player_id'])
+    x = visits[visits.player_id.isin(cohort)]
+    frame = pd.DataFrame(index=cohort)
+    frame['a'] = x[x.gd.ge(a0) & x.gd.lt(split)].groupby('player_id').size()
+    frame['b'] = x[x.gd.ge(split) & x.gd.lt(b1)].groupby('player_id').size()
+    frame = frame.fillna(0)
+    a, b, u = frame.a.to_numpy(), frame.b.to_numpy(), frame.index.isin(users)
+    def est(i):
+        return b[i][u[i]].sum() / a[i][u[i]].sum() - b[i][~u[i]].sum() / a[i][~u[i]].sum()
+    boot = np.array([est(did_rng.integers(0, len(a), len(a))) for _ in range(reps)])
+    return {'split': str(split.date()), 'cohort': int(len(a)), 'users': int(u.sum()),
+            'usersChange': float(b[u].sum() / a[u].sum() - 1), 'othersChange': float(b[~u].sum() / a[~u].sum() - 1),
+            'did': float(est(np.arange(len(a)))), 'interval': [float(v) for v in np.percentile(boot, [2.5, 97.5])],
+            'perMember': [float(a[u].sum() / u.sum()), float(b[u].sum() / u.sum()), float(a[~u].sum() / (~u).sum()), float(b[~u].sum() / (~u).sum())]}
+# The split is the repricing date itself, found from the ledger: the day that maximises the gap between the 28-day
+# points-per-face-dollar price before and after (the app's break test lands on the same day). Placebos sit 4 and 8
+# weeks earlier and 4 weeks later, where no program change was found.
+price_day = redeems.groupby('gaming_date').agg(spent=('points_delta','sum'), face=('face_value_cents','sum'))
+price_day.index = pd.to_datetime(price_day.index)
+spent_roll, face_roll = price_day.spent.rolling('28D').sum(), price_day.face.rolling('28D').sum()
+price_gap = {d: abs(spent_roll.loc[:d - pd.Timedelta(days=1)].iloc[-1] / face_roll.loc[:d - pd.Timedelta(days=1)].iloc[-1]
+                    - spent_roll.loc[:d + pd.Timedelta(days=27)].iloc[-1] / face_roll.loc[:d + pd.Timedelta(days=27)].iloc[-1])
+             for d in price_day.index if price_day.index[0] + pd.Timedelta(days=28) <= d <= price_day.index[-1] - pd.Timedelta(days=28)}
+reprice = max(price_gap, key=price_gap.get)
+comp_visits = {'real': visit_did(reprice),
+               'placebos': [visit_did(reprice + pd.Timedelta(days=k)) for k in (-56, -28, 28)]}
+print('Comp repricing visit test:', {k: (round(v, 4) if isinstance(v, float) else v) for k, v in comp_visits['real'].items()})
 data = {
     'revision': subprocess.check_output(['git','-C',str(repo),'rev-parse','HEAD'],text=True).strip(),
     'dates': dates, 'moves': moves, 'dicts': dictionaries, 'daily': rows(daily, columns),
@@ -664,6 +730,7 @@ data = {
                 'tierRules': tier_rules},
     'configs': rows(configs, ['config_id','configured_rtp','volatility','payout_multiplier_variance']),
     'luck': rows(luck, ['machine_id','month_index','bank_id','luck_var'], 1),
+    'hitCheck': hit_check, 'compVisits': comp_visits,
     'zoneTraffic': {'zones': zone_ids, 'dayMinutes': day_minutes, 'rows': rows(zone_days, ['zone','day','entries','minutes','offline'], 0)},
     'heat': heat, 'weather': weather_context, 'missouri': missouri,
     'actions': rows(actions, ['action_type_id','name','unit_cost_cents','recurring_cost_cents_per_day','lead_days','downtime_minutes','quantity_limit']),

@@ -359,6 +359,47 @@ export function createModel(data) {
   const fullSensitivity = kSensitivity(summarize(scope({ from: 0, to: 5, bank: '' }).rows, fullDays), luckFor({ from: 0, to: 5, bank: '' }), fullRanking);
   const fullOverlap = rankingOverlap(fullRanking);
 
+  // P10 hit-frequency check: share of all-play spins that paid anything, against the published hit probability of
+  // each cabinet's configuration, for the selected months and bank. A binomial z per cabinet, Benjamini–Hochberg across cabinets.
+  const hitData = data.hitCheck;
+  function hitCheck({ from = 0, to = 5, bank = '' } = {}) {
+    const totals = new Map();
+    for (const [machine, mo, b, config, spins, hits] of hitData.rows) {
+      if (mo < from || mo > to || (bank && dict.bank_id[b] !== bank)) continue;
+      const t = totals.get(machine) ?? { id: dict.machine_id[machine], code: machine, config: dict.config_id[config], expected: 0, spins: 0, hits: 0 };
+      t.spins += spins; t.hits += hits; t.expected += spins * hitData.hitProbability[config];
+      totals.set(machine, t);
+    }
+    const rows = [...totals.values()].filter(t => t.spins > 0).map(t => {
+      const published = t.expected / t.spins, observed = t.hits / t.spins;
+      const z = (t.hits - t.expected) / Math.sqrt(t.spins * published * (1 - published));
+      return { ...t, published, observed, z, p: pNormalTwoSided(z) };
+    });
+    adjustPValues(rows);
+    const flagged = rows.filter(r => r.q < .01).sort((a, b) => Math.abs(b.z) - Math.abs(a.z));
+    const others = rows.filter(r => !flagged.includes(r));
+    const meanZ = others.length ? sum(others, r => r.z) / others.length : null;
+    const sdZ = others.length > 1 ? Math.sqrt(sum(others, r => (r.z - meanZ) ** 2) / (others.length - 1)) : null;
+    return { rows, flagged, others, meanZ, sdZ, maxOther: others.length ? Math.max(...others.map(r => Math.abs(r.z))) : null };
+  }
+  /** Full-period detail for a flagged cabinet: weekly rate, carded vs uncarded and bet-size splits, and how fast the rate verifies a fix. */
+  function hitDetail(row) {
+    if (!row) return null;
+    const weeks = hitData.weeks.filter(w => w[0] === row.code).map(([, w, spins, hits]) => ({ w, spins, hits, rate: hits / spins }));
+    const split = hitData.split.find(r => r[0] === row.code);
+    const [, cardedSpins, cardedHits, allSpins, allHits, bets, medianDaySpins] = split ?? [];
+    const daySe = medianDaySpins ? Math.sqrt(row.published * (1 - row.published) / medianDaySpins) : null;
+    return {
+      weeks, above: weeks.filter(w => w.rate > row.published).length,
+      carded: split ? cardedHits / cardedSpins : null, cardedSpins, uncarded: split ? (allHits - cardedHits) / (allSpins - cardedSpins) : null, uncardedSpins: split ? allSpins - cardedSpins : null,
+      bets: (bets ?? []).map(([bet, spins, hits]) => ({ bet: bet / 100, spins, rate: hits / spins })),
+      medianDaySpins, daySe, daySeparation: daySe ? (row.observed - row.published) / daySe : null,
+    };
+  }
+  const fullHit = hitCheck();
+  const hitFinding = (lead => ({ ...fullHit, lead, detail: hitDetail(lead) }))(fullHit.flagged[0]);
+  const compVisits = data.compVisits;
+
   // Guests
   const regions = [...new Set(data.players.map(r => r[2]))].sort();
   const tiers = [...new Set(data.players.map(r => r[3]))].sort();
@@ -556,5 +597,6 @@ export function createModel(data) {
     moveCases, closestCase, moveControls, bankZone, weeksBelow, cohort, quietCohort, payoutCohort, shortCohort, payoutOverlap, reviewAction, weekdayAdjusted,
     configHold, credibility, luckFor, ranking, rankingOverlap, kSensitivity, fullRanking, fullOverlap, fullSensitivity, payoutConfig: data.payoutConfig,
     compBreak, fullBreak, tierRules, compFinding,
+    hitCheck, hitDetail, hitFinding, compVisits,
   };
 }
