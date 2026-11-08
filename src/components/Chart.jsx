@@ -31,7 +31,7 @@ function barPath(x, w, y0, y1) {
  * type: default kind for series without one. baseline: label for the zero line (shown when 0 is in range).
  * title: the panel title, used to look up the chart's "i" explanation.
  */
-export function Chart({ series, labels, format = n, min = null, max = null, height = 240, annotations = [], type = 'line', baseline = null, title = null, valueLabels = true }) {
+export function Chart({ series, labels, format = n, min = null, max = null, height = 240, annotations = [], type = 'line', baseline = null, title = null, valueLabels = true, markers = false, fillBetween = null }) {
   const [hover, setHover] = useState(null);
   const frameRef = useRef(null);
   const tableId = useId();
@@ -55,7 +55,7 @@ export function Chart({ series, labels, format = n, min = null, max = null, heig
   const gap = 2, barW = Math.max(3, Math.min(24, (band * .72 - gap * (barSeries.length - 1)) / Math.max(1, barSeries.length)));
   const groupW = barW * barSeries.length + gap * (barSeries.length - 1);
   const tickStep = Math.ceil(labels.length / 7);
-  const showX = i => labels.length <= 8 || i === labels.length - 1 || (i % tickStep === 0 && labels.length - 1 - i >= tickStep / 2);
+  const showX = i => labels.length <= 8 || i === labels.length - 1 || (i % tickStep === 0 && labels.length - 1 - i >= tickStep * .8);
   const anchor = i => hasBars ? 'middle' : i === 0 && labels.length > 1 ? 'start' : i === labels.length - 1 && labels.length > 1 ? 'end' : 'middle';
   const colorAt = (s, v) => s.diverging ? (v < 0 ? s.diverging.below : s.diverging.above) : s.color;
 
@@ -78,8 +78,10 @@ export function Chart({ series, labels, format = n, min = null, max = null, heig
       const i = s.values.findLastIndex(Number.isFinite);
       if (i < 0) continue;
       const ly = y(s.values[i]);
-      if (endLabels.some(l => Math.abs(l.y - ly) < 14)) continue;
-      endLabels.push({ x: x(i) + 8, y: ly, text: format(s.values[i]), key: s.name });
+      // Converging ends: push the label below the previous one and connect it with a short leader.
+      let labelY = ly;
+      while (endLabels.some(l => Math.abs(l.y - labelY) < 16)) labelY += 16;
+      endLabels.push({ x: x(i) + 14, y: labelY, lineY: ly, endX: x(i), text: format(s.values[i]), key: s.name, color: s.color });
     }
   }
   const capLabels = [];
@@ -133,6 +135,14 @@ export function Chart({ series, labels, format = n, min = null, max = null, heig
             <path key={s.name + i} className={'bar' + (hover === i ? ' lit' : '')} fill={colorAt(s, v)}
               d={barPath(x(i) - groupW / 2 + bi * (barW + gap), barW, y0, y(v))} />
           ) : null))}
+          {fillBetween && (() => {
+            // Shade the gap between two line series (e.g. forecast vs actual) so the difference itself is visible.
+            const a = series[fillBetween.a].values, b = series[fillBetween.b].values;
+            const idx = labels.map((_, i) => i).filter(i => Number.isFinite(a[i]) && Number.isFinite(b[i]));
+            if (idx.length < 2) return null;
+            const d = 'M' + idx.map(i => x(i).toFixed(1) + ' ' + y(a[i]).toFixed(1)).join('L') + 'L' + idx.slice().reverse().map(i => x(i).toFixed(1) + ' ' + y(b[i]).toFixed(1)).join('L') + 'Z';
+            return <path className="gap-fill" d={d} fill={fillBetween.color} />;
+          })()}
           {series.map((s, si) => kinds[si] === 'line' && (
             <g key={s.name} className={s.muted ? 'muted-series' : undefined}>
               {s.area && <path d={areaPath(s.values)} fill={'url(#' + tableId + 'g' + si + ')'} />}
@@ -149,7 +159,15 @@ export function Chart({ series, labels, format = n, min = null, max = null, heig
               <text className="annotation" x={x(index) + 6} y={yOffset}>{label}</text>
             </g>
           ))}
-          {endLabels.map(l => <text key={l.key} className="value-label" x={l.x} y={l.y + 4}>{l.text}</text>)}
+          {markers && series.map((s, si) => kinds[si] === 'line' && !s.muted && labels.length <= 12 && s.values.map((v, i) => Number.isFinite(v) && (
+            <circle key={s.name + 'm' + i} className="marker" cx={x(i)} cy={y(v)} r="4" fill={s.color} />
+          )))}
+          {endLabels.map(l => (
+            <g key={l.key}>
+              {Math.abs(l.y - l.lineY) > 1 && <path className="leader" d={'M' + (l.endX + 5) + ' ' + l.lineY + 'L' + (l.x - 3) + ' ' + l.y} stroke={l.color} />}
+              <text className="value-label" x={l.x} y={l.y + 4}>{l.text}</text>
+            </g>
+          ))}
           {capLabels.map(l => <text key={l.x} className="value-label" x={l.x} y={l.y} textAnchor="middle">{l.text}</text>)}
         </svg>
         {hover != null && (

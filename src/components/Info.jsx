@@ -23,7 +23,8 @@ export function Info({ text, label }) {
     const r = ref.current?.getBoundingClientRect();
     if (r) {
       const cls = [];
-      if (r.top < 150) cls.push('below');
+      const covered = (document.querySelector('.topbar')?.offsetHeight ?? 0) + (document.querySelector('.subnav')?.offsetHeight ?? 0);
+      if (r.top < covered + 130) cls.push('below');
       if (r.left < 160) cls.push('edge-left');
       else if (innerWidth - r.right < 160) cls.push('edge-right');
       setPlace(cls.join(' '));
